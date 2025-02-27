@@ -9,8 +9,11 @@ const nextConfig = {
   },
   // Enable strict mode for better error detection
   reactStrictMode: true,
-  // Configure output for hybrid rendering
-  output: 'standalone'
+  // Remove the standalone output for Vercel deployment
+  // output: 'standalone'
+  
+  // Explicitly set the build directory
+  distDir: '.next'
 };
 
-export default nextConfig; 
+export default nextConfig;
