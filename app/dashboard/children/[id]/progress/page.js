@@ -1,4 +1,3 @@
-// app/dashboard/children/[id]/progress/page.js
 "use client"
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
