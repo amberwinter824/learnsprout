@@ -28,74 +28,114 @@ export const AuthProvider = ({ children }) => {
   // Sign up function
   const signup = async (email, password, name) => {
     try {
+      console.log("Starting signup process...");
+      
       // Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log("User created in Firebase Auth");
       
       // Create a user document in Firestore
       const user = userCredential.user;
-      await setDoc(doc(db, 'users', user.uid), {
-        name,
-        email,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-      
-      // Set token in cookie
-      if (isBrowser) {
-        const token = await user.getIdToken();
-        Cookies.set('token', token, { expires: 7 });
+      if (user) {
+        console.log("Creating Firestore document for user:", user.uid);
+        await setDoc(doc(db, 'users', user.uid), {
+          name,
+          email,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        
+        // Set token in cookie
+        if (isBrowser) {
+          try {
+            console.log("Setting token cookie");
+            const token = await user.getIdToken();
+            Cookies.set('token', token, { expires: 7 });
+          } catch (tokenError) {
+            console.error("Error setting token:", tokenError);
+          }
+        }
       }
       
       return user;
     } catch (error) {
-      throw error;
+      console.error("Signup error:", error);
+      // Enhanced error handling
+      const errorMessage = error.message || "Unknown error occurred";
+      throw new Error(errorMessage);
     }
   };
 
   // Sign in function
   const login = async (email, password) => {
     try {
+      console.log("Starting login process...");
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("User signed in");
       
       // Set token in cookie
       if (isBrowser) {
-        const token = await userCredential.user.getIdToken();
-        Cookies.set('token', token, { expires: 7 });
+        try {
+          console.log("Setting token cookie");
+          const token = await userCredential.user.getIdToken();
+          Cookies.set('token', token, { expires: 7 });
+        } catch (tokenError) {
+          console.error("Error setting token:", tokenError);
+        }
       }
       
       return userCredential;
     } catch (error) {
-      throw error;
+      console.error("Login error:", error);
+      const errorMessage = error.message || "Failed to sign in";
+      throw new Error(errorMessage);
     }
   };
 
   // Sign out function
   const logout = async () => {
     try {
+      console.log("Starting logout process...");
       await signOut(auth);
+      console.log("User signed out");
+      
       // Remove the cookie
       if (isBrowser) {
+        console.log("Removing token cookie");
         Cookies.remove('token');
       }
+      
       // Redirect to login page
       router.push('/login');
     } catch (error) {
+      console.error("Logout error:", error);
       throw error;
     }
   };
 
   // Reset password function
   const resetPassword = (email) => {
-    return sendPasswordResetEmail(auth, email);
+    console.log("Sending password reset email to:", email);
+    return sendPasswordResetEmail(auth, email)
+      .then(() => {
+        console.log("Password reset email sent successfully");
+      })
+      .catch((error) => {
+        console.error("Error sending password reset:", error);
+        throw error;
+      });
   };
 
   // Get user data from Firestore
   const getUserData = async (uid) => {
     try {
+      console.log("Fetching user data for:", uid);
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
+        console.log("User data found");
         return userDoc.data();
       }
+      console.log("No user data found");
       return null;
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -105,31 +145,50 @@ export const AuthProvider = ({ children }) => {
 
   // Listen for auth state changes
   useEffect(() => {
+    console.log("Setting up auth state listener");
+    
     if (!isBrowser) {
+      console.log("Not in browser environment, skipping auth listener");
       setLoading(false);
       return;
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? "User authenticated" : "No user");
+      
       if (user) {
-        const userData = await getUserData(user.uid);
-        setCurrentUser({ ...user, ...userData });
-        
-        // Set token in cookie
         try {
-          const token = await user.getIdToken();
-          Cookies.set('token', token, { expires: 7 });
+          const userData = await getUserData(user.uid);
+          console.log("Combined user data with auth data");
+          setCurrentUser({ ...user, ...userData });
+          
+          // Set token in cookie
+          try {
+            console.log("Setting token cookie on auth state change");
+            const token = await user.getIdToken();
+            Cookies.set('token', token, { expires: 7 });
+          } catch (tokenError) {
+            console.error("Error setting token on auth state change:", tokenError);
+          }
         } catch (error) {
-          console.error("Error setting auth token:", error);
+          console.error("Error in auth state change handler:", error);
         }
       } else {
+        console.log("Clearing current user and token");
         setCurrentUser(null);
         Cookies.remove('token');
       }
+      
+      setLoading(false);
+    }, (error) => {
+      console.error("Auth state change error:", error);
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      console.log("Cleaning up auth state listener");
+      unsubscribe();
+    };
   }, [isBrowser]);
 
   const value = {
