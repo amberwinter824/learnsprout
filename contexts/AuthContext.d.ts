@@ -14,6 +14,7 @@ export interface AuthContextType {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   getUserData: (uid: string) => Promise<UserData | null>;
+  loading: boolean;
 }
 
-export function useAuth(): AuthContextType; 
+export function useAuth(): AuthContextType;
