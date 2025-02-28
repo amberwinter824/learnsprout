@@ -5,7 +5,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Montessori Home",
+  title: "Learn Sprout",
   description: "Personalized Montessori activities for your child",
 }
 

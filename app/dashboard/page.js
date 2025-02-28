@@ -67,10 +67,10 @@ export default function Dashboard() {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">
-          {currentUser ? `Welcome, ${currentUser.name || 'User'}` : 'Welcome to Montessori Home'}
+          {currentUser ? `Welcome, ${currentUser.name || 'User'}` : 'Welcome to Learn Sprout'}
         </h1>
         <p className="mt-2 text-lg text-gray-600">
-          Your personalized Montessori homeschool platform
+          Your personalized Learn Sproutschool platform
         </p>
       </div>
 
@@ -105,7 +105,7 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg p-6 text-center">
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Get Started</h2>
               <p className="text-gray-600 mb-4">
-                Add your first child to begin your Montessori homeschool journey.
+                Add your first child to begin your Learn Sproutschool journey.
               </p>
               <Link
                 href="/dashboard/children/add"
