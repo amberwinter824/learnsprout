@@ -5,16 +5,17 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sprout } from 'lucide-react';
+import { FormEvent } from 'react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const {login} = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     try {
@@ -22,8 +23,9 @@ const Login = () => {
       setLoading(true);
       await login(email, password);
       router.push('/dashboard');
-    } catch (error) {
-      setError('Failed to sign in: ' + error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      setError('Failed to sign in: ' + errorMessage);
     } finally {
       setLoading(false);
     }
