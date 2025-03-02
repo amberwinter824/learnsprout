@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { Sprout } from 'lucide-react';
 
 export default function Signup() {
@@ -12,23 +14,14 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("Form submitted");
     
-    // Add input validation
-    if (!name.trim()) {
-      return setError('Please enter your name');
-    }
-    if (!email.trim()) {
-      return setError('Please enter your email');
-    }
-    if (password.length < 6) {
-      return setError('Password must be at least 6 characters long');
-    }
     if (password !== confirmPassword) {
+      console.log("Passwords don't match");
       return setError('Passwords do not match');
     }
     
@@ -36,20 +29,49 @@ export default function Signup() {
       setError('');
       setLoading(true);
       
-      await signup(email, password, name);
-      router.push('/dashboard');
-    } catch (error) {
-      console.error("Signup error:", error);
+      console.log("Creating user account with Firebase Auth directly");
+      // Use Firebase Auth directly without going through context
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
       
-      // More user-friendly error messages
-      if ((error as { code?: string }).code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists');
-      } else if ((error as { code?: string }).code === 'auth/invalid-email') {
-        setError('Please enter a valid email address');
-      } else if ((error as { code?: string }).code === 'auth/weak-password') {
-        setError('Password is too weak. Please choose a stronger password');
-      } else {
-        setError('Failed to create account. Please try again.');
+      console.log("User created successfully:", user.uid);
+      
+      // Create the user document in Firestore
+      try {
+        console.log("Creating user document in Firestore");
+        await setDoc(doc(db, 'users', user.uid), {
+          name,
+          email,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        console.log("User document created successfully");
+      } catch (firestoreError) {
+        console.error("Error creating user document:", firestoreError);
+        // Continue anyway since the auth account was created
+      }
+      
+      // Redirect to dashboard
+      console.log("Redirecting to dashboard");
+      router.push('/dashboard');
+    } catch (error: unknown) {
+      console.error("SIGNUP ERROR:", error);
+      
+      // Type guard to check if error is an object with code and message properties
+      if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        
+        // Provide a more user-friendly error message
+        if (error.code === 'auth/email-already-in-use') {
+          setError('This email is already registered. Please log in instead.');
+        } else if (error.code === 'auth/invalid-email') {
+          setError('Please enter a valid email address.');
+        } else if (error.code === 'auth/weak-password') {
+          setError('Password is too weak. Please use at least 6 characters.');
+        } else {
+          setError(`Failed to create account: ${error.message}`);
+        }
       }
     } finally {
       setLoading(false);
