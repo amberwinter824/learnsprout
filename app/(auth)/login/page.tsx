@@ -1,31 +1,55 @@
 "use client"
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Sprout } from 'lucide-react';
-import { FormEvent } from 'react';
 
-const Login = () => {
+export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const {login} = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("Login form submitted");
     
     try {
       setError('');
       setLoading(true);
-      await login(email, password);
+      
+      console.log("Signing in with Firebase Auth directly");
+      // Use Firebase Auth directly without going through context
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      console.log("User signed in successfully:", user.uid);
+      
+      // Redirect to dashboard
+      console.log("Redirecting to dashboard");
       router.push('/dashboard');
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      setError('Failed to sign in: ' + errorMessage);
+      console.error("LOGIN ERROR:", error);
+      
+      // Type guard to check if error is an object with code and message properties
+      if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        
+        // Provide a more user-friendly error message
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          setError('Invalid email or password. Please try again.');
+        } else if (error.code === 'auth/invalid-email') {
+          setError('Please enter a valid email address.');
+        } else if (error.code === 'auth/too-many-requests') {
+          setError('Too many failed login attempts. Please try again later.');
+        } else {
+          setError(`Failed to sign in: ${error.message}`);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -115,6 +139,4 @@ const Login = () => {
       </div>
     </div>
   );
-};
-
-export default Login;
+}
