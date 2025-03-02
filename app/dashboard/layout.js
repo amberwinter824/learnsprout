@@ -1,11 +1,13 @@
 "use client"
-import React, { useState, useEffect } from 'react'; // Add React import
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { Sprout, Home, Users, BookOpen, BarChart2, LogOut, Menu, X } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import Cookies from 'js-cookie';
 
 export default function DashboardLayout({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -13,11 +15,31 @@ export default function DashboardLayout({ children }) {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // We'll leave this for a direct approach instead of using context
-  React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          // Fetch additional user data from Firestore
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          const userData = userDoc.exists() ? userDoc.data() : {};
+
+          // Combine Firebase user with Firestore user data
+          const combinedUser = { ...user, ...userData };
+          setCurrentUser(combinedUser);
+
+          // Set token in cookies
+          const token = await user.getIdToken();
+          Cookies.set('token', token, { expires: 7 });
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setCurrentUser(user);
+        }
+      } else {
+        setCurrentUser(null);
+        Cookies.remove('token');
+      }
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -32,6 +54,18 @@ export default function DashboardLayout({ children }) {
     try {
       console.log("Logging out...");
       await signOut(auth);
+      
+      // Remove token and clear session storage
+      Cookies.remove('token');
+      const keys = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('redirect_attempted_')) {
+          keys.push(key);
+        }
+      }
+      keys.forEach(key => sessionStorage.removeItem(key));
+
       console.log("Logged out, redirecting to login");
       router.push('/login');
     } catch (error) {
@@ -135,11 +169,14 @@ export default function DashboardLayout({ children }) {
                   <div className="flex items-center px-3 mb-3">
                     <div className="flex-shrink-0">
                       <div className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
-                        {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                        {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 
+                         currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                     </div>
                     <div className="ml-3">
-                      <div className="text-sm font-medium text-gray-900">{currentUser.name || 'User'}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {currentUser.displayName || currentUser.name || 'User'}
+                      </div>
                       <div className="text-xs text-gray-500">{currentUser.email}</div>
                     </div>
                   </div>

@@ -2,85 +2,79 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Sprout } from 'lucide-react';
-import Cookies from 'js-cookie';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [redirectChecked, setRedirectChecked] = useState(false);
+  const { login, currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Check authentication state on component mount
+  // Check if user is already logged in
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("Auth state changed:", user ? "User is signed in" : "No user");
-      
-      if (user) {
-        // User is already signed in, set a token and redirect
-        console.log("User already authenticated, redirecting to dashboard");
-        user.getIdToken().then(token => {
-          Cookies.set('token', token, { expires: 7 });
-          router.push('/dashboard');
-        });
-      }
+    console.log("Login page: Auth state check", { 
+      authLoading, 
+      currentUser: currentUser ? 'exists' : 'null' 
     });
-
-    return () => unsubscribe();
-  }, [router]);
+    
+    // Clear any previous redirect markers
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith('redirect_attempted_')) {
+        keys.push(key);
+      }
+    }
+    keys.forEach(key => sessionStorage.removeItem(key));
+    
+    // Only redirect if we're not in a loading state and have a user
+    if (!authLoading) {
+      if (currentUser) {
+        console.log("Login page: User already logged in, redirecting to dashboard");
+        router.push('/dashboard');
+      } else {
+        setRedirectChecked(true);
+      }
+    }
+  }, [currentUser, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Login form submitted");
     
     try {
       setError('');
       setLoading(true);
+      await login(email, password);
       
-      console.log("Signing in with Firebase Auth directly");
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      console.log("User signed in successfully:", user.uid);
-      
-      // Set the token cookie
-      const token = await user.getIdToken();
-      Cookies.set('token', token, { expires: 7 });
-      
-      // Redirect to dashboard (force the navigation)
-      console.log("Redirecting to dashboard");
-      router.push('/dashboard');
+      // Don't redirect here - let the useEffect handle it
+      console.log("Login successful");
     } catch (error: unknown) {
-      console.error("LOGIN ERROR:", error);
-      
-      // Type guard for Firebase Auth error
-      if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
-        console.error("Error code:", error.code);
-        console.error("Error message:", error.message);
-        
-        // Provide a more user-friendly error message
-        if (error.code === 'auth/invalid-credential' || 
-            error.code === 'auth/user-not-found' || 
-            error.code === 'auth/wrong-password' ||
-            error.code === 'auth/invalid-login-credentials') {
-          setError('Invalid email or password. Please try again.');
-        } else if (error.code === 'auth/invalid-email') {
-          setError('Please enter a valid email address.');
-        } else if (error.code === 'auth/too-many-requests') {
-          setError('Too many failed login attempts. Please try again later.');
-        } else {
-          setError(`Failed to sign in: ${error.message}`);
-        }
+      console.error("Login error:", error);
+      if (error instanceof Error) {
+        setError('Failed to sign in: ' + error.message);
       } else {
-        setError('An unexpected error occurred');
+        setError('Failed to sign in');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Show loading while checking authentication
+  if (authLoading || !redirectChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking login status...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-emerald-50 px-4">
