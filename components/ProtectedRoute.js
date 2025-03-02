@@ -1,41 +1,42 @@
 "use client";
-import React, { useEffect, useState } from 'react'; // Add React import
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProtectedRoute({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { currentUser, loading } = useAuth();
   const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     console.log("ProtectedRoute: Setting up auth listener");
     
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("ProtectedRoute: Auth state changed:", user ? "User is signed in" : "No user");
+    // Only proceed with checks once loading is complete
+    if (!loading) {
+      console.log("ProtectedRoute: Auth state changed:", currentUser ? "User is signed in" : "No user");
       
-      setCurrentUser(user);
-      setLoading(false);
-      
-      if (!user) {
-        console.log("ProtectedRoute: No user, redirecting to login");
+      if (!currentUser) {
+        console.log("ProtectedRoute: Redirecting to login");
         router.push('/login');
+      } else {
+        console.log("ProtectedRoute: User authenticated, allowing access");
+        setIsChecking(false);
       }
-    });
+    }
+  }, [currentUser, loading, router]);
 
-    return () => unsubscribe();
-  }, [router]);
-
-  // Show loading state or nothing while checking auth
-  if (loading || !currentUser) {
+  // Show loading state while authentication is being checked
+  if (loading || (isChecking && !currentUser)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verifying your account...</p>
+        </div>
       </div>
     );
   }
 
-  // If we have a user, render the children
+  // Show children once user is confirmed to be authenticated
   return children;
 }

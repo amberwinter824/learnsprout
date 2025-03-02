@@ -1,9 +1,10 @@
 "use client"
 
+// contexts/AuthContext.js
 import { createContext, useContext, useState, useEffect } from 'react';
 import { 
   onAuthStateChanged, 
-  createUserWithEmailAndPassword,
+  createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut, 
   sendPasswordResetEmail 
@@ -18,117 +19,158 @@ const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
+  // Add check for window to handle SSR
   const isBrowser = typeof window !== 'undefined';
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // SIMPLIFIED SIGNUP FUNCTION - focus on auth only first
+  // Sign up function
   const signup = async (email, password, name) => {
-    console.log("Signup attempt with:", email);
-    
     try {
-      // Just focus on auth first, we'll add Firestore later
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log("Auth creation successful");
+      console.log("Signup started with email:", email);
       
+      // Create the user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Create a user document in Firestore
       const user = userCredential.user;
       console.log("User created:", user.uid);
       
-      // Try to add to Firestore
-      try {
-        await setDoc(doc(db, 'users', user.uid), {
-          name,
-          email,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-        console.log("Firestore document created");
-      } catch (firestoreError) {
-        console.error("Firestore error:", firestoreError);
-        // Continue anyway, focus on auth
+      await setDoc(doc(db, 'users', user.uid), {
+        name,
+        email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log("User document created in Firestore");
+      
+      // Set token in cookie
+      if (isBrowser) {
+        const token = await user.getIdToken();
+        Cookies.set('token', token, { expires: 7 });
       }
       
-      // Skip token for now
+      // Set the current user immediately instead of waiting for onAuthStateChanged
+      const userData = { name, email };
+      setCurrentUser({ ...user, ...userData });
+      console.log("Current user set in state:", user.uid);
+      
       return user;
     } catch (error) {
-      console.error("Signup error:", error);
-      throw new Error(error.message || "Signup failed");
-    }
-  };
-
-  // Simplify login too
-  const login = async (email, password) => {
-    console.log("Login attempt with:", email);
-    
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login successful");
-      return userCredential;
-    } catch (error) {
-      console.error("Login error:", error);
-      throw new Error(error.message || "Login failed");
-    }
-  };
-
-  // Basic logout function
-  const logout = async () => {
-    console.log("Logout attempt");
-    try {
-      await signOut(auth);
-      console.log("Logout successful");
-      router.push('/login');
-    } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Error in signup:", error);
       throw error;
     }
   };
 
-  // Simple reset password
+  // Sign in function
+  const login = async (email, password) => {
+    try {
+      console.log("Login started with email:", email);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Get user data from Firestore
+      const userData = await getUserData(userCredential.user.uid);
+      console.log("User data retrieved:", userData);
+      
+      // Set current user immediately instead of waiting for onAuthStateChanged
+      setCurrentUser({ ...userCredential.user, ...userData });
+      
+      // Set token in cookie
+      if (isBrowser) {
+        const token = await userCredential.user.getIdToken();
+        Cookies.set('token', token, { expires: 7 });
+      }
+      
+      return userCredential;
+    } catch (error) {
+      console.error("Error in login:", error);
+      throw error;
+    }
+  };
+
+  // Sign out function
+  const logout = async () => {
+    try {
+      console.log("Logout started");
+      await signOut(auth);
+      // Remove the cookie
+      if (isBrowser) {
+        Cookies.remove('token');
+      }
+      // Clear user state immediately
+      setCurrentUser(null);
+      console.log("User logged out, state cleared");
+      // Redirect to login page
+      router.push('/login');
+    } catch (error) {
+      console.error("Error in logout:", error);
+      throw error;
+    }
+  };
+
+  // Reset password function
   const resetPassword = (email) => {
-    console.log("Password reset for:", email);
     return sendPasswordResetEmail(auth, email);
   };
 
-  // Get user data
+  // Get user data from Firestore
   const getUserData = async (uid) => {
     try {
+      console.log("Getting user data for:", uid);
       const userDoc = await getDoc(doc(db, 'users', uid));
-      return userDoc.exists() ? userDoc.data() : null;
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("User data found:", userData);
+        return userData;
+      }
+      console.log("No user data found");
+      return null;
     } catch (error) {
       console.error("Error fetching user data:", error);
       return null;
     }
   };
 
-  // Auth state listener
+  // Listen for auth state changes
   useEffect(() => {
-    console.log("Setting up auth listener");
-    
     if (!isBrowser) {
       setLoading(false);
       return;
     }
     
+    console.log("Setting up auth state listener");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("Auth state changed:", user ? "User exists" : "No user");
+      console.log("Auth state changed:", user ? "User signed in" : "No user");
       
       if (user) {
         try {
           const userData = await getUserData(user.uid);
+          console.log("Setting current user with data:", userData);
           setCurrentUser({ ...user, ...userData });
+          
+          // Set token in cookie
+          try {
+            const token = await user.getIdToken();
+            Cookies.set('token', token, { expires: 7 });
+          } catch (tokenError) {
+            console.error("Error setting auth token:", tokenError);
+          }
         } catch (error) {
-          console.error("Error in auth state change:", error);
-          setCurrentUser(user);
+          console.error("Error in auth state change handler:", error);
+          setCurrentUser(user); // Fall back to just the user object without Firestore data
         }
       } else {
+        console.log("Clearing current user state");
         setCurrentUser(null);
+        Cookies.remove('token');
       }
       
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, [isBrowser]);
 
   const value = {
@@ -140,10 +182,15 @@ export const AuthProvider = ({ children }) => {
     getUserData,
     loading
   };
+  
+  console.log("Auth context value:", { 
+    currentUser: currentUser ? { uid: currentUser.uid, email: currentUser.email } : null,
+    loading 
+  });
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {(!loading || !isBrowser) && children}
     </AuthContext.Provider>
   );
 };

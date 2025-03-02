@@ -1,6 +1,5 @@
 "use client"
-export const dynamic = 'force-dynamic';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +18,14 @@ export default function AddChildPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Add an effect to wait for the auth state to be properly loaded
+  useEffect(() => {
+    if (currentUser !== null) {
+      setAuthChecked(true);
+    }
+  }, [currentUser]);
 
   const ageGroupOptions = [
     { value: '3-4', label: '3-4 years' },
@@ -34,7 +41,13 @@ export default function AddChildPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!currentUser?.uid) {
+    // Add debugging logs
+    console.log("Submit handler triggered");
+    console.log("Current user:", currentUser);
+    console.log("Auth checked:", authChecked);
+    
+    if (!currentUser) {
+      console.error("No user found in context");
       setError('You must be logged in to add a child');
       return;
     }
@@ -51,7 +64,8 @@ export default function AddChildPage() {
       // Create a Date object from the birthDate string
       const birthDateObj = new Date(childData.birthDate);
 
-      // Create the child in Firestore
+      // Create the child in Firestore using the currentUser.uid
+      console.log("Creating child with parent ID:", currentUser.uid);
       const childId = await createChild(currentUser.uid, {
         name: childData.name,
         birthDate: birthDateObj,
@@ -63,6 +77,7 @@ export default function AddChildPage() {
       
       router.push(`/dashboard/children/${childId}`);
     } catch (error) {
+      console.error("Error adding child:", error);
       setError('Failed to add child: ' + error.message);
     } finally {
       setLoading(false);
@@ -178,7 +193,7 @@ export default function AddChildPage() {
               </Link>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !authChecked}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
               >
                 {loading ? 'Adding...' : 'Add Child'}
