@@ -1,6 +1,5 @@
-// app/dashboard/layout.js
 "use client"
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Add React import
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
