@@ -1,10 +1,11 @@
 "use client"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Sprout } from 'lucide-react';
+import Cookies from 'js-cookie';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,24 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Check authentication state on component mount
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("Auth state changed:", user ? "User is signed in" : "No user");
+      
+      if (user) {
+        // User is already signed in, set a token and redirect
+        console.log("User already authenticated, redirecting to dashboard");
+        user.getIdToken().then(token => {
+          Cookies.set('token', token, { expires: 7 });
+          router.push('/dashboard');
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,25 +41,31 @@ export default function Login() {
       setLoading(true);
       
       console.log("Signing in with Firebase Auth directly");
-      // Use Firebase Auth directly without going through context
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
       console.log("User signed in successfully:", user.uid);
       
-      // Redirect to dashboard
+      // Set the token cookie
+      const token = await user.getIdToken();
+      Cookies.set('token', token, { expires: 7 });
+      
+      // Redirect to dashboard (force the navigation)
       console.log("Redirecting to dashboard");
       router.push('/dashboard');
     } catch (error: unknown) {
       console.error("LOGIN ERROR:", error);
       
-      // Type guard to check if error is an object with code and message properties
+      // Type guard for Firebase Auth error
       if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
         console.error("Error code:", error.code);
         console.error("Error message:", error.message);
         
         // Provide a more user-friendly error message
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        if (error.code === 'auth/invalid-credential' || 
+            error.code === 'auth/user-not-found' || 
+            error.code === 'auth/wrong-password' ||
+            error.code === 'auth/invalid-login-credentials') {
           setError('Invalid email or password. Please try again.');
         } else if (error.code === 'auth/invalid-email') {
           setError('Please enter a valid email address.');
@@ -49,6 +74,8 @@ export default function Login() {
         } else {
           setError(`Failed to sign in: ${error.message}`);
         }
+      } else {
+        setError('An unexpected error occurred');
       }
     } finally {
       setLoading(false);

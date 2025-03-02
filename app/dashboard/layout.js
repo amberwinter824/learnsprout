@@ -1,16 +1,26 @@
+// app/dashboard/layout.js
 "use client"
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Sprout, Home, Users, BookOpen, BarChart2, LogOut, Menu, X } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function DashboardLayout({ children }) {
-  const { currentUser, logout } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null);
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // We'll leave this for a direct approach instead of using context
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -21,7 +31,9 @@ export default function DashboardLayout({ children }) {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      console.log("Logging out...");
+      await signOut(auth);
+      console.log("Logged out, redirecting to login");
       router.push('/login');
     } catch (error) {
       console.error('Failed to log out:', error);

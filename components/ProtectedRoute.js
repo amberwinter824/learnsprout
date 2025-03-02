@@ -1,18 +1,31 @@
 "use client";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function ProtectedRoute({ children }) {
-  const { currentUser, loading } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // If not loading and no user is present, redirect to login
-    if (!loading && !currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, loading, router]);
+    console.log("ProtectedRoute: Setting up auth listener");
+    
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("ProtectedRoute: Auth state changed:", user ? "User is signed in" : "No user");
+      
+      setCurrentUser(user);
+      setLoading(false);
+      
+      if (!user) {
+        console.log("ProtectedRoute: No user, redirecting to login");
+        router.push('/login');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   // Show loading state or nothing while checking auth
   if (loading || !currentUser) {
