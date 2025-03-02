@@ -1,12 +1,11 @@
 "use client"
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sprout } from 'lucide-react';
 
-const Signup = () => {
+export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,9 +15,19 @@ const Signup = () => {
   const { signup } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    // Add input validation
+    if (!name.trim()) {
+      return setError('Please enter your name');
+    }
+    if (!email.trim()) {
+      return setError('Please enter your email');
+    }
+    if (password.length < 6) {
+      return setError('Password must be at least 6 characters long');
+    }
     if (password !== confirmPassword) {
       return setError('Passwords do not match');
     }
@@ -26,10 +35,22 @@ const Signup = () => {
     try {
       setError('');
       setLoading(true);
+      
       await signup(email, password, name);
       router.push('/dashboard');
     } catch (error) {
-      setError('Failed to create an account: ' + error.message);
+      console.error("Signup error:", error);
+      
+      // More user-friendly error messages
+      if ((error as { code?: string }).code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists');
+      } else if ((error as { code?: string }).code === 'auth/invalid-email') {
+        setError('Please enter a valid email address');
+      } else if ((error as { code?: string }).code === 'auth/weak-password') {
+        setError('Password is too weak. Please choose a stronger password');
+      } else {
+        setError('Failed to create account. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -139,6 +160,4 @@ const Signup = () => {
       </div>
     </div>
   );
-};
-
-export default Signup;
+}
