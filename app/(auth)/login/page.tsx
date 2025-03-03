@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sprout } from 'lucide-react';
-import type { AuthContextType } from '@/contexts/AuthContext';
+import AuthDebug from '@/components/AuthDebug'; // Import debug component
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,11 +13,18 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [redirectChecked, setRedirectChecked] = useState(false);
   
-  // Fix: Use explicit type casting for useAuth
-  const auth = useAuth() as AuthContextType;
+  // Get auth context with safer access pattern
+  const auth = useAuth();
   const { login, currentUser, loading: authLoading } = auth;
   
   const router = useRouter();
+
+  // Add extra debug logging
+  useEffect(() => {
+    console.log("Login component mounted");
+    console.log("Auth context available:", !!auth);
+    console.log("Auth functions:", Object.keys(auth));
+  }, [auth]);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -27,14 +34,16 @@ export default function Login() {
     });
     
     // Clear any previous redirect markers
-    const keys = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key && key.startsWith('redirect_attempted_')) {
-        keys.push(key);
+    if (typeof window !== 'undefined') {
+      const keys = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('redirect_attempted_')) {
+          keys.push(key);
+        }
       }
+      keys.forEach(key => sessionStorage.removeItem(key));
     }
-    keys.forEach(key => sessionStorage.removeItem(key));
     
     // Only redirect if we're not in a loading state and have a user
     if (!authLoading) {
@@ -51,14 +60,22 @@ export default function Login() {
     e.preventDefault();
     console.log("Submit handler triggered");
     
+    // Verify login function exists
+    if (typeof login !== 'function') {
+      console.error("Login function is not available:", login);
+      setError('Authentication system not properly initialized');
+      return;
+    }
+    
     try {
       setError('');
       setLoading(true);
+      console.log("Attempting login with:", { email });
       await login(email, password);
       
       // Don't redirect here - let the useEffect handle it
       console.log("Login successful");
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Login error:", error);
       if (error instanceof Error) {
         setError('Failed to sign in: ' + error.message);
@@ -84,6 +101,9 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-emerald-50 px-4">
+      {/* Debug component - REMOVE AFTER DEBUGGING */}
+      <AuthDebug />
+      
       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-lg shadow">
         <div className="text-center">
           <div className="flex justify-center">
