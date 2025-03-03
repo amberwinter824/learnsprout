@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sprout } from 'lucide-react';
+import type { AuthContextType } from '@/contexts/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,11 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [redirectChecked, setRedirectChecked] = useState(false);
-  const { login, currentUser, loading: authLoading } = useAuth();
+  
+  // Fix: Use explicit type casting for useAuth
+  const auth = useAuth() as AuthContextType;
+  const { login, currentUser, loading: authLoading } = auth;
+  
   const router = useRouter();
 
   // Check if user is already logged in
@@ -44,6 +49,7 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("Submit handler triggered");
     
     try {
       setError('');

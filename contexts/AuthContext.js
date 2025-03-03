@@ -14,7 +14,13 @@ import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext({});
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context || Object.keys(context).length === 0) {
+    console.error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const isBrowser = typeof window !== 'undefined';
@@ -45,15 +51,23 @@ export const AuthProvider = ({ children }) => {
       
       return user;
     } catch (error) {
+      console.error("Signup error:", error);
       throw error;
     }
   };
 
   const login = async (email, password) => {
+    if (!email || !password) {
+      console.error("Email or password is missing");
+      throw new Error("Email and password are required");
+    }
+    
     try {
+      console.log(`Attempting login for ${email}`);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userData = await getUserData(userCredential.user.uid);
+      console.log("Login successful, fetching user data");
       
+      const userData = await getUserData(userCredential.user.uid);
       setCurrentUser({ ...userCredential.user, ...userData });
       
       if (isBrowser) {
@@ -63,12 +77,14 @@ export const AuthProvider = ({ children }) => {
       
       return userCredential;
     } catch (error) {
+      console.error("Login error in AuthContext:", error);
       throw error;
     }
   };
 
   const logout = async () => {
     try {
+      console.log("Logging out...");
       await signOut(auth);
       
       if (isBrowser) {
@@ -85,8 +101,10 @@ export const AuthProvider = ({ children }) => {
       }
       
       setCurrentUser(null);
+      console.log("Logged out, redirecting to login");
       router.push('/login');
     } catch (error) {
+      console.error("Logout error:", error);
       throw error;
     }
   };
@@ -113,6 +131,8 @@ export const AuthProvider = ({ children }) => {
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? `User ${user.uid} logged in` : "No user");
+      
       if (user) {
         try {
           const userData = await getUserData(user.uid);
@@ -137,7 +157,7 @@ export const AuthProvider = ({ children }) => {
       setInitialized(true);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, [isBrowser]);
 
   const value = {

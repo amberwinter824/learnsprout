@@ -1,6 +1,6 @@
 import { User, UserCredential } from 'firebase/auth';
 
-interface UserData {
+export interface UserData {
   name?: string;
   email?: string;
   createdAt?: any;
@@ -15,6 +15,7 @@ export interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   getUserData: (uid: string) => Promise<UserData | null>;
   loading: boolean;
+  initialized: boolean;
 }
 
 export function useAuth(): AuthContextType;
