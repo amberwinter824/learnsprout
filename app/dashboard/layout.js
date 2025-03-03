@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }) {
             <div className="px-4 py-4 flex items-center justify-between">
               <div className="flex items-center">
                 <Sprout className="h-8 w-8 text-emerald-500" />
-                <span className="ml-2 text-xl font-semibold text-gray-900">Montessori Home</span>
+                <span className="ml-2 text-xl font-semibold text-gray-900">Learn Sprout</span>
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -138,7 +138,7 @@ export default function DashboardLayout({ children }) {
           <div className="flex flex-col flex-grow bg-white pt-5 overflow-y-auto border-r">
             <div className="flex items-center flex-shrink-0 px-4">
               <Sprout className="h-8 w-8 text-emerald-500" />
-              <span className="ml-2 text-xl font-semibold text-gray-900">Montessori Home</span>
+              <span className="ml-2 text-xl font-semibold text-gray-900">Learn Sprout</span>
             </div>
             <div className="mt-6 flex-1 flex flex-col">
               <nav className="flex-1 px-2 pb-4 space-y-1">

@@ -70,7 +70,7 @@ export default function Dashboard() {
           {currentUser ? `Welcome, ${currentUser.name || 'User'}` : 'Welcome to Learn Sprout'}
         </h1>
         <p className="mt-2 text-lg text-gray-600">
-          Your personalized Learn Sproutschool platform
+          Your personalized homeschool platform
         </p>
       </div>
 
@@ -105,7 +105,7 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg p-6 text-center">
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Get Started</h2>
               <p className="text-gray-600 mb-4">
-                Add your first child to begin your Learn Sproutschool journey.
+                Add your first child to begin your journey.
               </p>
               <Link
                 href="/dashboard/children/add"
