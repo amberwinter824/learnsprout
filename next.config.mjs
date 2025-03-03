@@ -4,17 +4,31 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: true,
-  // Using ESM format with .mjs extension
-  // Add output configuration for better Vercel deployment
+  // Output configuration for better Vercel deployment
   output: 'standalone',
   
   // Explicitly set swcMinify
   swcMinify: true,
   
-  // Enable app directory (only needed for Next.js versions before 13.4)
-  // experimental: {
-  //   appDir: true,
-  // },
+  // Critical: This prevents errors with Firebase in server components
+  experimental: {
+    serverComponentsExternalPackages: ['firebase', 'firebase-admin'],
+  },
+  
+  // Important for dynamic routes (prevents static generation of auth routes)
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   description: "Personalized Montessori activities for your child",
 };
 
+// This tells Next.js not to statically optimize this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function RootLayout({
   children,
 }: {
