@@ -7,7 +7,7 @@
   --foreground: #171717;
   --text-primary: #2d3748;
   --text-secondary: #4a5568;
-  --text-muted: #718096;
+  --text-muted: #4a5568;
 }
 
 @media (prefers-color-scheme: dark) {
