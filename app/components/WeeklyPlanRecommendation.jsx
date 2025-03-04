@@ -6,10 +6,29 @@ import { useRouter } from 'next/navigation';
 import { generateWeeklyPlan } from '@/lib/planGenerator';
 import { Loader2, Calendar, ArrowRight, ShieldAlert } from 'lucide-react';
 
-export default function WeeklyPlanRecommendation({ childId, childName, userId, childData }) {
+export default function WeeklyPlanRecommendation({ childId, childName, userId, childData = {} }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  // Format the last generated date safely
+  const formatLastGenerated = () => {
+    if (!childData || !childData.lastPlanGenerated) {
+      return "Never";
+    }
+    
+    try {
+      // Handle both Firestore Timestamp and regular Date objects
+      const dateObj = childData.lastPlanGenerated.toDate 
+        ? childData.lastPlanGenerated.toDate() 
+        : new Date(childData.lastPlanGenerated);
+        
+      return dateObj.toLocaleString();
+    } catch (err) {
+      console.error("Error formatting date:", err);
+      return "Unknown";
+    }
+  };
 
   const handleGeneratePlan = async () => {
     if (!childId || !userId) {
@@ -66,31 +85,29 @@ export default function WeeklyPlanRecommendation({ childId, childName, userId, c
           </div>
         )}
         
-        <div className="text-sm text-gray-500">
-          Last generated: <span className="font-medium">
-            {childData?.lastPlanGenerated 
-              ? new Date(childData.lastPlanGenerated.toDate?.() || childData.lastPlanGenerated).toLocaleString() 
-              : "Never"}
-          </span>
+        <div className="flex justify-between items-center mt-6">
+          <div className="text-sm text-gray-500">
+            Last generated: <span className="font-medium">{formatLastGenerated()}</span>
+          </div>
+          
+          <button
+            onClick={handleGeneratePlan}
+            disabled={isGenerating}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                Generating...
+              </>
+            ) : (
+              <>
+                Generate Weekly Plan
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </button>
         </div>
-        
-        <button
-          onClick={handleGeneratePlan}
-          disabled={isGenerating}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
-              Generating...
-            </>
-          ) : (
-            <>
-              Generate Weekly Plan
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </>
-          )}
-        </button>
       </div>
     </div>
   );

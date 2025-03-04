@@ -191,13 +191,13 @@ export default function ChildProfilePage({ params }) {
           </div>
         </div>
         
-        {/* Weekly Plan Recommendation - New Component */}
+        {/* Weekly Plan Recommendation - Fixed: Using 'child' instead of 'childData' */}
         <div className="md:col-span-2">
           <WeeklyPlanRecommendation 
             childId={id} 
             childName={child.name} 
             userId={currentUser?.uid}
-            childData={childData}
+            childData={child}
           />
         </div>
       </div>
