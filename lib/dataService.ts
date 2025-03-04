@@ -1,4 +1,4 @@
-// lib/dataService.js
+// lib/dataService.ts
 import { 
     collection, 
     doc, 
@@ -11,18 +11,77 @@ import {
     query, 
     where, 
     orderBy, 
-    serverTimestamp 
+    serverTimestamp,
+    DocumentData,
+    Timestamp 
   } from 'firebase/firestore';
   import { db } from './firebase';
   
+  interface UserData extends DocumentData {
+    id?: string;
+    email?: string;
+    name?: string;
+    updatedAt?: Timestamp;
+  }
+  
+  interface ChildData extends DocumentData {
+    id?: string;
+    name: string;
+    birthDate?: Timestamp;
+    parentId?: string;
+    userId?: string;
+    ageGroup?: string;
+    active?: boolean;
+    interests?: string[];
+    notes?: string;
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+  }
+  
+  interface ActivityData extends DocumentData {
+    id?: string;
+    title: string;
+    description?: string;
+    area?: string;
+    ageGroups?: string[];
+    duration?: number;
+    difficulty?: string;
+    materialsNeeded?: string[];
+    skillsAddressed?: string[];
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+  }
+  
+  // Add ProgressData and WeeklyPlanData interfaces
+  interface ProgressData extends DocumentData {
+    id?: string;
+    childId: string;
+    activityId: string;
+    date: Timestamp;
+    completionStatus: 'started' | 'in_progress' | 'completed';
+    notes?: string;
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+  }
+  
+  interface WeeklyPlanData extends DocumentData {
+    id?: string;
+    childId: string;
+    userId: string;
+    weekStarting: Timestamp;
+    createdBy: string;
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+  }
+  
   // ---------- User Functions ----------
-  export async function getUserData(userId) {
+  export async function getUserData(userId: string): Promise<UserData | null> {
     const docRef = doc(db, "users", userId);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   }
   
-  export async function updateUserData(userId, data) {
+  export async function updateUserData(userId: string, data: Partial<UserData>) {
     const userRef = doc(db, "users", userId);
     await updateDoc(userRef, {
       ...data,
@@ -31,7 +90,7 @@ import {
   }
   
   // ---------- Child Functions ----------
-  export async function createChild(userId, childData) {
+  export async function createChild(userId: string, childData: ChildData): Promise<string> {
     // Add debugging logs
     console.log("Creating child with user ID:", userId);
     console.log("Child data:", childData);
@@ -58,13 +117,13 @@ import {
     }
   }
   
-  export async function getChild(childId) {
+  export async function getChild(childId: string): Promise<ChildData | null> {
     const docRef = doc(db, "children", childId);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   }
   
-  export async function updateChild(childId, data) {
+  export async function updateChild(childId: string, data: Partial<ChildData>) {
     const childRef = doc(db, "children", childId);
     await updateDoc(childRef, {
       ...data,
@@ -72,11 +131,11 @@ import {
     });
   }
   
-  export async function deleteChild(childId) {
+  export async function deleteChild(childId: string) {
     await deleteDoc(doc(db, "children", childId));
   }
   
-  export async function getUserChildren(userId) {
+  export async function getUserChildren(userId: string): Promise<ChildData[]> {
     const q = query(
       collection(db, "children"), 
       where("userId", "==", userId),
@@ -84,11 +143,11 @@ import {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChildData));
   }
   
   // ---------- Activity Functions ----------
-  export async function createActivity(activityData) {
+  export async function createActivity(activityData: ActivityData): Promise<string> {
     const activityRef = await addDoc(collection(db, "activities"), {
       ...activityData,
       createdAt: serverTimestamp(),
@@ -98,13 +157,13 @@ import {
     return activityRef.id;
   }
   
-  export async function getActivity(activityId) {
+  export async function getActivity(activityId: string): Promise<ActivityData | null> {
     const docRef = doc(db, "activities", activityId);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   }
   
-  export async function updateActivity(activityId, data) {
+  export async function updateActivity(activityId: string, data: Partial<ActivityData>) {
     const activityRef = doc(db, "activities", activityId);
     await updateDoc(activityRef, {
       ...data,
@@ -112,37 +171,37 @@ import {
     });
   }
   
-  export async function deleteActivity(activityId) {
+  export async function deleteActivity(activityId: string) {
     await deleteDoc(doc(db, "activities", activityId));
   }
   
-  export async function getAllActivities() {
+  export async function getAllActivities(): Promise<ActivityData[]> {
     const querySnapshot = await getDocs(collection(db, "activities"));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityData));
   }
   
-  export async function getActivitiesByAgeGroup(ageGroup) {
+  export async function getActivitiesByAgeGroup(ageGroup: string): Promise<ActivityData[]> {
     const q = query(
       collection(db, "activities"), 
       where("ageGroups", "array-contains", ageGroup)
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityData));
   }
   
-  export async function getActivitiesByArea(area) {
+  export async function getActivitiesByArea(area: string): Promise<ActivityData[]> {
     const q = query(
       collection(db, "activities"), 
       where("area", "==", area)
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityData));
   }
   
   // ---------- Progress Functions ----------
-  export async function createProgressRecord(progressData) {
+  export async function createProgressRecord(progressData: ProgressData): Promise<string> {
     const progressRef = await addDoc(collection(db, "progress"), {
       ...progressData,
       createdAt: serverTimestamp(),
@@ -152,13 +211,13 @@ import {
     return progressRef.id;
   }
   
-  export async function getProgressRecord(progressId) {
+  export async function getProgressRecord(progressId: string): Promise<ProgressData | null> {
     const docRef = doc(db, "progress", progressId);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as ProgressData : null;
   }
   
-  export async function updateProgressRecord(progressId, data) {
+  export async function updateProgressRecord(progressId: string, data: Partial<ProgressData>) {
     const progressRef = doc(db, "progress", progressId);
     await updateDoc(progressRef, {
       ...data,
@@ -166,11 +225,11 @@ import {
     });
   }
   
-  export async function deleteProgressRecord(progressId) {
+  export async function deleteProgressRecord(progressId: string) {
     await deleteDoc(doc(db, "progress", progressId));
   }
   
-  export async function getChildProgress(childId) {
+  export async function getChildProgress(childId: string): Promise<ProgressData[]> {
     const q = query(
       collection(db, "progress"), 
       where("childId", "==", childId),
@@ -178,11 +237,11 @@ import {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProgressData));
   }
   
   // ---------- Weekly Plan Functions ----------
-  export async function createWeeklyPlan(planData) {
+  export async function createWeeklyPlan(planData: WeeklyPlanData): Promise<string> {
     const planRef = await addDoc(collection(db, "weeklyPlans"), {
       ...planData,
       createdAt: serverTimestamp(),
@@ -192,13 +251,13 @@ import {
     return planRef.id;
   }
   
-  export async function getWeeklyPlan(planId) {
+  export async function getWeeklyPlan(planId: string): Promise<WeeklyPlanData | null> {
     const docRef = doc(db, "weeklyPlans", planId);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   }
   
-  export async function updateWeeklyPlan(planId, data) {
+  export async function updateWeeklyPlan(planId: string, data: Partial<WeeklyPlanData>) {
     const planRef = doc(db, "weeklyPlans", planId);
     await updateDoc(planRef, {
       ...data,
@@ -206,11 +265,11 @@ import {
     });
   }
   
-  export async function deleteWeeklyPlan(planId) {
+  export async function deleteWeeklyPlan(planId: string) {
     await deleteDoc(doc(db, "weeklyPlans", planId));
   }
   
-  export async function getChildWeeklyPlans(childId) {
+  export async function getChildWeeklyPlans(childId: string): Promise<WeeklyPlanData[]> {
     const q = query(
       collection(db, "weeklyPlans"), 
       where("childId", "==", childId),
@@ -218,10 +277,10 @@ import {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeeklyPlanData));
   }
   
-  export async function getCurrentWeeklyPlan(childId, weekStarting) {
+  export async function getCurrentWeeklyPlan(childId: string, weekStarting: Timestamp): Promise<WeeklyPlanData | null> {
     const q = query(
       collection(db, "weeklyPlans"),
       where("childId", "==", childId),
@@ -229,5 +288,5 @@ import {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))[0] || null;
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeeklyPlanData))[0] || null;
   }

@@ -197,6 +197,7 @@ export default function ChildProfilePage({ params }) {
             childId={id} 
             childName={child.name} 
             userId={currentUser?.uid}
+            childData={childData}
           />
         </div>
       </div>

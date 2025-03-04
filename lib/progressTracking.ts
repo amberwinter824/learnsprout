@@ -249,7 +249,7 @@ import {
    */
   export async function getRecentProgressForChildren(
     childIds: string[], 
-    limit: number = 5
+    limitCount: number = 5
   ): Promise<ProgressRecord[]> {
     try {
       if (childIds.length === 0) {
@@ -265,7 +265,7 @@ import {
           collection(db, 'progressRecords'),
           where('childId', '==', childId),
           orderBy('date', 'desc'),
-          limit(limit)
+          limit(limitCount)
         );
         
         const snapshot = await getDocs(childQuery);
@@ -285,7 +285,7 @@ import {
       });
       
       // Return only the most recent records up to the limit
-      return allRecords.slice(0, limit);
+      return allRecords.slice(0, limitCount);
     } catch (error) {
       console.error('Error getting recent progress:', error);
       throw error;

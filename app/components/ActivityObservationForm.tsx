@@ -2,11 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, collection, query, where, getDocs, DocumentData, QueryDocumentSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { addProgressRecord, getActivityProgress } from '@/lib/progressTracking';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { addProgressRecord, getActivityProgress } from '../../lib/progressTracking';
+import { AlertCircle, CheckCircle, Loader2, X } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -43,9 +43,19 @@ interface ActivityObservationFormProps {
   activityId: string;
   childId: string;
   onSuccess?: () => void;
+  onClose?: () => void;
+  weeklyPlanId?: string;
+  dayOfWeek?: string;
 }
 
-export function ActivityObservationForm({ activityId, childId, onSuccess }: ActivityObservationFormProps) {
+export function ActivityObservationForm({ 
+  activityId, 
+  childId, 
+  onSuccess, 
+  onClose,
+  weeklyPlanId,
+  dayOfWeek
+}: ActivityObservationFormProps) {
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [relatedSkills, setRelatedSkills] = useState<Skill[]>([]);
   const [previousObservations, setPreviousObservations] = useState<ProgressRecord[]>([]);
@@ -143,7 +153,9 @@ export function ActivityObservationForm({ activityId, childId, onSuccess }: Acti
         completionDifficulty,
         notes,
         skillsDemonstrated: selectedSkills,
-        skillObservations
+        skillObservations,
+        weeklyPlanId,
+        dayOfWeek
       };
       
       // Add the progress record
@@ -168,7 +180,13 @@ export function ActivityObservationForm({ activityId, childId, onSuccess }: Acti
       
       // Show success message
       setSuccessMessage('Observation recorded successfully!');
-      setTimeout(() => setSuccessMessage(''), 5000);
+      
+      // You can optionally close the form after success
+      if (onClose) {
+        setTimeout(() => onClose(), 1500);
+      } else {
+        setTimeout(() => setSuccessMessage(''), 5000);
+      }
     } catch (err: any) {
       console.error('Error adding observation:', err);
       setError('Failed to save observation. Please try again.');
@@ -198,7 +216,7 @@ export function ActivityObservationForm({ activityId, childId, onSuccess }: Acti
   const formatDate = (timestamp: Timestamp | Date | undefined): string => {
     if (!timestamp) return 'Unknown date';
     
-    const date = 'toDate' in timestamp ? timestamp.toDate() : new Date(timestamp);
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -233,6 +251,18 @@ export function ActivityObservationForm({ activityId, childId, onSuccess }: Acti
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {onClose && (
+        <div className="flex justify-end p-2">
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+      
       {successMessage && (
         <div className="bg-green-50 text-green-700 p-4 border-b border-green-100 flex items-center">
           <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
@@ -241,7 +271,9 @@ export function ActivityObservationForm({ activityId, childId, onSuccess }: Acti
       )}
       
       <div className="p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Record Observation</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          Record Observation for {activity.title}
+        </h3>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
