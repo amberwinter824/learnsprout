@@ -1,67 +1,102 @@
 "use client"
-export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserChildren } from '@/lib/dataService';
+import { getUserChildren, getAllActivities } from '@/lib/dataService';
 import { Users, BookOpen, BarChart2, Calendar } from 'lucide-react';
+
+interface Child {
+  id: string;
+  name?: string;
+  birthDate?: any;
+  ageGroup?: string;
+  interests?: string[];
+  notes?: string;
+  active?: boolean;
+  parentId?: string;
+  userId?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+interface DashboardCard {
+  title: string;
+  description: string;
+  icon: React.ComponentType<any>;
+  href: string;
+  color: string;
+  count: number | string;
+}
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
-  const [children, setChildren] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [activityCount, setActivityCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    async function fetchChildren() {
+    async function fetchData() {
       if (currentUser?.uid) {
         try {
+          // Fetch children data
           const childrenData = await getUserChildren(currentUser.uid);
           setChildren(childrenData);
+          
+          // Fetch activities count
+          try {
+            const activities = await getAllActivities();
+            setActivityCount(activities?.length || 0);
+          } catch (err) {
+            console.error('Error fetching activities:', err);
+            setActivityCount(0);
+          }
         } catch (error) {
-          console.error('Error fetching children:', error);
+          console.error('Error fetching dashboard data:', error);
         } finally {
           setLoading(false);
         }
       }
     }
 
-    fetchChildren();
+    fetchData();
   }, [currentUser]);
 
-  const dashboardCards = [
-    {
-      title: 'Child Profiles',
-      description: 'Manage your children\'s profiles',
-      icon: Users,
-      href: '/dashboard/children',
-      color: 'bg-blue-500',
-      count: children.length
-    },
-    {
-      title: 'Weekly Activities',
-      description: 'Plan and manage weekly activities',
-      icon: Calendar,
-      href: '/dashboard/activities',
-      color: 'bg-emerald-500',
-      count: '0' // This would need to be dynamically calculated
-    },
-    {
-      title: 'Activity Library',
-      description: 'Browse all available activities',
-      icon: BookOpen,
-      href: '/dashboard/activities/library',
-      color: 'bg-indigo-500',
-      count: '0' // This would need to be dynamically calculated
-    },
-    {
-      title: 'Progress Tracking',
-      description: 'Track development and milestones',
-      icon: BarChart2,
-      href: '/dashboard/progress',
-      color: 'bg-amber-500',
-      count: '0' // This would need to be dynamically calculated
-    }
-  ];
+  const getDashboardCards = (): DashboardCard[] => {
+    return [
+      {
+        title: 'Child Profiles',
+        description: 'Manage your children\'s profiles',
+        icon: Users,
+        href: '/dashboard/children',
+        color: 'bg-blue-500',
+        count: children.length
+      },
+      {
+        title: 'Weekly Activities',
+        description: 'Plan and manage weekly activities',
+        icon: Calendar,
+        href: children.length > 0 ? `/dashboard/children/${children[0]?.id}/weekly-plan` : '/dashboard/children',
+        color: 'bg-emerald-500',
+        count: children.length > 0 ? 'View' : 0
+      },
+      {
+        title: 'Activity Library',
+        description: 'Browse all available activities',
+        icon: BookOpen,
+        href: '/dashboard/activities',
+        color: 'bg-indigo-500',
+        count: activityCount
+      },
+      {
+        title: 'Progress Tracking',
+        description: 'Track development and milestones',
+        icon: BarChart2,
+        href: children.length > 0 ? `/dashboard/children/${children[0]?.id}/progress` : '/dashboard/children',
+        color: 'bg-amber-500',
+        count: children.length > 0 ? 'View' : 0
+      }
+    ];
+  };
 
   return (
     <div>
@@ -81,7 +116,7 @@ export default function Dashboard() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {dashboardCards.map((card) => (
+            {getDashboardCards().map((card) => (
               <Link
                 key={card.title}
                 href={card.href}
@@ -126,10 +161,10 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium">
-                            {child.name.charAt(0).toUpperCase()}
+                            {child.name ? child.name.charAt(0).toUpperCase() : 'C'}
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{child.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{child.name || 'Child'}</div>
                             <div className="text-sm text-gray-500">
                               {child.birthDate && new Date(child.birthDate.seconds * 1000).toLocaleDateString()}
                             </div>

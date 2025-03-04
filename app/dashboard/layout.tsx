@@ -1,19 +1,34 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, DocumentData } from 'firebase/firestore';
 import { Sprout, Home, Users, BookOpen, BarChart2, LogOut, Menu, X } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Cookies from 'js-cookie';
 
-export default function DashboardLayout({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<any>;
+}
+
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
+
+interface CombinedUser extends User {
+  name?: string;
+  displayName: string | null;
+}
+
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const [currentUser, setCurrentUser] = useState<CombinedUser | null>(null);
   const pathname = usePathname();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -24,7 +39,7 @@ export default function DashboardLayout({ children }) {
           const userData = userDoc.exists() ? userDoc.data() : {};
 
           // Combine Firebase user with Firestore user data
-          const combinedUser = { ...user, ...userData };
+          const combinedUser = { ...user, ...userData } as CombinedUser;
           setCurrentUser(combinedUser);
 
           // Set token in cookies
@@ -32,7 +47,7 @@ export default function DashboardLayout({ children }) {
           Cookies.set('token', token, { expires: 7 });
         } catch (error) {
           console.error('Error fetching user data:', error);
-          setCurrentUser(user);
+          setCurrentUser(user as CombinedUser);
         }
       } else {
         setCurrentUser(null);
@@ -43,21 +58,22 @@ export default function DashboardLayout({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const navigation = [
+  const navigation: NavItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Children', href: '/dashboard/children', icon: Users },
     { name: 'Activities', href: '/dashboard/activities', icon: BookOpen },
-    { name: 'Progress', href: '/dashboard/progress', icon: BarChart2 },
+    // You can uncomment this if you implement a dedicated progress page
+    // { name: 'Progress', href: '/dashboard/progress', icon: BarChart2 },
   ];
 
-  const handleLogout = async () => {
+  const handleLogout = async (): Promise<void> => {
     try {
       console.log("Logging out...");
       await signOut(auth);
       
       // Remove token and clear session storage
       Cookies.remove('token');
-      const keys = [];
+      const keys: string[] = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
         if (key && key.startsWith('redirect_attempted_')) {
