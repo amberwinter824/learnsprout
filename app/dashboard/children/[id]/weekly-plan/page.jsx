@@ -29,6 +29,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateWeeklyPlan } from '@/lib/planGenerator';
+import { updateLastGeneratedTimestamp } from '@/lib/weeklyPlanService';
+import ActivityDetailModal from '@/app/components/ActivityDetailModal';
+import { ActivityObservationForm } from '@/app/components/ActivityObservationForm';
+import ActivityCard from '@/app/components/ActivityCard';
 
 export default function WeeklyPlanPage({ params }) {
   const router = useRouter();
@@ -341,6 +345,9 @@ export default function WeeklyPlanPage({ params }) {
       // Generate a new plan
       const newPlan = await generateWeeklyPlan(childId, currentUser.uid);
       
+      // Update the lastPlanGenerated timestamp on the child profile
+      await updateLastGeneratedTimestamp(childId);
+      
       // Update state with the new plan
       setWeeklyPlan(newPlan);
       
@@ -453,7 +460,6 @@ export default function WeeklyPlanPage({ params }) {
       </div>
     );
   }
-
   return (
     <div>
       <div className="mb-6">
@@ -558,63 +564,24 @@ export default function WeeklyPlanPage({ params }) {
                       </div>
                       {weeklyPlan[day]
                         ?.filter(activity => activity.timeSlot === timeSlot)
-                        .map((activity, index) => {
-                          const activityDetail = activityDetails[activity.activityId];
-                          return (
-                            <div key={`${activity.activityId}-${index}`} className="mb-2 border rounded-md p-3 bg-gray-50">
-                              <div className="flex items-start justify-between mb-2">
-                                <h5 className="text-sm font-medium">
-                                  {activityDetail?.title || 'Unknown Activity'}
-                                </h5>
-                                <div className="flex space-x-2">
-                                  {activity.status !== 'completed' && (
-                                    <button
-                                      onClick={() => handleAddObservation(activity.activityId, day, index)}
-                                      className="text-xs text-emerald-600 hover:text-emerald-800"
-                                      title="Add Observation"
-                                    >
-                                      <File className="h-3 w-3" />
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => handleRemoveActivity(day, index)}
-                                    className="text-gray-400 hover:text-red-500"
-                                    title="Remove Activity"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              </div>
-                              
-                              {activityDetail && (
-                                <div className="flex flex-wrap gap-1 mb-2">
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColorClass(activityDetail.area)}`}>
-                                    {getAreaLabel(activityDetail.area)}
-                                  </span>
-                                  {activityDetail.duration && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 flex items-center">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      {activityDetail.duration} min
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              
-                              <div className="flex justify-between items-center mt-2">
-                                <StatusBadge status={activity.status} />
-                                
-                                {activity.status !== 'completed' && (
-                                  <button
-                                    onClick={() => handleUpdateActivityStatus(day, index, 'completed')}
-                                    className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-200 hover:bg-emerald-100"
-                                  >
-                                    Mark Complete
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                        .map((activity, index) => (
+                          <div key={`${activity.activityId}-${index}`} className="mb-2">
+                            <ActivityCard
+                              activity={activity}
+                              activityData={activityDetails[activity.activityId]}
+                              day={day}
+                              childId={childId}
+                              onStatusChange={() => {
+                                // Refetch the weekly plan data after status change
+                                if (weeklyPlan.id) {
+                                  getWeeklyPlan(weeklyPlan.id).then(plan => {
+                                    if (plan) setWeeklyPlan(plan);
+                                  });
+                                }
+                              }}
+                            />
+                          </div>
+                        ))}
                     </div>
                   ))}
                 </div>
@@ -756,36 +723,15 @@ export default function WeeklyPlanPage({ params }) {
             </div>
             
             <div className="p-6">
-              {/* Insert ActivityObservationForm component here */}
-              {/* This would be imported from components/ActivityObservationForm */}
               {selectedActivityForObservation && (
-                <div>
-                  <p className="mb-4 text-gray-600">
-                    Record your observations for the activity "{activityDetails[selectedActivityForObservation.id]?.title || 'Activity'}" 
-                    completed on {dayLabels[days.indexOf(selectedActivityForObservation.day)]}.
-                  </p>
-                  
-                  {/* This would normally be replaced with the actual component */}
-                  <div className="bg-yellow-50 p-4 rounded-md">
-                    <p className="text-yellow-700">
-                      ActivityObservationForm would be rendered here, with props:
-                    </p>
-                    <ul className="list-disc pl-5 mt-2 text-yellow-600">
-                      <li>activityId: {selectedActivityForObservation.id}</li>
-                      <li>childId: {childId}</li>
-                      <li>onSuccess: handleObservationRecorded</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      onClick={() => setShowAddObservation(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+                <ActivityObservationForm
+                  activityId={selectedActivityForObservation.id}
+                  childId={childId}
+                  onSuccess={handleObservationRecorded}
+                  onClose={() => setShowAddObservation(false)}
+                  weeklyPlanId={weeklyPlan?.id}
+                  dayOfWeek={selectedActivityForObservation.day}
+                />
               )}
             </div>
           </div>

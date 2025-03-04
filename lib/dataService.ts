@@ -120,7 +120,7 @@ import {
   export async function getChild(childId: string): Promise<ChildData | null> {
     const docRef = doc(db, "children", childId);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+    return docSnap.exists() ? { id: docSnap.id, ...(docSnap.data() as ChildData) } : null;
   }
   
   export async function updateChild(childId: string, data: Partial<ChildData>) {
@@ -160,7 +160,7 @@ import {
   export async function getActivity(activityId: string): Promise<ActivityData | null> {
     const docRef = doc(db, "activities", activityId);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+    return docSnap.exists() ? { id: docSnap.id, ...(docSnap.data() as ActivityData) } : null;
   }
   
   export async function updateActivity(activityId: string, data: Partial<ActivityData>) {
@@ -254,7 +254,7 @@ import {
   export async function getWeeklyPlan(planId: string): Promise<WeeklyPlanData | null> {
     const docRef = doc(db, "weeklyPlans", planId);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as WeeklyPlanData : null;
   }
   
   export async function updateWeeklyPlan(planId: string, data: Partial<WeeklyPlanData>) {

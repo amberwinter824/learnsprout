@@ -40,7 +40,10 @@ export default function Dashboard() {
         try {
           // Fetch children data
           const childrenData = await getUserChildren(currentUser.uid);
-          setChildren(childrenData);
+          setChildren(childrenData.map(child => ({
+            ...child,
+            id: child.id || '' // Ensure id is always a string
+          })));
           
           // Fetch activities count
           try {
