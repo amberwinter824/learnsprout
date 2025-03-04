@@ -7,7 +7,7 @@
   --foreground: #171717;
   --text-primary: #2d3748;
   --text-secondary: #4a5568;
-  --text-muted: #19934e;
+  --text-muted: #718096;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -16,7 +16,7 @@
     --foreground: #ededed;
     --text-primary: #f7fafc;
     --text-secondary: #e2e8f0;
-    --text-muted: #4a5568;
+    --text-muted: #a0aec0;
   }
 }
 
