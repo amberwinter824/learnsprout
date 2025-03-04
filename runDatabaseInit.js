@@ -1,4 +1,5 @@
 // runDatabaseInit.js
+require('dotenv').config({ path: '.env.local' });
 const { initializeDatabase } = require('./utilities/firebaseInit');
 
 // Add more detailed error handling

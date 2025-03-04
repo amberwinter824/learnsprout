@@ -13,15 +13,17 @@ const {
   Timestamp
 } = require('firebase/firestore');
 
-// Use the exact same Firebase config that worked in your test
+// Load environment variables in Node.js context
+require('dotenv').config({ path: '.env.local' });
+
+// Use environment variables for configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCxEjieQBNxZugmCs1t-TC5R3wvKAgkDdA",
-  authDomain: "learn-sprout.firebaseapp.com",
-  projectId: "learn-sprout",
-  storageBucket: "learn-sprout.firebasestorage.app",
-  messagingSenderId: "453725467626",
-  appId: "1:453725467626:web:353a01c707d19422857893",
-  measurementId: "G-SV0GLYPR0E"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
