@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -21,11 +21,13 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/components/*": ["./app/components/*"],
       "@/lib/*": ["./lib/*"],
+      "@/components/*": ["./app/components/*"],
       "@/contexts/*": ["./contexts/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "next.config.cjs"],
-  "exclude": ["node_modules"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "next.config.cjs", "adminDevelopmentalSkillsSeeder.cjs"],
+  "exclude": [
+    "node_modules"
+  ]
 }
