@@ -1,0 +1,117 @@
+{
+    "indexes": [
+      {
+        "collectionGroup": "children",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "userId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "progressRecords",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "childId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "date",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "progressRecords",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "childId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "skillsDemonstrated",
+            "arrayConfig": "CONTAINS"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "activitySuggestions",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "childId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "priority",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "weeklyPlans",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "childId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "weekStarting",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "childSkills",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "childId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "lastAssessed",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "childSkills",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "childId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "recommendationLogs",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "childId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "suggestedAt",
+            "order": "DESCENDING"
+          }
+        ]
+      }
+    ],
+    "fieldOverrides": []
+  }  

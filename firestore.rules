@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function hasUserAccess(data) {
+      return isSignedIn() && (data.userId == request.auth.uid || data.parentId == request.auth.uid);
+    }
+    
+    function hasChildAccess(childId) {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/children/$(childId)) && 
+             get(/databases/$(database)/documents/children/$(childId)).data.userId == request.auth.uid;
+    }
+    
+    function isChildData(data) {
+      return data.keys().hasAll(['childId']) && hasChildAccess(data.childId);
+    }
+    
+    // Collections
+    match /{collection}/{document=**} {
+      allow read, write: if false; // Default deny
+    }
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+    
+    match /children/{childId} {
+      allow read, write: if isSignedIn() && hasUserAccess(resource.data);
+    }
+    
+    // Child skills tracking
+    match /childSkills/{skillId} {
+      allow read: if isSignedIn() && isChildData(resource.data);
+      allow create: if isSignedIn() && isChildData(request.resource.data);
+      allow update: if isSignedIn() && isChildData(resource.data) && isChildData(request.resource.data);
+      allow delete: if isSignedIn() && isChildData(resource.data);
+    }
+    
+    // Read-only collections for developmental skills and activities
+    match /developmentalSkills/{skillId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+    
+    match /activities/{activityId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+    
+    // Weekly plans collection
+    match /weeklyPlans/{planId} {
+      allow read: if isSignedIn() && isChildData(resource.data);
+      allow create: if isSignedIn() && isChildData(request.resource.data);
+      allow update: if isSignedIn() && isChildData(resource.data) && isChildData(request.resource.data);
+      allow delete: if isSignedIn() && isChildData(resource.data);
+    }
+    
+    // Progress records
+    match /progressRecords/{recordId} {
+      allow read: if isSignedIn() && isChildData(resource.data);
+      allow create: if isSignedIn() && isChildData(request.resource.data);
+      allow update: if isSignedIn() && isChildData(resource.data) && isChildData(request.resource.data);
+      allow delete: if isSignedIn() && isChildData(resource.data);
+    }
+    
+    // Activity suggestions
+    match /activitySuggestions/{suggestionId} {
+      allow read: if isSignedIn() && isChildData(resource.data);
+      allow create: if false; // Only system-generated
+      allow update: if isSignedIn() && isChildData(resource.data) && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['status', 'weeklyPlanId']);
+      allow delete: if false; // Preserve suggestion history
+    }
+    
+    // Recommendation logs - system-managed with limited updates
+    match /recommendationLogs/{logId} {
+      allow read: if isSignedIn() && isChildData(resource.data);
+      allow create: if false; // Only system-generated
+      allow update: if isSignedIn() && isChildData(resource.data) && 
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['outcome', 'parentFeedback']);
+      allow delete: if false; // Preserve recommendation history
+    }
+  }
+}

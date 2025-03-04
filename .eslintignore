@@ -1,0 +1,7 @@
+# Add this file to your project root
+functions/**
+node_modules/
+.next/
+out/
+build/
+dist/
