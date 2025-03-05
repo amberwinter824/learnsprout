@@ -42,3 +42,26 @@ label.text-gray-700 {
 p.text-gray-600 {
   color: #1f2937 !important;
 }
+
+/* Improve form field text readability */
+input, select, textarea {
+  color: #000000 !important;
+  font-weight: 500 !important;
+}
+
+/* Add background highlight on focus for better visibility */
+input:focus, select:focus, textarea:focus {
+  background-color: #f0fff4 !important; /* Light green background on focus */
+}
+
+/* Placeholder text color */
+::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
+/* Make disabled fields more distinct */
+input:disabled, select:disabled, textarea:disabled {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+}

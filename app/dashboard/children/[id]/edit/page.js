@@ -156,7 +156,7 @@ export default function EditChildPage({ params }) {
                 required
                 value={childData.name}
                 onChange={handleChange}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm px-3 py-2"
               />
             </div>
 
@@ -171,7 +171,7 @@ export default function EditChildPage({ params }) {
                 required
                 value={childData.birthDate}
                 onChange={handleChange}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm px-3 py-2"
               />
             </div>
 
@@ -207,7 +207,7 @@ export default function EditChildPage({ params }) {
                 placeholder="art, nature, music, etc."
                 value={childData.interests}
                 onChange={handleChange}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm px-3 py-2"
               />
             </div>
 
@@ -221,7 +221,7 @@ export default function EditChildPage({ params }) {
                 rows={3}
                 value={childData.notes}
                 onChange={handleChange}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm px-3 py-2"
                 placeholder="Any additional information about your child..."
               />
             </div>
