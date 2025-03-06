@@ -9,6 +9,7 @@ interface Child {
   id: string;
   name?: string;
   birthDate?: any;
+  birthDateString?: string;
   ageGroup?: string;
   interests?: string[];
   notes?: string;
@@ -75,14 +76,6 @@ export default function Dashboard() {
         count: children.length
       },
       {
-        title: 'Weekly Activities',
-        description: 'Plan and manage weekly activities',
-        icon: Calendar,
-        href: children.length > 0 ? `/dashboard/children/${children[0]?.id}/weekly-plan` : '/dashboard/children',
-        color: 'bg-emerald-500',
-        count: children.length > 0 ? 'View' : 0
-      },
-      {
         title: 'Activity Library',
         description: 'Browse all available activities',
         icon: BookOpen,
@@ -91,12 +84,12 @@ export default function Dashboard() {
         count: activityCount
       },
       {
-        title: 'Progress Tracking',
-        description: 'Track development and milestones',
+        title: 'Progress Reports',
+        description: 'Track overall development progress',
         icon: BarChart2,
-        href: children.length > 0 ? `/dashboard/children/${children[0]?.id}/progress` : '/dashboard/children',
+        href: children.length > 0 ? `/dashboard/progress` : '/dashboard/children',
         color: 'bg-amber-500',
-        count: children.length > 0 ? 'View' : 0
+        count: 'View'
       }
     ];
   };
@@ -105,7 +98,7 @@ export default function Dashboard() {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">
-          {currentUser ? `Welcome, ${currentUser.name || 'User'}` : 'Welcome to Learn Sprout'}
+          {currentUser ? `Welcome, ${currentUser.name || currentUser.displayName || 'User'}` : 'Welcome to Learn Sprout'}
         </h1>
         <p className="mt-2 text-lg text-gray-600">
           Your personalized early childhood development platform
@@ -118,7 +111,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {getDashboardCards().map((card) => (
               <Link
                 key={card.title}
@@ -137,6 +130,40 @@ export default function Dashboard() {
                 </div>
               </Link>
             ))}
+          </div>
+          
+          {/* NEW: Weekly Plans Section */}
+          <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
+            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Weekly Plans</h3>
+            </div>
+            {children.length === 0 ? (
+              <div className="p-6 text-center">
+                <p className="text-gray-500">Add a child to create weekly plans</p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-200">
+                {children.map((child) => (
+                  <li key={child.id} className="p-4 hover:bg-gray-50">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium">
+                          {child.name ? child.name.charAt(0).toUpperCase() : 'C'}
+                        </div>
+                        <span className="ml-3 text-sm font-medium text-gray-900">{child.name || 'Child'}</span>
+                      </div>
+                      <Link
+                        href={`/dashboard/children/${child.id}/weekly-plan`}
+                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs rounded text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        <Calendar className="mr-1 h-3.5 w-3.5" />
+                        View Weekly Plan
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {children.length === 0 ? (
@@ -169,14 +196,23 @@ export default function Dashboard() {
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{child.name || 'Child'}</div>
                             <div className="text-sm text-gray-500">
-                              {child.birthDate && new Date(child.birthDate.seconds * 1000).toLocaleDateString()}
+                              {child.ageGroup || 'Age group not set'}
                             </div>
                           </div>
                         </div>
                         <div>
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            {child.ageGroup || 'Age group not set'}
-                          </span>
+                          <svg
+                            className="h-5 w-5 text-gray-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                            aria-hidden="true"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
                         </div>
                       </div>
                     </Link>

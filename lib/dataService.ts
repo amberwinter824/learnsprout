@@ -28,6 +28,7 @@ import {
     id?: string;
     name: string;
     birthDate?: Timestamp | Date;
+    birthDateString?: string; // Use string format for birth dates
     parentId?: string;
     userId: string;
     ageGroup?: string;
@@ -57,21 +58,64 @@ import {
     id?: string;
     childId: string;
     activityId: string;
-    date: Timestamp;
+    date: Timestamp | string;
     completionStatus: 'started' | 'in_progress' | 'completed';
+    engagementLevel?: 'low' | 'medium' | 'high';
+    interestLevel?: 'low' | 'medium' | 'high';
     notes?: string;
+    skillsDemonstrated?: string[];
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
   }
   
-  interface WeeklyPlanData extends DocumentData {
+  // Define day activity type
+  export interface DayActivity {
+    activityId: string;
+    timeSlot: string;
+    status: 'suggested' | 'confirmed' | 'completed';
+    order: number;
+    suggestionId?: string;
+  }
+  
+  export interface WeeklyPlanData {
     id?: string;
     childId: string;
     userId: string;
-    weekStarting: Timestamp;
+    weekStarting: string;
     createdBy: string;
-    createdAt?: Timestamp;
-    updatedAt?: Timestamp;
+    createdAt?: any;
+    updatedAt?: any;
+    monday: DayActivity[];
+    tuesday: DayActivity[];
+    wednesday: DayActivity[];
+    thursday: DayActivity[];
+    friday: DayActivity[];
+    saturday: DayActivity[];
+    sunday: DayActivity[];
+    [key: string]: any;
+  }
+  
+  // Helper function to convert dates to strings
+  function formatDateToString(date: Date | Timestamp | string | undefined): string {
+    if (!date) return '';
+    
+    // If it's a Timestamp with toDate method
+    if (typeof date === 'object' && 'toDate' in date) {
+      const dateObj = date.toDate();
+      return dateObj.toISOString().split('T')[0];
+    }
+    
+    // If it's a Date object
+    if (date instanceof Date) {
+      return date.toISOString().split('T')[0];
+    }
+    
+    // If it's already a string
+    if (typeof date === 'string') {
+      return date;
+    }
+    
+    return '';
   }
   
   // ---------- User Functions ----------
@@ -270,6 +314,10 @@ import {
   }
   
   export async function getChildWeeklyPlans(childId: string): Promise<WeeklyPlanData[]> {
+    if (!childId) {
+      throw new Error("Child ID is required to fetch weekly plans");
+    }
+    
     const q = query(
       collection(db, "weeklyPlans"), 
       where("childId", "==", childId),
@@ -277,14 +325,23 @@ import {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeeklyPlanData));
+    return querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    } as WeeklyPlanData));
   }
   
-  export async function getCurrentWeeklyPlan(childId: string, weekStarting: Timestamp): Promise<WeeklyPlanData | null> {
+  export async function getCurrentWeeklyPlan(childId: string, weekStarting: string | Date | Timestamp): Promise<WeeklyPlanData | null> {
+    // Convert weekStarting to string format if it's not already
+    const weekStartingStr = formatDateToString(weekStarting instanceof Date || 
+      (typeof weekStarting === 'object' && 'toDate' in weekStarting) ? 
+      weekStarting : 
+      weekStarting as string);
+    
     const q = query(
       collection(db, "weeklyPlans"),
       where("childId", "==", childId),
-      where("weekStarting", "==", weekStarting)
+      where("weekStarting", "==", weekStartingStr)
     );
     
     const querySnapshot = await getDocs(q);
