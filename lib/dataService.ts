@@ -24,7 +24,7 @@ import {
     updatedAt?: Timestamp;
   }
   
-  interface ChildData extends DocumentData {
+  export interface ChildData extends DocumentData {
     id?: string;
     name: string;
     birthDate?: Timestamp | Date;
