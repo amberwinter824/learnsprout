@@ -71,24 +71,63 @@ export default function ChildrenListPage() {
   };
 
   // Format birthdate for display
-  const formatBirthDate = (timestamp: any): string => {
-    if (!timestamp) return 'Not set';
+  const formatBirthDate = (birthDateInput: any): string => {
+    if (!birthDateInput) return 'Not set';
     
     try {
-      // Handle both Date objects and Firestore Timestamps
-      const date = timestamp.seconds 
-        ? new Date(timestamp.seconds * 1000) 
-        : new Date(timestamp);
+      // Handle string format (birthDateString)
+      if (typeof birthDateInput === 'string') {
+        const date = new Date(birthDateInput + 'T12:00:00');
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
       
-      return date.toLocaleDateString('en-US', {
+      // Handle Timestamp objects
+      if (birthDateInput.seconds) {
+        const date = new Date(birthDateInput.seconds * 1000);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+      
+      // Handle Date objects
+      if (birthDateInput instanceof Date) {
+        return birthDateInput.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+      
+      // Handle Firestore Timestamp with toDate method
+      if (birthDateInput.toDate && typeof birthDateInput.toDate === 'function') {
+        return birthDateInput.toDate().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+      
+      // Generic fallback
+      return new Date(birthDateInput).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       });
     } catch (error) {
-      console.error("Error formatting birthdate:", error, timestamp);
+      console.error("Error formatting birthdate:", error, birthDateInput);
       return 'Invalid date';
     }
+  };
+
+  // Helper to get birth date from either format
+  const getBirthDate = (child: ChildData) => {
+    return child.birthDateString || child.birthDate;
   };
 
   if (loading) {
@@ -155,7 +194,9 @@ export default function ChildrenListPage() {
                       {child.name}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {child.birthDate ? formatBirthDate(child.birthDate) : 'Birth date not set'}
+                      {(child.birthDate || child.birthDateString) 
+                        ? formatBirthDate(getBirthDate(child)) 
+                        : 'Birth date not set'}
                     </p>
                   </div>
                 </div>

@@ -81,11 +81,22 @@ export default function ChildProfilePage({ params }: { params: Params }) {
   }, [id, currentUser]);
 
   // Format date for display
-  function formatDate(timestamp: any): string {
-    if (!timestamp) return '';
+  function formatDate(birthDateInput: any): string {
+    if (!birthDateInput) return '';
     
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      // Handle birthDateString format
+      if (typeof birthDateInput === 'string') {
+        const date = new Date(birthDateInput + 'T12:00:00');
+        return date.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+      
+      // Handle Timestamp or Date format (legacy)
+      const date = birthDateInput.toDate ? birthDateInput.toDate() : new Date(birthDateInput);
       return date.toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
@@ -98,11 +109,20 @@ export default function ChildProfilePage({ params }: { params: Params }) {
   }
 
   // Calculate age
-  function calculateAge(birthDate: any): string {
-    if (!birthDate) return '';
+  function calculateAge(birthDateInput: any): string {
+    if (!birthDateInput) return '';
     
     try {
-      const dob = birthDate.toDate ? birthDate.toDate() : new Date(birthDate);
+      let dob;
+      
+      // Handle birthDateString format
+      if (typeof birthDateInput === 'string') {
+        dob = new Date(birthDateInput + 'T12:00:00');
+      } else {
+        // Handle Timestamp or Date format (legacy)
+        dob = birthDateInput.toDate ? birthDateInput.toDate() : new Date(birthDateInput);
+      }
+      
       const today = new Date();
       let age = today.getFullYear() - dob.getFullYear();
       const monthDiff = today.getMonth() - dob.getMonth();
@@ -122,6 +142,14 @@ export default function ChildProfilePage({ params }: { params: Params }) {
       console.error('Error calculating age:', error);
       return 'Unknown age';
     }
+  }
+
+  // Get birth date value - tries both formats
+  function getBirthDate(child: ChildData) {
+    if (child.birthDateString) {
+      return child.birthDateString;
+    }
+    return child.birthDate;
   }
 
   if (loading) {
@@ -179,11 +207,11 @@ export default function ChildProfilePage({ params }: { params: Params }) {
                 <p className="mt-1 text-gray-900">{child.name}</p>
               </div>
               
-              {child.birthDate && (
+              {(child.birthDate || child.birthDateString) && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Date of Birth</h3>
-                  <p className="mt-1 text-gray-900">{formatDate(child.birthDate)}</p>
-                  <p className="text-sm text-gray-500">{calculateAge(child.birthDate)}</p>
+                  <p className="mt-1 text-gray-900">{formatDate(getBirthDate(child))}</p>
+                  <p className="text-sm text-gray-500">{calculateAge(getBirthDate(child))}</p>
                 </div>
               )}
               
@@ -311,7 +339,7 @@ export default function ChildProfilePage({ params }: { params: Params }) {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900 truncate">{sibling.name}</p>
                     <p className="text-sm text-gray-500 truncate">
-                      {sibling.ageGroup || calculateAge(sibling.birthDate)}
+                      {sibling.ageGroup || calculateAge(getBirthDate(sibling))}
                     </p>
                   </div>
                   <div>
