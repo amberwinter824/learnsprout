@@ -35,7 +35,7 @@ const mockChildren: ChildData[] = [
   {
     id: "mock1",
     name: "Sophie",
-    birthDate: Timestamp.fromDate(new Date("2020-01-15")),
+    birthDate: Timestamp.fromMillis(new Date("2020-01-15").getTime()),
     ageGroup: "3-4",
     active: true,
     userId: "mock-user-id",
@@ -44,7 +44,7 @@ const mockChildren: ChildData[] = [
   {
     id: "mock2",
     name: "Ethan",
-    birthDate: Timestamp.fromDate(new Date("2021-06-10")),
+    birthDate: Timestamp.fromMillis(new Date("2021-06-10").getTime()),
     ageGroup: "1-2",
     active: true,
     userId: "mock-user-id",
@@ -60,68 +60,86 @@ export default function ChildrenListPage() {
   const [error, setError] = useState<string>('');
   const [useMockData, setUseMockData] = useState<boolean>(false);
   const [debugInfo, setDebugInfo] = useState<DebugInfo>({});
+  const [fetchTrigger, setFetchTrigger] = useState<number>(0); // Used to trigger new fetches
 
+  // Separate useEffect for fetching data to prevent issues with state updates
   useEffect(() => {
+    let isMounted = true; // Track if component is mounted
+    let timeoutId: NodeJS.Timeout;
+
     async function fetchChildren() {
       if (!currentUser) {
         console.log("No user found, cannot fetch children");
-        setDebugInfo(prev => ({
-          ...prev,
-          error: "No user found, cannot fetch children"
-        }));
-        setLoading(false);
+        if (isMounted) {
+          setDebugInfo(prev => ({
+            ...prev,
+            error: "No user found, cannot fetch children"
+          }));
+          setLoading(false);
+        }
         return;
       }
 
       try {
-        setDebugInfo(prev => ({
-          ...prev, 
-          fetchStart: new Date().toISOString(),
-          userInfo: { uid: currentUser.uid }
-        }));
+        if (isMounted) {
+          setDebugInfo(prev => ({
+            ...prev, 
+            fetchStart: new Date().toISOString(),
+            userInfo: { uid: currentUser.uid }
+          }));
+        }
         
         if (useMockData) {
           console.log("Using mock data");
-          setChildren(mockChildren);
-          setDebugInfo(prev => ({
-            ...prev,
-            dataSource: "mock",
-            fetchEnd: new Date().toISOString()
-          }));
+          if (isMounted) {
+            setChildren(mockChildren);
+            setDebugInfo(prev => ({
+              ...prev,
+              dataSource: "mock",
+              fetchEnd: new Date().toISOString(),
+              childrenCount: mockChildren.length
+            }));
+            setLoading(false);
+            setError('');
+          }
         } else {
           console.log("Fetching real children data for user:", currentUser.uid);
           const childrenData = await getUserChildren(currentUser.uid);
           console.log("Children data received:", childrenData);
-          setChildren(childrenData || []);
-          setDebugInfo(prev => ({
-            ...prev,
-            dataSource: "firestore",
-            fetchEnd: new Date().toISOString(),
-            dataReceived: !!childrenData,
-            childrenCount: childrenData?.length || 0
-          }));
+          
+          if (isMounted) {
+            setChildren(childrenData || []);
+            setDebugInfo(prev => ({
+              ...prev,
+              dataSource: "firestore",
+              fetchEnd: new Date().toISOString(),
+              dataReceived: !!childrenData,
+              childrenCount: childrenData?.length || 0
+            }));
+            setLoading(false);
+            setError('');
+          }
         }
-        
-        setError('');
       } catch (err: any) {
         console.error('Error fetching children:', err);
-        setError(`Failed to load children profiles: ${err.message || 'Unknown error'}`);
-        setDebugInfo(prev => ({
-          ...prev,
-          errorDetails: {
-            message: err.message,
-            stack: err.stack,
-            time: new Date().toISOString()
-          }
-        }));
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setError(`Failed to load children profiles: ${err.message || 'Unknown error'}`);
+          setDebugInfo(prev => ({
+            ...prev,
+            errorDetails: {
+              message: err.message,
+              stack: err.stack,
+              time: new Date().toISOString()
+            }
+          }));
+          setLoading(false);
+        }
       }
     }
 
     // Set a timeout to prevent infinite loading state
-    const timeout = setTimeout(() => {
-      if (loading) {
+    timeoutId = setTimeout(() => {
+      if (loading && isMounted) {
         console.log("Loading timeout triggered");
         setLoading(false);
         setError("Loading timeout - operation took too long");
@@ -133,22 +151,30 @@ export default function ChildrenListPage() {
       }
     }, 10000); // 10 second timeout
 
-    fetchChildren();
+    // Only fetch if we're in loading state
+    if (loading) {
+      fetchChildren();
+    }
 
-    return () => clearTimeout(timeout);
-  }, [currentUser, useMockData]);
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [currentUser, useMockData, fetchTrigger, loading]);
 
   const handleAddChild = (): void => {
     router.push('/dashboard/children/new');
   };
 
   const toggleMockData = (): void => {
-    setUseMockData(!useMockData);
+    setUseMockData(prev => !prev);
     setLoading(true);
   };
 
   const retryFetch = (): void => {
     setLoading(true);
+    setFetchTrigger(prev => prev + 1);
     setDebugInfo(prev => ({
       ...prev,
       retryAttempt: (prev.retryAttempt || 0) + 1,
@@ -246,6 +272,7 @@ export default function ChildrenListPage() {
             userId: currentUser?.uid,
             childrenCount: children.length,
             childrenIds: children.map(c => c.id),
+            fetchTrigger,
             ...debugInfo
           }, null, 2)}
         </pre>
