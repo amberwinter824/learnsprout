@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserChildren, ChildData } from '@/lib/dataService';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDisplayBirthDate } from '@/lib/dateUtils';
 import { PlusCircle, User } from 'lucide-react';
 
 export default function ChildrenListPage() {
@@ -68,63 +69,6 @@ export default function ChildrenListPage() {
 
   const handleAddChild = (): void => {
     router.push('/dashboard/children/add');
-  };
-
-  // Format birthdate for display
-  const formatBirthDate = (birthDateInput: any): string => {
-    if (!birthDateInput) return 'Not set';
-    
-    try {
-      // Handle string format (birthDateString)
-      if (typeof birthDateInput === 'string') {
-        // Create date without timezone adjustment by specifying parts directly
-        const [year, month, day] = birthDateInput.split('-').map(Number);
-        // Note: In JS Date, months are 0-indexed (0=Jan, 1=Feb, etc)
-        return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
-      
-      // Handle Timestamp objects
-      if (birthDateInput.seconds) {
-        const date = new Date(birthDateInput.seconds * 1000);
-        return date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
-      
-      // Handle Date objects
-      if (birthDateInput instanceof Date) {
-        return birthDateInput.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
-      
-      // Handle Firestore Timestamp with toDate method
-      if (birthDateInput.toDate && typeof birthDateInput.toDate === 'function') {
-        return birthDateInput.toDate().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
-      
-      // Generic fallback
-      return new Date(birthDateInput).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error("Error formatting birthdate:", error, birthDateInput);
-      return 'Invalid date';
-    }
   };
 
   // Helper to get birth date from either format
@@ -197,7 +141,7 @@ export default function ChildrenListPage() {
                     </h3>
                     <p className="text-sm text-gray-500">
                       {(child.birthDate || child.birthDateString) 
-                        ? formatBirthDate(getBirthDate(child)) 
+                        ? getDisplayBirthDate(child) 
                         : 'Birth date not set'}
                     </p>
                   </div>

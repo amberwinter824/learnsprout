@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getChild, getUserChildren, ChildData } from '@/lib/dataService';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDisplayBirthDate } from '@/lib/dateUtils';
 import { 
   User,
   Calendar,
@@ -80,36 +81,6 @@ export default function ChildProfilePage({ params }: { params: Params }) {
     };
   }, [id, currentUser]);
 
-  // Format date for display
-function formatDate(birthDateInput: any): string {
-  if (!birthDateInput) return '';
-  
-  try {
-    // Handle birthDateString format
-    if (typeof birthDateInput === 'string') {
-      // Create date without timezone adjustment by specifying parts directly
-      const [year, month, day] = birthDateInput.split('-').map(Number);
-      // Note: In JS Date, months are 0-indexed (0=Jan, 1=Feb, etc)
-      return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-      });
-    }
-    
-    // Handle Timestamp or Date format (legacy)
-    const date = birthDateInput.toDate ? birthDateInput.toDate() : new Date(birthDateInput);
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return 'Invalid date';
-  }
-}
-
   // Calculate age
   function calculateAge(birthDateInput: any): string {
     if (!birthDateInput) return '';
@@ -119,7 +90,12 @@ function formatDate(birthDateInput: any): string {
       
       // Handle birthDateString format
       if (typeof birthDateInput === 'string') {
-        dob = new Date(birthDateInput + 'T12:00:00');
+        const parts = birthDateInput.split('-');
+        dob = new Date(
+          parseInt(parts[0], 10),
+          parseInt(parts[1], 10) - 1,
+          parseInt(parts[2], 10)
+        );
       } else {
         // Handle Timestamp or Date format (legacy)
         dob = birthDateInput.toDate ? birthDateInput.toDate() : new Date(birthDateInput);
@@ -146,12 +122,9 @@ function formatDate(birthDateInput: any): string {
     }
   }
 
-  // Get birth date value - tries both formats
+  // Get birth date value from either format
   function getBirthDate(child: ChildData) {
-    if (child.birthDateString) {
-      return child.birthDateString;
-    }
-    return child.birthDate;
+    return child.birthDateString || child.birthDate;
   }
 
   if (loading) {
@@ -212,7 +185,7 @@ function formatDate(birthDateInput: any): string {
               {(child.birthDate || child.birthDateString) && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Date of Birth</h3>
-                  <p className="mt-1 text-gray-900">{formatDate(getBirthDate(child))}</p>
+                  <p className="mt-1 text-gray-900">{getDisplayBirthDate(child)}</p>
                   <p className="text-sm text-gray-500">{calculateAge(getBirthDate(child))}</p>
                 </div>
               )}
