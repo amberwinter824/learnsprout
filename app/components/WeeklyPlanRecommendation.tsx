@@ -1,4 +1,3 @@
-// components/WeeklyPlanRecommendation.jsx
 'use client';
 
 import { useState } from 'react';
@@ -6,13 +5,28 @@ import { useRouter } from 'next/navigation';
 import { generateWeeklyPlan } from '@/lib/planGenerator';
 import { Loader2, Calendar, ArrowRight, ShieldAlert } from 'lucide-react';
 
-export default function WeeklyPlanRecommendation({ childId, childName, userId, childData = {} }) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState('');
+interface WeeklyPlanRecommendationProps {
+  childId: string;
+  childName: string;
+  userId?: string;
+  childData?: {
+    lastPlanGenerated?: any;
+    [key: string]: any;
+  };
+}
+
+export default function WeeklyPlanRecommendation({ 
+  childId, 
+  childName, 
+  userId, 
+  childData = {} 
+}: WeeklyPlanRecommendationProps) {
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
   const router = useRouter();
 
   // Format the last generated date safely
-  const formatLastGenerated = () => {
+  const formatLastGenerated = (): string => {
     if (!childData || !childData.lastPlanGenerated) {
       return "Never";
     }
@@ -30,7 +44,7 @@ export default function WeeklyPlanRecommendation({ childId, childName, userId, c
     }
   };
 
-  const handleGeneratePlan = async () => {
+  const handleGeneratePlan = async (): Promise<void> => {
     if (!childId || !userId) {
       setError('Missing required information');
       return;
@@ -44,7 +58,7 @@ export default function WeeklyPlanRecommendation({ childId, childName, userId, c
       
       // Redirect to the weekly plan page with the new plan ID
       router.push(`/dashboard/children/${childId}/weekly-plan?planId=${plan.id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error generating weekly plan:', err);
       setError('Failed to generate weekly plan. Please try again.');
     } finally {

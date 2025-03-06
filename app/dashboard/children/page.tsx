@@ -4,53 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserChildren, ChildData } from '@/lib/dataService';
 import { useAuth } from '@/contexts/AuthContext';
-import { PlusCircle, User, RefreshCw } from 'lucide-react';
-import { Timestamp } from 'firebase/firestore';
-
-// Define a type for the debug information
-interface DebugInfo {
-  fetchStart?: string;
-  fetchEnd?: string;
-  userInfo?: {
-    uid: string;
-  };
-  dataSource?: 'mock' | 'firestore';
-  dataReceived?: boolean;
-  childrenCount?: number;
-  error?: string;
-  errorDetails?: {
-    message?: string;
-    stack?: string;
-    time: string;
-  };
-  timeoutTriggered?: boolean;
-  timeoutTime?: string;
-  retryAttempt?: number;
-  retryTime?: string;
-  [key: string]: any;
-}
-
-// Mock data to bypass Firestore fetch if needed
-const mockChildren: ChildData[] = [
-  {
-    id: "mock1",
-    name: "Sophie",
-    birthDate: Timestamp.fromMillis(new Date("2020-01-15").getTime()),
-    ageGroup: "3-4",
-    active: true,
-    userId: "mock-user-id",
-    interests: ["art", "nature", "music"]
-  },
-  {
-    id: "mock2",
-    name: "Ethan",
-    birthDate: Timestamp.fromMillis(new Date("2021-06-10").getTime()),
-    ageGroup: "1-2",
-    active: true,
-    userId: "mock-user-id",
-    interests: ["building", "sensory"]
-  }
-];
+import { PlusCircle, User } from 'lucide-react';
 
 export default function ChildrenListPage() {
   const router = useRouter();
@@ -58,11 +12,7 @@ export default function ChildrenListPage() {
   const [children, setChildren] = useState<ChildData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [useMockData, setUseMockData] = useState<boolean>(false);
-  const [debugInfo, setDebugInfo] = useState<DebugInfo>({});
-  const [fetchTrigger, setFetchTrigger] = useState<number>(0); // Used to trigger new fetches
 
-  // Separate useEffect for fetching data to prevent issues with state updates
   useEffect(() => {
     let isMounted = true; // Track if component is mounted
     let timeoutId: NodeJS.Timeout;
@@ -71,67 +21,25 @@ export default function ChildrenListPage() {
       if (!currentUser) {
         console.log("No user found, cannot fetch children");
         if (isMounted) {
-          setDebugInfo(prev => ({
-            ...prev,
-            error: "No user found, cannot fetch children"
-          }));
           setLoading(false);
         }
         return;
       }
 
       try {
-        if (isMounted) {
-          setDebugInfo(prev => ({
-            ...prev, 
-            fetchStart: new Date().toISOString(),
-            userInfo: { uid: currentUser.uid }
-          }));
-        }
+        console.log("Fetching children for user:", currentUser.uid);
+        const childrenData = await getUserChildren(currentUser.uid);
+        console.log("Children data received:", childrenData);
         
-        if (useMockData) {
-          console.log("Using mock data");
-          if (isMounted) {
-            setChildren(mockChildren);
-            setDebugInfo(prev => ({
-              ...prev,
-              dataSource: "mock",
-              fetchEnd: new Date().toISOString(),
-              childrenCount: mockChildren.length
-            }));
-            setLoading(false);
-            setError('');
-          }
-        } else {
-          console.log("Fetching real children data for user:", currentUser.uid);
-          const childrenData = await getUserChildren(currentUser.uid);
-          console.log("Children data received:", childrenData);
-          
-          if (isMounted) {
-            setChildren(childrenData || []);
-            setDebugInfo(prev => ({
-              ...prev,
-              dataSource: "firestore",
-              fetchEnd: new Date().toISOString(),
-              dataReceived: !!childrenData,
-              childrenCount: childrenData?.length || 0
-            }));
-            setLoading(false);
-            setError('');
-          }
+        if (isMounted) {
+          setChildren(childrenData || []);
+          setLoading(false);
+          setError('');
         }
       } catch (err: any) {
         console.error('Error fetching children:', err);
         if (isMounted) {
           setError(`Failed to load children profiles: ${err.message || 'Unknown error'}`);
-          setDebugInfo(prev => ({
-            ...prev,
-            errorDetails: {
-              message: err.message,
-              stack: err.stack,
-              time: new Date().toISOString()
-            }
-          }));
           setLoading(false);
         }
       }
@@ -143,11 +51,6 @@ export default function ChildrenListPage() {
         console.log("Loading timeout triggered");
         setLoading(false);
         setError("Loading timeout - operation took too long");
-        setDebugInfo(prev => ({
-          ...prev,
-          timeoutTriggered: true,
-          timeoutTime: new Date().toISOString()
-        }));
       }
     }, 10000); // 10 second timeout
 
@@ -161,25 +64,10 @@ export default function ChildrenListPage() {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [currentUser, useMockData, fetchTrigger, loading]);
+  }, [currentUser, loading]);
 
   const handleAddChild = (): void => {
     router.push('/dashboard/children/new');
-  };
-
-  const toggleMockData = (): void => {
-    setUseMockData(prev => !prev);
-    setLoading(true);
-  };
-
-  const retryFetch = (): void => {
-    setLoading(true);
-    setFetchTrigger(prev => prev + 1);
-    setDebugInfo(prev => ({
-      ...prev,
-      retryAttempt: (prev.retryAttempt || 0) + 1,
-      retryTime: new Date().toISOString()
-    }));
   };
 
   // Format birthdate for display
@@ -208,12 +96,6 @@ export default function ChildrenListPage() {
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500 mx-auto"></div>
         <p className="mt-4 text-gray-500">Loading children profiles...</p>
-        <button 
-          onClick={() => setLoading(false)}
-          className="mt-6 text-sm text-emerald-600 hover:text-emerald-700"
-        >
-          Cancel loading
-        </button>
       </div>
     );
   }
@@ -222,28 +104,13 @@ export default function ChildrenListPage() {
     <div>
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Children</h1>
-        <div className="flex space-x-2">
-          <button
-            onClick={toggleMockData}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-          >
-            {useMockData ? 'Using Mock Data' : 'Using Real Data'}
-          </button>
-          <button
-            onClick={retryFetch}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </button>
-          <button
-            onClick={handleAddChild}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-          >
-            <PlusCircle className="-ml-1 mr-2 h-5 w-5" />
-            Add Child
-          </button>
-        </div>
+        <button
+          onClick={handleAddChild}
+          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+        >
+          <PlusCircle className="-ml-1 mr-2 h-5 w-5" />
+          Add Child
+        </button>
       </div>
 
       {error && (
@@ -252,31 +119,6 @@ export default function ChildrenListPage() {
           <div className="mt-1">{error}</div>
         </div>
       )}
-
-      {/* Debug Info */}
-      <div className="mb-6 bg-yellow-50 p-4 rounded-md">
-        <div className="flex justify-between items-center">
-          <h3 className="text-sm font-medium text-yellow-800">Debug Information</h3>
-          <button 
-            onClick={() => setDebugInfo({})}
-            className="text-xs text-yellow-600 hover:text-yellow-800"
-          >
-            Clear
-          </button>
-        </div>
-        <pre className="mt-2 text-xs overflow-auto max-h-40 bg-yellow-100 p-2 rounded">
-          {JSON.stringify({
-            time: new Date().toISOString(),
-            useMockData,
-            userAuthenticated: !!currentUser,
-            userId: currentUser?.uid,
-            childrenCount: children.length,
-            childrenIds: children.map(c => c.id),
-            fetchTrigger,
-            ...debugInfo
-          }, null, 2)}
-        </pre>
-      </div>
 
       {children.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-6 text-center">
