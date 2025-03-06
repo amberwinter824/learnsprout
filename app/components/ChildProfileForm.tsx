@@ -1,4 +1,4 @@
-{/* app/components/ChildProfileForm.tsx */}
+// app/components/ChildProfileForm.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { calculateAgeGroup, getAgeGroupDescription } from '@/lib/ageUtils';
 import { createChild, updateChild } from '@/lib/dataService';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { Timestamp } from 'firebase/firestore';
 
 // Define interests appropriate for all age ranges
 const INTEREST_OPTIONS = [
@@ -44,6 +43,7 @@ interface ChildProfileFormProps {
     id?: string;
     name?: string;
     birthDate?: Date;
+    birthDateString?: string;
     interests?: string[];
     notes?: string;
     [key: string]: any;
@@ -62,7 +62,10 @@ export default function ChildProfileForm({
   
   // Form state
   const [name, setName] = useState(initialData.name || '');
-  const [birthDate, setBirthDate] = useState<Date | null>(initialData.birthDate || null);
+  const [birthDate, setBirthDate] = useState<Date | null>(
+    initialData.birthDateString ? new Date(initialData.birthDateString + 'T12:00:00') :
+    initialData.birthDate || null
+  );
   const [ageGroup, setAgeGroup] = useState<string>('');
   const [interests, setInterests] = useState<string[]>(initialData.interests || []);
   const [notes, setNotes] = useState(initialData.notes || '');
@@ -95,7 +98,7 @@ export default function ChildProfileForm({
   
   // Handle birthdate change with validation
   const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputDate = new Date(e.target.value);
+    const inputDate = new Date(e.target.value + 'T12:00:00');
     
     // Validate date range
     if (inputDate > MAX_BIRTHDATE) {
@@ -147,10 +150,13 @@ export default function ChildProfileForm({
       setLoading(true);
       setError('');
       
+      // Store birthdate as a string in YYYY-MM-DD format instead of Timestamp
+      const birthDateString = birthDate.toISOString().split('T')[0];
+      
       // Prepare child data
       const childData = {
         name: name.trim(),
-        birthDate: Timestamp.fromDate(birthDate),
+        birthDateString, // Store as string instead of Timestamp
         ageGroup,
         interests,
         notes: notes.trim(),
