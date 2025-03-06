@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --ext .js,.ts ."
+    "lint": "eslint --ext .js,.ts .",
+    "seed:infant-toddler": "node adminInfantToddlerSeeder.cjs"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

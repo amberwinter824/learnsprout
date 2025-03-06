@@ -27,9 +27,9 @@ import {
   interface ChildData extends DocumentData {
     id?: string;
     name: string;
-    birthDate?: Timestamp;
+    birthDate?: Timestamp | Date;
     parentId?: string;
-    userId?: string;
+    userId: string;
     ageGroup?: string;
     active?: boolean;
     interests?: string[];

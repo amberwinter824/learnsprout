@@ -1,13 +1,11 @@
 // adminDevelopmentalSkillsSeeder.cjs
-const admin = require('firebase-admin');
-const serviceAccount = require('./service-account.json'); // Path to your downloaded service account file
 
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-}
+const admin = require('firebase-admin');
+const serviceAccount = require('./config/service-account.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 const db = admin.firestore();
 
@@ -337,11 +335,23 @@ module.exports = {
 
 // If running this script directly
 if (require.main === module) {
-  seedDevelopmentalSkills().then(() => {
-    console.log('Developmental skills seeding process completed!');
-    process.exit(0);
-  }).catch(error => {
-    console.error('Fatal error during seeding process:', error);
+  console.log("Service account check:");
+  try {
+    // Log basic information about the service account to confirm it's loaded
+    console.log(`Project ID: ${serviceAccount.project_id}`);
+    console.log(`Client Email: ${serviceAccount.client_email}`);
+    console.log(`Service account loaded successfully`);
+    
+    seedDevelopmentalSkills().then(() => {
+      console.log('Developmental skills seeding process completed!');
+      process.exit(0);
+    }).catch(error => {
+      console.error('Fatal error during seeding process:', error);
+      process.exit(1);
+    });
+  } catch (error) {
+    console.error("Error accessing service account:", error);
+    console.error("Make sure config/service-account.json exists and is properly formatted");
     process.exit(1);
-  });
+  }
 }
