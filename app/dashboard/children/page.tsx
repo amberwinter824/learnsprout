@@ -67,7 +67,7 @@ export default function ChildrenListPage() {
   }, [currentUser, loading]);
 
   const handleAddChild = (): void => {
-    router.push('/dashboard/children/new');
+    router.push('/dashboard/children/add');
   };
 
   // Format birthdate for display
