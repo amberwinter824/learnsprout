@@ -108,7 +108,7 @@ export default function Dashboard() {
           {currentUser ? `Welcome, ${currentUser.name || 'User'}` : 'Welcome to Learn Sprout'}
         </h1>
         <p className="mt-2 text-lg text-gray-600">
-          Your personalized homeschool platform
+          Your personalized early childhood development platform
         </p>
       </div>
 

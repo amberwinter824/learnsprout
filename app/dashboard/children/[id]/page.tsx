@@ -81,32 +81,34 @@ export default function ChildProfilePage({ params }: { params: Params }) {
   }, [id, currentUser]);
 
   // Format date for display
-  function formatDate(birthDateInput: any): string {
-    if (!birthDateInput) return '';
-    
-    try {
-      // Handle birthDateString format
-      if (typeof birthDateInput === 'string') {
-        const date = new Date(birthDateInput + 'T12:00:00');
-        return date.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric'
-        });
-      }
-      
-      // Handle Timestamp or Date format (legacy)
-      const date = birthDateInput.toDate ? birthDateInput.toDate() : new Date(birthDateInput);
-      return date.toLocaleDateString('en-US', {
+function formatDate(birthDateInput: any): string {
+  if (!birthDateInput) return '';
+  
+  try {
+    // Handle birthDateString format
+    if (typeof birthDateInput === 'string') {
+      // Create date without timezone adjustment by specifying parts directly
+      const [year, month, day] = birthDateInput.split('-').map(Number);
+      // Note: In JS Date, months are 0-indexed (0=Jan, 1=Feb, etc)
+      return new Date(year, month - 1, day).toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
         year: 'numeric'
       });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
     }
+    
+    // Handle Timestamp or Date format (legacy)
+    const date = birthDateInput.toDate ? birthDateInput.toDate() : new Date(birthDateInput);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
   }
+}
 
   // Calculate age
   function calculateAge(birthDateInput: any): string {

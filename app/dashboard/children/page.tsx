@@ -77,8 +77,10 @@ export default function ChildrenListPage() {
     try {
       // Handle string format (birthDateString)
       if (typeof birthDateInput === 'string') {
-        const date = new Date(birthDateInput + 'T12:00:00');
-        return date.toLocaleDateString('en-US', {
+        // Create date without timezone adjustment by specifying parts directly
+        const [year, month, day] = birthDateInput.split('-').map(Number);
+        // Note: In JS Date, months are 0-indexed (0=Jan, 1=Feb, etc)
+        return new Date(year, month - 1, day).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
