@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import WeeklyPlanRecommendation from '@/components/WeeklyPlanRecommendation';
 import ChildSkillProgress from '@/components/ChildSkillProgress';
+import RecentActivities from '@/components/RecentActivities';
 
 interface Params {
   id: string;
@@ -286,13 +287,8 @@ export default function ChildProfilePage({ params }: { params: Params }) {
           <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
         </div>
         
-        <div className="divide-y divide-gray-200">
-          <div className="p-6 text-center text-gray-500">
-            <p>No recent activities recorded.</p>
-            <p className="mt-2 text-sm">
-              Complete activities from the weekly plan to see them here.
-            </p>
-          </div>
+        <div className="p-6">
+          <RecentActivities childId={id} />
         </div>
       </div>
       
