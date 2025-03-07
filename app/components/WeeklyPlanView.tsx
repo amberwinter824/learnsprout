@@ -156,6 +156,24 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
     }
   }, [weeklyPlanId, childId, userId, refreshKey]);
   
+  // Listen for activity status change events
+  useEffect(() => {
+    const handleActivityStatusChange = () => {
+      if (weeklyPlanId) {
+        console.log('Activity status changed, refreshing weekly plan');
+        fetchWeeklyPlan();
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener('activity-status-changed', handleActivityStatusChange);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('activity-status-changed', handleActivityStatusChange);
+    };
+  }, [weeklyPlanId]);
+  
   const getDayLabel = (day: string, index: number) => {
     if (!weeklyPlan || !weeklyPlan.weekStarting) return day;
     

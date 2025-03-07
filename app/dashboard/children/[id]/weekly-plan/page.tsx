@@ -159,6 +159,35 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
   const [showAddObservation, setShowAddObservation] = useState<boolean>(false);
   const [selectedActivityForObservation, setSelectedActivityForObservation] = useState<SelectedActivityForObservation | null>(null);
 
+  // At the top of your component after your state declarations
+useEffect(() => {
+  // Function to handle refreshing the weekly plan
+  const handleActivityStatusChange = async () => {
+    if (planIdFromUrl) {
+      try {
+        setLoading(true);
+        // Refetch the weekly plan
+        const planData = await getWeeklyPlan(planIdFromUrl);
+        if (planData) {
+          setWeeklyPlan(planData as WeeklyPlan);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error refreshing weekly plan:', error);
+        setLoading(false);
+      }
+    }
+  };
+
+  // Set up event listener for activity status changes
+  window.addEventListener('activity-status-changed', handleActivityStatusChange);
+
+  // Clean up event listener
+  return () => {
+    window.removeEventListener('activity-status-changed', handleActivityStatusChange);
+  };
+}, [planIdFromUrl]);
+
   // Initialize days and time slots
   const days: string[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const dayLabels: string[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

@@ -165,6 +165,10 @@ export function ActivityObservationForm({
       const updatedObservations = await getActivityProgress(childId, activityId);
       setPreviousObservations(updatedObservations);
       
+      // Trigger custom event to refresh the weekly plan
+      const event = new CustomEvent('activity-status-changed');
+      window.dispatchEvent(event);
+      
       // Call the success callback if provided
       if (onSuccess) {
         onSuccess();
