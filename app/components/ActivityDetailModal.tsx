@@ -14,6 +14,8 @@ interface ActivityDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onObservationRecorded?: () => void;
+  weeklyPlanId?: string;  // Added weeklyPlanId prop
+  dayOfWeek?: string;     // Added dayOfWeek prop
 }
 
 interface ActivityData {
@@ -35,13 +37,16 @@ export default function ActivityDetailModal({
   childId,
   isOpen,
   onClose,
-  onObservationRecorded
+  onObservationRecorded,
+  weeklyPlanId,
+  dayOfWeek
 }: ActivityDetailModalProps) {
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'observation'>('details');
   const [mounted, setMounted] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -89,9 +94,18 @@ export default function ActivityDetailModal({
   };
 
   const handleObservationSuccess = () => {
+    // Show success message
+    setSuccessMessage('Observation recorded successfully!');
+    
+    // Call the parent callback if provided
     if (onObservationRecorded) {
       onObservationRecorded();
     }
+    
+    // Close the modal after a short delay to show success message
+    setTimeout(() => {
+      onClose();
+    }, 1500);
   };
 
   const getAreaColor = (area?: string) => {
@@ -141,6 +155,14 @@ export default function ActivityDetailModal({
             <X className="h-6 w-6" />
           </button>
         </div>
+        
+        {/* Success message if present */}
+        {successMessage && (
+          <div className="bg-green-50 text-green-700 p-4 border-b border-green-100 flex items-center">
+            <Loader2 className="h-5 w-5 mr-2 flex-shrink-0 animate-spin" />
+            {successMessage}
+          </div>
+        )}
         
         {/* Tabs */}
         <div className="flex border-b border-gray-200">
@@ -263,6 +285,9 @@ export default function ActivityDetailModal({
                 activityId={activityId}
                 childId={childId}
                 onSuccess={handleObservationSuccess}
+                onClose={onClose}
+                weeklyPlanId={weeklyPlanId} // Pass weeklyPlanId to the form
+                dayOfWeek={dayOfWeek}       // Pass dayOfWeek to the form
               />
             </div>
           )}

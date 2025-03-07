@@ -12,7 +12,8 @@ import {
   MoreHorizontal,
   FileText,
   BookOpen,
-  ClipboardEdit
+  ClipboardEdit,
+  RefreshCw
 } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -68,83 +69,92 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
   const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<{ activityId: string; day: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState<number>(0); // Added a refresh key for forcing updates
   
   const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   
-  useEffect(() => {
-    const fetchWeeklyPlan = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Fetch weekly plan data
+  const fetchWeeklyPlan = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching weekly plan:', weeklyPlanId);
+      
+      // Get the weekly plan
+      const planRef = doc(db, 'weeklyPlans', weeklyPlanId);
+      const planSnapshot = await getDoc(planRef);
+      
+      if (!planSnapshot.exists()) {
+        setError('Weekly plan not found');
+        setLoading(false);
+        return;
+      }
+      
+      const planData = {
+        id: planSnapshot.id,
+        ...planSnapshot.data()
+      } as WeeklyPlan;
+      
+      console.log('Weekly plan data fetched:', planData);
+      setWeeklyPlan(planData);
+      
+      // Get all activity IDs from the weekly plan
+      const activityIds = new Set<string>();
+      
+      daysOfWeek.forEach(day => {
+        const dayActivities = planData[day as keyof WeeklyPlan] as DayActivity[];
+        if (dayActivities) {
+          dayActivities.forEach(activity => {
+            if (activity.activityId) {
+              activityIds.add(activity.activityId);
+            }
+          });
+        }
+      });
+      
+      console.log('Activity IDs to fetch:', activityIds.size);
+      
+      // Fetch activity details for all IDs
+      const activityPromises = Array.from(activityIds).map(async (activityId) => {
+        const activityRef = doc(db, 'activities', activityId);
+        const activitySnapshot = await getDoc(activityRef);
         
-        // Get the weekly plan
-        const planRef = doc(db, 'weeklyPlans', weeklyPlanId);
-        const planSnapshot = await getDoc(planRef);
-        
-        if (!planSnapshot.exists()) {
-          setError('Weekly plan not found');
-          setLoading(false);
-          return;
+        if (activitySnapshot.exists()) {
+          return {
+            id: activitySnapshot.id,
+            ...activitySnapshot.data()
+          } as ActivityData;
         }
         
-        const planData = {
-          id: planSnapshot.id,
-          ...planSnapshot.data()
-        } as WeeklyPlan;
-        
-        setWeeklyPlan(planData);
-        
-        // Get all activity IDs from the weekly plan
-        const activityIds = new Set<string>();
-        
-        daysOfWeek.forEach(day => {
-          const dayActivities = planData[day as keyof WeeklyPlan] as DayActivity[];
-          if (dayActivities) {
-            dayActivities.forEach(activity => {
-              if (activity.activityId) {
-                activityIds.add(activity.activityId);
-              }
-            });
-          }
-        });
-        
-        // Fetch activity details for all IDs
-        const activityPromises = Array.from(activityIds).map(async (activityId) => {
-          const activityRef = doc(db, 'activities', activityId);
-          const activitySnapshot = await getDoc(activityRef);
-          
-          if (activitySnapshot.exists()) {
-            return {
-              id: activitySnapshot.id,
-              ...activitySnapshot.data()
-            } as ActivityData;
-          }
-          
-          return null;
-        });
-        
-        const activityResults = await Promise.all(activityPromises);
-        const activityMap: Record<string, ActivityData> = {};
-        
-        activityResults.forEach(activity => {
-          if (activity) {
-            activityMap[activity.id] = activity;
-          }
-        });
-        
-        setActivities(activityMap);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching weekly plan:', err);
-        setError('Failed to load weekly plan');
-        setLoading(false);
-      }
-    };
-    
+        return null;
+      });
+      
+      const activityResults = await Promise.all(activityPromises);
+      const activityMap: Record<string, ActivityData> = {};
+      
+      activityResults.forEach(activity => {
+        if (activity) {
+          activityMap[activity.id] = activity;
+        }
+      });
+      
+      console.log('Activities fetched:', Object.keys(activityMap).length);
+      setActivities(activityMap);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching weekly plan:', err);
+      setError('Failed to load weekly plan');
+      setLoading(false);
+    }
+  };
+  
+  // Initial fetch
+  useEffect(() => {
     if (weeklyPlanId) {
       fetchWeeklyPlan();
     }
-  }, [weeklyPlanId, childId, userId]);
+  }, [weeklyPlanId, childId, userId, refreshKey]);
   
   const getDayLabel = (day: string, index: number) => {
     if (!weeklyPlan || !weeklyPlan.weekStarting) return day;
@@ -193,25 +203,21 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
   
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setSelectedActivity(null);
   };
   
   const handleObservationRecorded = async () => {
-    // Refresh the weekly plan data to update activity statuses
-    try {
-      const planRef = doc(db, 'weeklyPlans', weeklyPlanId);
-      const planSnapshot = await getDoc(planRef);
-      
-      if (planSnapshot.exists()) {
-        const planData = {
-          id: planSnapshot.id,
-          ...planSnapshot.data()
-        } as WeeklyPlan;
-        
-        setWeeklyPlan(planData);
-      }
-    } catch (err) {
-      console.error('Error refreshing weekly plan:', err);
-    }
+    console.log('Observation recorded, refreshing weekly plan');
+    
+    // Force a complete refresh by incrementing refresh key
+    setRefreshKey(prevKey => prevKey + 1);
+    
+    // Directly fetch the weekly plan again to update activity statuses
+    await fetchWeeklyPlan();
+  };
+  
+  const handleManualRefresh = () => {
+    setRefreshKey(prevKey => prevKey + 1);
   };
   
   if (loading) {
@@ -249,6 +255,14 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
             Weekly Plan for {format(weeklyPlan.weekStarting.toDate(), 'MMMM d, yyyy')}
           </h2>
         </div>
+        <button 
+          onClick={handleManualRefresh}
+          className="text-emerald-600 hover:text-emerald-700 flex items-center text-sm"
+          title="Refresh plan"
+        >
+          <RefreshCw className="h-4 w-4 mr-1" />
+          Refresh
+        </button>
       </div>
       
       <div className="p-6">
@@ -276,7 +290,7 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
                         
                         return (
                           <ActivityCard
-                            key={`${day}-${activity.activityId}-${activity.order}`}
+                            key={`${day}-${activity.activityId}-${activity.order}-${activity.status}`}
                             activity={activity}
                             activityData={activityData}
                             day={day}
@@ -305,6 +319,8 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onObservationRecorded={handleObservationRecorded}
+          weeklyPlanId={weeklyPlanId}
+          dayOfWeek={selectedActivity.day}
         />
       )}
     </div>
