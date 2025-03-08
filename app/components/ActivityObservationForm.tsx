@@ -1,4 +1,4 @@
-// app/components/ActivityObservationForm.tsx
+// app/components/ActivityObservationForm.tsx - Merged version
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +6,7 @@ import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'fireb
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { addProgressRecord, getActivityProgress } from '../../lib/progressTracking';
-import { AlertCircle, CheckCircle, Loader2, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, X, Camera, Eye, EyeOff } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -28,6 +28,10 @@ interface ProgressRecord {
   photoUrls?: string[];
   skillsDemonstrated: string[];
   skillObservations?: Record<string, string>;
+  // New fields for environment context
+  environmentContext?: "home" | "school" | "other";
+  observationType?: "milestone" | "interest" | "challenge" | "general";
+  visibility?: string[]; // Users allowed to view this observation
 }
 
 interface ActivityData {
@@ -73,6 +77,15 @@ export function ActivityObservationForm({
   const [notes, setNotes] = useState<string>('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillObservations, setSkillObservations] = useState<Record<string, string>>({});
+  
+  // New state for environment context fields
+  const [environmentContext, setEnvironmentContext] = useState<"home" | "school" | "other">("home");
+  const [observationType, setObservationType] = useState<"milestone" | "interest" | "challenge" | "general">("general");
+  const [visibilityType, setVisibilityType] = useState<"private" | "educators" | "all">("all");
+  
+  // Photo state
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   
   useEffect(() => {
     const fetchActivityAndSkills = async () => {
@@ -131,6 +144,28 @@ export function ActivityObservationForm({
     }
   }, [activityId, childId]);
 
+  // Handle photo capture
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setPhotoFile(file);
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target) {
+          setPhotoPreview(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Reset photo state
+  const handleClearPhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -143,6 +178,20 @@ export function ActivityObservationForm({
       setSubmitting(true);
       setError('');
       
+      // Translate visibility type to actual user IDs
+      let visibilityIds: string[] = [];
+      if (visibilityType === "private") {
+        // Only the current user can see it
+        visibilityIds = [currentUser.uid];
+      } else if (visibilityType === "educators") {
+        // Need to fetch educators related to this child
+        // For now, we'll set it to the current user + a placeholder for educators
+        visibilityIds = [currentUser.uid, "educators"];
+      } else {
+        // Everyone can see it - including all educators and parents
+        visibilityIds = ["all"];
+      }
+      
       // Prepare the progress record data
       const progressData = {
         activityId,
@@ -154,6 +203,11 @@ export function ActivityObservationForm({
         notes,
         skillsDemonstrated: selectedSkills,
         skillObservations,
+        // Include new environment context fields
+        environmentContext,
+        observationType,
+        visibility: visibilityIds,
+        // Keep existing fields
         weeklyPlanId,
         dayOfWeek
       };
@@ -181,6 +235,10 @@ export function ActivityObservationForm({
       setCompletionDifficulty('appropriate');
       setNotes('');
       setSkillObservations({});
+      setEnvironmentContext("home");
+      setObservationType("general");
+      setVisibilityType("all");
+      handleClearPhoto();
       
       // Show success message
       setSuccessMessage('Observation recorded successfully!');
@@ -280,6 +338,95 @@ export function ActivityObservationForm({
         </h3>
         
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Environment Context Section */}
+          <div className="p-4 bg-blue-50 rounded-md">
+            <h4 className="font-medium text-blue-800 mb-3">Environment Context</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Where did this activity take place?
+                </label>
+                <select
+                  value={environmentContext}
+                  onChange={(e) => setEnvironmentContext(e.target.value as "home" | "school" | "other")}
+                  className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                >
+                  <option value="home">Home</option>
+                  <option value="school">School/Classroom</option>
+                  <option value="other">Other Location</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Observation Type
+                </label>
+                <select
+                  value={observationType}
+                  onChange={(e) => setObservationType(e.target.value as "milestone" | "interest" | "challenge" | "general")}
+                  className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                >
+                  <option value="general">General Observation</option>
+                  <option value="milestone">Developmental Milestone</option>
+                  <option value="interest">Interest/Engagement</option>
+                  <option value="challenge">Challenge/Difficulty</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Who should see this observation?
+              </label>
+              <div className="flex space-x-4 items-center">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="private"
+                    checked={visibilityType === "private"}
+                    onChange={() => setVisibilityType("private")}
+                    className="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 flex items-center">
+                    <EyeOff className="h-4 w-4 mr-1" />
+                    Only me
+                  </span>
+                </label>
+                
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="educators"
+                    checked={visibilityType === "educators"}
+                    onChange={() => setVisibilityType("educators")}
+                    className="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Me and educators
+                  </span>
+                </label>
+                
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="all"
+                    checked={visibilityType === "all"}
+                    onChange={() => setVisibilityType("all")}
+                    className="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 flex items-center">
+                    <Eye className="h-4 w-4 mr-1" />
+                    Everyone
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          {/* Completion Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Completion Status
@@ -303,6 +450,7 @@ export function ActivityObservationForm({
             </div>
           </div>
           
+          {/* Engagement, Interest, Difficulty */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -350,6 +498,44 @@ export function ActivityObservationForm({
             </div>
           </div>
           
+          {/* Photo Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Add Photo (Optional)
+            </label>
+            <div className="mt-1 flex items-center space-x-4">
+              <label className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
+                <Camera className="h-4 w-4 mr-2 text-gray-500" />
+                <span>Take Photo</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handlePhotoCapture} 
+                  className="hidden" 
+                  capture="environment"
+                />
+              </label>
+              
+              {photoPreview && (
+                <div className="relative">
+                  <img 
+                    src={photoPreview} 
+                    alt="Preview" 
+                    className="h-20 w-20 object-cover rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleClearPhoto}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* General Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               General Notes
@@ -363,6 +549,7 @@ export function ActivityObservationForm({
             ></textarea>
           </div>
           
+          {/* Skills Demonstrated */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Skills Demonstrated
@@ -412,6 +599,7 @@ export function ActivityObservationForm({
             </div>
           </div>
           
+          {/* Submit Button */}
           <div className="flex justify-end">
             <button
               type="submit"
@@ -453,6 +641,20 @@ export function ActivityObservationForm({
                     {record.completionStatus.replace('_', ' ')}
                   </span>
                 </div>
+                
+                {/* Environment Context & Type */}
+                {record.environmentContext && (
+                  <div className="flex gap-2 mb-1 text-xs">
+                    <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full capitalize">
+                      {record.environmentContext}
+                    </span>
+                    {record.observationType && (
+                      <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full capitalize">
+                        {record.observationType.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-3 gap-2 mb-2 text-xs text-gray-500">
                   <div>

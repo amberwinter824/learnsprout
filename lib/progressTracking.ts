@@ -1,4 +1,4 @@
-// lib/progressTracking.ts
+// lib/progressTracking.ts - Enhanced version
 import { 
   collection, 
   doc, 
@@ -10,11 +10,12 @@ import {
   getDocs,
   getDoc,
   serverTimestamp,
-  DocumentReference,
   Timestamp,
   limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 
 // Type definitions
 export interface ProgressRecordData {
@@ -30,10 +31,16 @@ export interface ProgressRecordData {
   photoUrls?: string[];
   skillsDemonstrated: string[];
   skillObservations?: Record<string, string>;
+  // New fields for environment context
+  environmentContext?: "home" | "school" | "other";
+  observationType?: "milestone" | "interest" | "challenge" | "general";
+  visibility?: string[]; // Users allowed to view this observation
   weeklyPlanId?: string;
   dayOfWeek?: string;
   createdAt?: any;
   updatedAt?: any;
+  // Optional fields that might be added during processing
+  activityTitle?: string;
 }
 
 export interface ProgressRecord extends ProgressRecordData {
@@ -55,7 +62,8 @@ export interface ChildSkillData {
 export async function addProgressRecord(
   childId: string, 
   userId: string, 
-  data: Partial<ProgressRecordData>
+  data: Partial<ProgressRecordData>,
+  photoFile?: File | null
 ): Promise<string> {
   try {
     console.log('Adding progress record:', {
@@ -66,8 +74,14 @@ export async function addProgressRecord(
       dayOfWeek: data.dayOfWeek
     });
     
-    // Create the progress record
-    const progressRef = await addDoc(collection(db, 'progressRecords'), {
+    // Upload photo if provided
+    let photoUrl: string | undefined;
+    if (photoFile) {
+      photoUrl = await uploadProgressPhoto(childId, photoFile);
+    }
+    
+    // Create progress record data
+    const progressData: any = {
       childId,
       userId,
       activityId: data.activityId,
@@ -77,14 +91,30 @@ export async function addProgressRecord(
       interestLevel: data.interestLevel || 'medium',
       completionDifficulty: data.completionDifficulty || 'appropriate',
       notes: data.notes || '',
-      photoUrls: data.photoUrls || [],
+      photoUrls: photoUrl ? [photoUrl] : [],
       skillsDemonstrated: data.skillsDemonstrated || [],
       skillObservations: data.skillObservations || {}, // Map of skillId -> observation text
       weeklyPlanId: data.weeklyPlanId || null, // Store the weekly plan ID
       dayOfWeek: data.dayOfWeek || null, // Store the day of week
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
+    
+    // Add new environment context fields if present
+    if (data.environmentContext) {
+      progressData.environmentContext = data.environmentContext;
+    }
+    
+    if (data.observationType) {
+      progressData.observationType = data.observationType;
+    }
+    
+    if (data.visibility) {
+      progressData.visibility = data.visibility;
+    }
+    
+    // Create the progress record
+    const progressRef = await addDoc(collection(db, 'progressRecords'), progressData);
     
     console.log('Progress record created with ID:', progressRef.id);
     
@@ -112,6 +142,29 @@ export async function addProgressRecord(
     return progressRef.id;
   } catch (error) {
     console.error('Error adding progress record:', error);
+    throw error;
+  }
+}
+
+/**
+ * Upload a photo for a progress record
+ */
+async function uploadProgressPhoto(childId: string, file: File): Promise<string> {
+  try {
+    // Create a reference to the file location in Firebase Storage
+    const timestamp = Date.now();
+    const fileName = `${childId}_${timestamp}_${file.name}`;
+    const photoRef = ref(storage, `progress/${childId}/${fileName}`);
+    
+    // Upload the file
+    await uploadBytes(photoRef, file);
+    
+    // Get download URL
+    const photoUrl = await getDownloadURL(photoRef);
+    
+    return photoUrl;
+  } catch (error) {
+    console.error('Error uploading photo:', error);
     throw error;
   }
 }
@@ -287,6 +340,89 @@ export async function getChildProgress(
 }
 
 /**
+ * Get all progress records with environment context
+ */
+export async function getProgressRecordsByEnvironment(
+  childId: string, 
+  environment: "home" | "school" | "other"
+): Promise<ProgressRecord[]> {
+  try {
+    const progressQuery = query(
+      collection(db, 'progressRecords'),
+      where('childId', '==', childId),
+      where('environmentContext', '==', environment),
+      orderBy('date', 'desc')
+    );
+    
+    const progressSnapshot = await getDocs(progressQuery);
+    return progressSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as ProgressRecord));
+  } catch (error) {
+    console.error('Error getting environment-specific progress records:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get progress records visible to a specific user
+ * This handles the visibility field
+ */
+export async function getVisibleProgressRecords(
+  childId: string, 
+  userId: string,
+  userRole: string = 'parent'
+): Promise<ProgressRecord[]> {
+  try {
+    // Get all progress records for the child
+    const progressQuery = query(
+      collection(db, 'progressRecords'),
+      where('childId', '==', childId),
+      orderBy('date', 'desc')
+    );
+    
+    const progressSnapshot = await getDocs(progressQuery);
+    
+    // Filter records based on visibility
+    const records = progressSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as ProgressRecord));
+    
+    // Apply visibility filters
+    return records.filter(record => {
+      // If no visibility field, default to visible to all
+      if (!record.visibility || record.visibility.length === 0) {
+        return true;
+      }
+      
+      // Check if this user is specifically allowed
+      if (record.visibility.includes(userId)) {
+        return true;
+      }
+      
+      // Check if all users are allowed
+      if (record.visibility.includes('all')) {
+        return true;
+      }
+      
+      // Check if educators are allowed and user is an educator
+      if (record.visibility.includes('educators') && 
+          (userRole === 'educator' || userRole === 'admin')) {
+        return true;
+      }
+      
+      // Default: not visible
+      return false;
+    });
+  } catch (error) {
+    console.error('Error getting visible progress records:', error);
+    throw error;
+  }
+}
+
+/**
  * Get recent progress records for multiple children
  */
 export async function getRecentProgressForChildren(
@@ -341,7 +477,7 @@ export async function getRecentProgressForChildren(
  */
 export async function addPhotoToProgressRecord(
   progressId: string, 
-  photoUrl: string
+  photoFile: File
 ): Promise<void> {
   try {
     const progressRef = doc(db, 'progressRecords', progressId);
@@ -352,6 +488,12 @@ export async function addPhotoToProgressRecord(
     }
     
     const progressData = progressDoc.data();
+    const childId = progressData.childId;
+    
+    // Upload the photo
+    const photoUrl = await uploadProgressPhoto(childId, photoFile);
+    
+    // Update the progress record
     const photoUrls = progressData.photoUrls || [];
     
     await updateDoc(progressRef, {
