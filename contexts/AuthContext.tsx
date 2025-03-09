@@ -1,4 +1,4 @@
-// contexts/AuthContext.tsx - Enhanced version
+// contexts/AuthContext.tsx - Enhanced version with role switching
 "use client"
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
@@ -22,7 +22,15 @@ export interface UserData {
   createdAt?: any;
   updatedAt?: any;
   role?: "parent" | "educator" | "admin" | "specialist";
+  associatedRoles?: string[]; // All roles assigned to this user
+  activeRole?: string; // Currently active role
   associatedInstitutions?: string[];
+  preferences?: {
+    activeRole?: string;
+    emailNotifications?: boolean;
+    weeklyDigest?: boolean;
+    theme?: string;
+  };
 }
 
 // Define permissions
@@ -48,6 +56,9 @@ export interface AuthContextType {
   hasRole: (requiredRole: string) => boolean;
   loading: boolean;
   initialized: boolean;
+  availableRoles: string[]; // All roles available to the user
+  activeRole: string; // Currently active role
+  switchRole: (role: string) => Promise<void>; // Function to switch active role
 }
 
 // Create a default context value with no-op functions
@@ -62,7 +73,10 @@ const defaultContext: AuthContextType = {
   hasPermission: () => false,
   hasRole: () => false,
   loading: true,
-  initialized: false
+  initialized: false,
+  availableRoles: [],
+  activeRole: '',
+  switchRole: async () => { throw new Error('AuthProvider not initialized'); }
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContext);
@@ -80,7 +94,7 @@ export const useAuth = () => {
 
 // Custom hook for role-based access control
 export const useRoleAccess = (requiredRole: string) => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, activeRole } = useAuth();
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   
   useEffect(() => {
@@ -90,7 +104,7 @@ export const useRoleAccess = (requiredRole: string) => {
         return;
       }
       
-      const userRole = currentUser.role || 'parent';
+      const userRole = activeRole || currentUser.role || 'parent';
       
       // Define role hierarchy (who can access what)
       const roleHierarchy: Record<string, string[]> = {
@@ -103,7 +117,7 @@ export const useRoleAccess = (requiredRole: string) => {
       const allowedRoles = roleHierarchy[userRole] || [userRole];
       setHasAccess(allowedRoles.includes(requiredRole));
     }
-  }, [currentUser, loading, requiredRole]);
+  }, [currentUser, loading, requiredRole, activeRole]);
   
   return { hasAccess, loading };
 };
@@ -118,11 +132,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [currentUser, setCurrentUser] = useState<(User & UserData) | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [activeRole, setActiveRole] = useState<string>('');
   const router = useRouter();
 
   // New function to check if user has a specific permission based on role
   const hasPermission = (permission: Permission): boolean => {
-    if (!currentUser || !currentUser.role) return false;
+    if (!currentUser) return false;
+    
+    // Use the active role if available, otherwise fall back to the user's default role
+    const userRole = activeRole || currentUser.role;
+    if (!userRole) return false;
 
     // Define role-based permissions
     const rolePermissions: Record<string, Permission[]> = {
@@ -155,13 +175,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     // Check if the current user's role has the requested permission
-    const userPermissions = rolePermissions[currentUser.role] || [];
+    const userPermissions = rolePermissions[userRole] || [];
     return userPermissions.includes(permission);
   };
   
   // Function to check if a user can access content for a specific role
   const hasRole = (requiredRole: string): boolean => {
-    if (!currentUser || !currentUser.role) return false;
+    if (!currentUser) return false;
+    
+    // Use the active role if available, otherwise fall back to the user's default role
+    const userRole = activeRole || currentUser.role;
+    if (!userRole) return false;
     
     // Define role hierarchy
     const roleHierarchy: Record<string, string[]> = {
@@ -172,7 +196,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
     
     // Check if the user's role can access the required role's content
-    const allowedRoles = roleHierarchy[currentUser.role] || [currentUser.role];
+    const allowedRoles = roleHierarchy[userRole] || [userRole];
     return allowedRoles.includes(requiredRole);
   };
 
@@ -190,11 +214,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+      // Initialize with the first role as both the role and in the associatedRoles array
       await setDoc(doc(db, 'users', user.uid), {
         name,
         email,
-        role, // Store user role
+        role, // Default role
+        associatedRoles: [role], // Array of all roles assigned to this user
+        activeRole: role, // Currently active role
         associatedInstitutions: [], // Initialize empty array for institutions
+        preferences: {
+          activeRole: role,
+          emailNotifications: true,
+          weeklyDigest: true,
+          theme: 'light'
+        },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -202,10 +235,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (isBrowser) {
         const token = await user.getIdToken();
         Cookies.set('token', token, { expires: 7 });
+        
+        // Store active role in a cookie for middleware access
+        Cookies.set('role', role, { expires: 7 });
       }
       
-      const userData = { name, email, role } as UserData;
+      const userData = { 
+        name, 
+        email, 
+        role,
+        associatedRoles: [role],
+        activeRole: role,
+        preferences: {
+          activeRole: role
+        }
+      } as UserData;
+      
       setCurrentUser({ ...user, ...userData } as (User & UserData));
+      setAvailableRoles([role]);
+      setActiveRole(role);
       
       return user;
     } catch (error) {
@@ -226,11 +274,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log("Login successful, fetching user data");
       
       const userData = await getUserData(userCredential.user.uid);
-      setCurrentUser({ ...userCredential.user, ...userData } as (User & UserData));
+      
+      // Set active role
+      let userActiveRole = userData?.activeRole || userData?.preferences?.activeRole || userData?.role || 'parent';
+      
+      // Get all roles user has
+      const userRoles = userData?.associatedRoles || [userData?.role || 'parent'];
+      
+      // Make sure the active role is in the list of available roles
+      if (!userRoles.includes(userActiveRole)) {
+        userActiveRole = userRoles[0];
+      }
+      
+      setCurrentUser({ 
+        ...userCredential.user, 
+        ...userData,
+        activeRole: userActiveRole
+      } as (User & UserData));
+      
+      setAvailableRoles(userRoles);
+      setActiveRole(userActiveRole);
       
       if (isBrowser) {
         const token = await userCredential.user.getIdToken();
         Cookies.set('token', token, { expires: 7 });
+        
+        // Store active role in a cookie for middleware access
+        Cookies.set('role', userActiveRole, { expires: 7 });
       }
       
       return userCredential;
@@ -247,6 +317,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (isBrowser) {
         Cookies.remove('token');
+        Cookies.remove('role');
         // Clear redirect flags
         const keys: string[] = [];
         for (let i = 0; i < sessionStorage.length; i++) {
@@ -259,6 +330,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
       
       setCurrentUser(null);
+      setAvailableRoles([]);
+      setActiveRole('');
       console.log("Logged out, redirecting to login");
       router.push('/login');
     } catch (error) {
@@ -289,20 +362,113 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     try {
       const userRef = doc(db, 'users', currentUser.uid);
+      
+      // Get current user data
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        throw new Error("User document not found");
+      }
+      
+      const userData = userDoc.data() as UserData;
+      
+      // Get current roles or initialize
+      const currentRoles = userData.associatedRoles || [userData.role || 'parent'];
+      
+      // Add the new role if it doesn't exist
+      let updatedRoles = currentRoles;
+      if (!currentRoles.includes(role)) {
+        updatedRoles = [...currentRoles, role];
+      }
+      
+      // Update Firestore
       await updateDoc(userRef, {
-        role,
+        role, // Primary role
+        associatedRoles: updatedRoles, // All roles
+        'preferences.activeRole': role, // Set active role in preferences
+        activeRole: role, // Set active role directly
         updatedAt: serverTimestamp()
       });
       
       // Update local state
       setCurrentUser(prev => {
         if (!prev) return null;
-        return { ...prev, role } as (User & UserData);
+        return { 
+          ...prev, 
+          role,
+          associatedRoles: updatedRoles,
+          activeRole: role,
+          preferences: {
+            ...prev.preferences,
+            activeRole: role
+          }
+        } as (User & UserData);
       });
+      
+      setAvailableRoles(updatedRoles);
+      setActiveRole(role);
+      
+      // Update role cookie for middleware
+      if (isBrowser) {
+        Cookies.set('role', role, { expires: 7 });
+      }
       
       console.log(`User role updated to ${role}`);
     } catch (error) {
       console.error("Error updating user role:", error);
+      throw error;
+    }
+  };
+  
+  // Function to switch between available roles
+  const switchRole = async (role: string): Promise<void> => {
+    if (!currentUser) {
+      throw new Error("No user is logged in");
+    }
+    
+    if (!availableRoles.includes(role)) {
+      throw new Error(`Role ${role} is not available for this user`);
+    }
+    
+    try {
+      // Update user preferences in Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        activeRole: role,
+        'preferences.activeRole': role,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state
+      setActiveRole(role);
+      setCurrentUser(prev => {
+        if (!prev) return null;
+        return { 
+          ...prev, 
+          activeRole: role,
+          preferences: {
+            ...prev.preferences,
+            activeRole: role
+          }
+        } as (User & UserData);
+      });
+      
+      // Update role cookie for middleware
+      if (isBrowser) {
+        Cookies.set('role', role, { expires: 7 });
+      }
+      
+      console.log(`Switched to role: ${role}`);
+      
+      // Redirect based on the new role
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else if (role === 'educator') {
+        router.push('/educator/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error("Error switching role:", error);
       throw error;
     }
   };
@@ -322,11 +488,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (user) {
         try {
           const userData = await getUserData(user.uid);
-          setCurrentUser({ ...user, ...userData } as (User & UserData));
+          
+          // Determine active role
+          const userActiveRole = userData?.activeRole || userData?.preferences?.activeRole || userData?.role || 'parent';
+          
+          // Get all roles user has
+          const userRoles = userData?.associatedRoles || [userData?.role || 'parent'];
+          
+          setAvailableRoles(userRoles);
+          setActiveRole(userActiveRole);
+          
+          setCurrentUser({ 
+            ...user, 
+            ...userData,
+            activeRole: userActiveRole
+          } as (User & UserData));
           
           try {
             const token = await user.getIdToken();
             Cookies.set('token', token, { expires: 7 });
+            
+            // Store active role in a cookie for middleware access
+            Cookies.set('role', userActiveRole, { expires: 7 });
           } catch (tokenError) {
             console.error("Error setting auth token:", tokenError);
           }
@@ -336,7 +519,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       } else {
         setCurrentUser(null);
+        setAvailableRoles([]);
+        setActiveRole('');
         Cookies.remove('token');
+        Cookies.remove('role');
       }
       
       setLoading(false);
@@ -344,7 +530,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
 
     return () => unsubscribe();
-  }, [isBrowser]);
+  }, [isBrowser, router]);
 
   const value: AuthContextType = {
     currentUser,
@@ -357,10 +543,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     hasPermission,
     hasRole,
     loading,
-    initialized
+    initialized,
+    availableRoles,
+    activeRole,
+    switchRole
   };
 
-  console.log("AuthProvider rendering with loading:", loading);
+  console.log("AuthProvider rendering with loading:", loading, "activeRole:", activeRole);
 
   return (
     <AuthContext.Provider value={value}>

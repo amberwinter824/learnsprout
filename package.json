@@ -11,7 +11,9 @@
     "seed:infant-toddler": "node adminInfantToddlerSeeder.cjs",
     "init:roles": "node scripts/initializeRoles.js",
     "init:institutions": "node scripts/createDefaultInstitution.js",
-    "setup:dev": "npm run init:roles && npm run init:institutions"
+    "init:schema": "node scripts/initFirebaseSchema.js",
+    "init:standalone": "node scripts/standaloneSchemaInit.js",
+    "setup:dev": "npm run init:roles && npm run init:institutions && npm run init:schema && npm run init:standalone"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
