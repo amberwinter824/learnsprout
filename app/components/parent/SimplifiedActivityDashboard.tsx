@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
@@ -42,11 +44,13 @@ interface Activity {
 interface SimplifiedActivityDashboardProps {
   childId: string;
   childName: string;
+  onActivitySelect?: (activityId: string, activityTitle: string) => void;
 }
 
 const SimplifiedActivityDashboard: React.FC<SimplifiedActivityDashboardProps> = ({ 
   childId, 
-  childName 
+  childName,
+  onActivitySelect 
 }) => {
   const [todayActivities, setTodayActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -175,6 +179,11 @@ const SimplifiedActivityDashboard: React.FC<SimplifiedActivityDashboardProps> = 
 
   const handleActivitySelect = (activity: Activity): void => {
     setSelectedActivity(activity);
+    
+    // Call the parent component's onActivitySelect if provided
+    if (onActivitySelect) {
+      onActivitySelect(activity.activityId, activity.title);
+    }
   };
 
   const markComplete = async (activityId: string): Promise<void> => {
@@ -191,8 +200,13 @@ const SimplifiedActivityDashboard: React.FC<SimplifiedActivityDashboardProps> = 
         )
       );
       
+      // Find the activity to pass to parent component
+      const activity = todayActivities.find(act => act.activityId === activityId);
+      if (activity && onActivitySelect) {
+        onActivitySelect(activity.activityId, activity.title);
+      }
+      
       // Set the selected activity for quick observation
-      const activity = todayActivities.find(a => a.activityId === activityId);
       if (activity) {
         setSelectedActivity(activity);
         setShowQuickObserve(true);
@@ -347,13 +361,61 @@ const SimplifiedActivityDashboard: React.FC<SimplifiedActivityDashboardProps> = 
                       </button>
                     )}
                   </div>
+                  
+                  <div className="flex items-center text-xs text-gray-500 space-x-3">
+                    {activity.area && (
+                      <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                        {activity.area.replace('_', ' ')}
+                      </span>
+                    )}
+                    {activity.duration && (
+                      <span className="flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {activity.duration} min
+                      </span>
+                    )}
+                    {activity.isHomeSchoolConnection && (
+                      <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                        <Star className="h-3 w-3 mr-1" />
+                        School Connection
+                      </span>
+                    )}
+                  </div>
                 </div>
+                
+                {activity.status === 'completed' && (
+                  <div className="flex border-t border-green-200 text-sm">
+                    <button className="flex items-center justify-center py-2 flex-1 text-green-700 hover:bg-green-100">
+                      <Camera className="h-4 w-4 mr-1" />
+                      Add Photo
+                    </button>
+                    <button className="flex items-center justify-center py-2 flex-1 text-green-700 hover:bg-green-100 border-l border-green-200">
+                      <FileText className="h-4 w-4 mr-1" />
+                      Add Notes
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-gray-500">No activities for today.</div>
+          <div className="text-center py-8 text-gray-500">
+            <p>No activities planned for today.</p>
+            <button 
+              className="mt-2 text-sm text-emerald-600 hover:text-emerald-700"
+              type="button"
+            >
+              <span>Add Activity</span>
+            </button>
+          </div>
         )}
+        
+        <div className="mt-6">
+          <button className="flex items-center justify-center w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700">
+            See Activity History
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </button>
+        </div>
       </div>
     </div>
   );

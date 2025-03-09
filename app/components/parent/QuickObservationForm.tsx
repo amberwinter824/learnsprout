@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import { Camera, Smile, Frown, Meh, CheckCircle, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { addDoc, collection, doc, serverTimestamp } from 'firebase/firestore';
@@ -6,6 +7,11 @@ import { db, storage } from '@/lib/firebase';
 
 // Define simple types
 type EngagementLevel = 'low' | 'medium' | 'high';
+
+interface Skill {
+  id: string;
+  name: string;
+}
 
 interface QuickObservationFormProps {
   activityId: string;
