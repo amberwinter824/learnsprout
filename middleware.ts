@@ -43,12 +43,14 @@ function decodeTokenWithoutVerification(token: string) {
 export async function middleware(request: NextRequest) {
   // Get the path being requested
   const path = request.nextUrl.pathname;
+  console.log(`Middleware processing path: ${path}`);
   
   // Define public paths that don't require authentication
   const isPublicPath = 
     path === '/login' || 
     path === '/signup' || 
-    path === '/reset-password';
+    path === '/reset-password' ||
+    path === '/';
   
   // Define role-specific paths
   const isParentPath = path.startsWith('/dashboard') || 
@@ -93,9 +95,15 @@ export async function middleware(request: NextRequest) {
     // you might need to add this as a custom claim or fetch from Firestore
     const role = payload.role || 'parent';
     
-    // If token is present but trying to access a public path
-    if (isPublicPath) {
-      console.log(`Middleware: User with role ${role} trying to access public path, redirecting to appropriate dashboard`);
+    // Don't redirect from the dashboard page - prevents loops
+    if (path === '/dashboard') {
+      console.log('Middleware: Already on dashboard, allowing access');
+      return NextResponse.next();
+    }
+    
+    // For public paths, only redirect if we have a fully valid, confirmed user identity
+    if (isPublicPath && payload.uid) {
+      console.log(`Middleware: Authenticated user (${payload.uid}) on public path (${path}), redirecting`);
       
       // Redirect to the appropriate dashboard based on user role
       if (role === 'educator') {
@@ -123,12 +131,14 @@ export async function middleware(request: NextRequest) {
     }
   }
   
+  console.log(`Middleware: Allowing access to ${path}`);
   return NextResponse.next();
 }
 
 // Configure which paths should be processed by this middleware
 export const config = {
   matcher: [
+    '/',
     '/dashboard/:path*',
     '/children/:path*',
     '/activities/:path*',

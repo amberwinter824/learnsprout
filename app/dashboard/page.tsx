@@ -30,17 +30,26 @@ interface DashboardCard {
 }
 
 export default function Dashboard() {
-  const { currentUser } = useAuth();
+  console.log("Dashboard component mounting");
+  const { currentUser, loading: authLoading } = useAuth();
+  console.log("Dashboard auth state:", currentUser ? "Logged in" : "Not logged in", "Auth loading:", authLoading);
+  
   const [children, setChildren] = useState<Child[]>([]);
   const [activityCount, setActivityCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [dataFetchAttempted, setDataFetchAttempted] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchData() {
       if (currentUser?.uid) {
+        console.log("Dashboard: Fetching data for user", currentUser.uid);
         try {
+          setLoading(true);
+          
           // Fetch children data
           const childrenData = await getUserChildren(currentUser.uid);
+          console.log("Dashboard: Fetched children data", childrenData.length);
+          
           setChildren(childrenData.map(child => ({
             ...child,
             id: child.id || '' // Ensure id is always a string
@@ -50,6 +59,7 @@ export default function Dashboard() {
           try {
             const activities = await getAllActivities();
             setActivityCount(activities?.length || 0);
+            console.log("Dashboard: Fetched activities", activities?.length || 0);
           } catch (err) {
             console.error('Error fetching activities:', err);
             setActivityCount(0);
@@ -58,12 +68,18 @@ export default function Dashboard() {
           console.error('Error fetching dashboard data:', error);
         } finally {
           setLoading(false);
+          setDataFetchAttempted(true);
         }
+      } else if (!authLoading) {
+        // If authentication check is complete and there's no user, stop loading
+        console.log("Dashboard: No user available and auth not loading");
+        setLoading(false);
+        setDataFetchAttempted(true);
       }
     }
 
     fetchData();
-  }, [currentUser]);
+  }, [currentUser, authLoading]);
 
   const getDashboardCards = (): DashboardCard[] => {
     return [
@@ -94,6 +110,22 @@ export default function Dashboard() {
     ];
   };
 
+  // Show redirect prompt if not authenticated and not loading
+  if (!currentUser && !authLoading && dataFetchAttempted) {
+    console.log("Dashboard: Showing unauthenticated state");
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500 mb-4">You need to be logged in to view this dashboard.</p>
+        <Link 
+          href="/login" 
+          className="inline-block bg-emerald-500 text-white px-4 py-2 rounded-md font-medium hover:bg-emerald-600 transition-colors"
+        >
+          Go to Login
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -107,7 +139,7 @@ export default function Dashboard() {
 
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Loading...</p>
+          <p className="text-gray-500">Loading your dashboard...</p>
         </div>
       ) : (
         <>
@@ -132,7 +164,7 @@ export default function Dashboard() {
             ))}
           </div>
           
-          {/* NEW: Weekly Plans Section */}
+          {/* Weekly Plans Section */}
           <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Weekly Plans</h3>
