@@ -8,12 +8,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --ext .js,.ts .",
-    "seed:infant-toddler": "node adminInfantToddlerSeeder.cjs"
+    "seed:infant-toddler": "node adminInfantToddlerSeeder.cjs",
+    "init:roles": "node scripts/initializeRoles.js",
+    "init:institutions": "node scripts/createDefaultInstitution.js",
+    "setup:dev": "npm run init:roles && npm run init:institutions"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
     "firebase": "^9.23.0",
-    "firebase-admin": "^11.11.1",
+    "firebase-admin": "^13.2.0",
     "firebase-functions": "^6.3.2",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.476.0",
