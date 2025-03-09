@@ -90,6 +90,13 @@ export async function middleware(request: NextRequest) {
       return response;
     }
     
+    // In middleware.ts, add this after decoding the token
+console.log('Token payload:', {
+  uid: payload?.uid,
+  exp: payload?.exp ? new Date(payload.exp * 1000).toISOString() : 'none',
+  iat: payload?.iat ? new Date(payload.iat * 1000).toISOString() : 'none',
+  current: new Date().toISOString()
+});
     // Get user role from custom claims or Firestore data
     // Since Firebase ID tokens may not have role information by default,
     // you might need to add this as a custom claim or fetch from Firestore
