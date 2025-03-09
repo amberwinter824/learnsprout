@@ -1,338 +1,274 @@
-"use client"
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { getChild, getUserChildren, ChildData } from '@/lib/dataService';
-import { useAuth } from '@/contexts/AuthContext';
-import { getDisplayBirthDate } from '@/lib/dateUtils';
-import { 
-  User,
-  Calendar,
-  Clock,
-  BarChart,
-  BookOpen,
-  Edit,
-  ArrowLeft,
-  Loader2
-} from 'lucide-react';
-import WeeklyPlanRecommendation from '@/components/WeeklyPlanRecommendation';
-import ChildSkillProgress from '@/components/ChildSkillProgress';
-import RecentActivities from '@/components/RecentActivities';
+import React, { useState } from 'react';
+import { Camera, Smile, Frown, Meh, CheckCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
 
-interface Params {
+// Define strict types
+type EngagementLevel = 'low' | 'medium' | 'high';
+
+interface Skill {
   id: string;
+  name: string;
 }
 
-export default function ChildProfilePage({ params }: { params: Params }) {
-  const { id } = params;
-  const router = useRouter();
-  const { currentUser } = useAuth();
-  const [child, setChild] = useState<ChildData | null>(null);
-  const [siblings, setSiblings] = useState<ChildData[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+interface QuickObservationFormProps {
+  activityId: string;
+  childId: string;
+  activityTitle?: string;
+  onSuccess?: () => void;
+  onClose?: () => void;
+}
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchData() {
-      try {
-        if (!currentUser) {
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        // Fetch child data
-        const childData = await getChild(id);
-        if (!childData) {
-          if (isMounted) {
-            setError('Child not found');
-            setLoading(false);
-          }
-          return;
-        }
-        
-        if (isMounted) {
-          setChild(childData);
-        }
-
-        // Fetch siblings (other children for this user)
-        const allChildren = await getUserChildren(currentUser.uid);
-        const siblingData = allChildren.filter(c => c.id !== id);
-        
-        if (isMounted) {
-          setSiblings(siblingData);
-          setLoading(false);
-        }
-      } catch (error: any) {
-        console.error('Error fetching child data:', error);
-        if (isMounted) {
-          setError(`Error fetching data: ${error.message}`);
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id, currentUser]);
-
-  // Calculate age
-  function calculateAge(birthDateInput: any): string {
-    if (!birthDateInput) return '';
+const QuickObservationForm: React.FC<QuickObservationFormProps> = ({ 
+  activityId, 
+  childId, 
+  activityTitle, 
+  onSuccess, 
+  onClose 
+}) => {
+  // State with proper type annotations
+  const [note, setNote] = useState<string>('');
+  const [engagement, setEngagement] = useState<EngagementLevel>('medium');
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  
+  // Define sample skills (in a real app this would come from props or API)
+  const skillOptions: Skill[] = [
+    { id: 'skill1', name: 'Fine Motor Control' },
+    { id: 'skill2', name: 'Concentration' },
+    { id: 'skill3', name: 'Independence' }
+  ];
+  
+  // Event handlers with proper types
+  const handleEngagementSelect = (level: EngagementLevel): void => {
+    setEngagement(level);
+  };
+  
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     
-    try {
-      let dob;
-      
-      // Handle birthDateString format
-      if (typeof birthDateInput === 'string') {
-        const parts = birthDateInput.split('-');
-        dob = new Date(
-          parseInt(parts[0], 10),
-          parseInt(parts[1], 10) - 1,
-          parseInt(parts[2], 10)
-        );
+    const file = files[0];
+    const reader = new FileReader();
+    
+    reader.onload = (event: ProgressEvent<FileReader>) => {
+      // Safely access result with proper nullish checks
+      const result = event.target?.result;
+      if (typeof result === 'string') {
+        setPhotoPreview(result);
+      }
+    };
+    
+    reader.readAsDataURL(file);
+  };
+  
+  const handleSkillToggle = (skillId: string): void => {
+    setSelectedSkills(prev => {
+      if (prev.includes(skillId)) {
+        return prev.filter(id => id !== skillId);
       } else {
-        // Handle Timestamp or Date format (legacy)
-        dob = birthDateInput.toDate ? birthDateInput.toDate() : new Date(birthDateInput);
+        return [...prev, skillId];
       }
+    });
+  };
+  
+  const handleSubmit = async (): Promise<void> => {
+    try {
+      setSubmitting(true);
       
-      const today = new Date();
-      let age = today.getFullYear() - dob.getFullYear();
-      const monthDiff = today.getMonth() - dob.getMonth();
+      // Sample submission data
+      const submissionData = {
+        activityId,
+        childId,
+        note,
+        engagement,
+        skills: selectedSkills,
+        hasPhoto: !!photoPreview
+      };
       
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-        age--;
+      console.log('Submitting observation:', submissionData);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess();
       }
-      
-      if (age < 5) {
-        // For children under 5, show years and months
-        const months = monthDiff < 0 ? 12 + monthDiff : monthDiff;
-        return `${age} years, ${months} months`;
-      }
-      
-      return `${age} years`;
     } catch (error) {
-      console.error('Error calculating age:', error);
-      return 'Unknown age';
+      console.error('Error submitting observation:', error);
+    } finally {
+      setSubmitting(false);
     }
-  }
-
-  // Get birth date value from either format
-  function getBirthDate(child: ChildData) {
-    return child.birthDateString || child.birthDate;
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="animate-spin h-12 w-12 text-emerald-500" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 text-red-700 p-4 rounded-md">
-        <p>{error}</p>
-        <Link href="/dashboard/children" className="mt-4 inline-block text-red-700 underline">
-          Back to Children
-        </Link>
-      </div>
-    );
-  }
-
-  if (!child) {
-    return (
-      <div className="bg-yellow-50 text-yellow-700 p-4 rounded-md">
-        <p>No child found with this ID</p>
-        <Link href="/dashboard/children" className="mt-4 inline-block text-yellow-700 underline">
-          Back to Children
-        </Link>
-      </div>
-    );
-  }
-
+  };
+  
   return (
-    <div>
-      <div className="mb-6">
-        <Link href="/dashboard/children" className="inline-flex items-center text-emerald-500 hover:text-emerald-600">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back to Children
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">{child.name}'s Profile</h1>
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-md mx-auto">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+        <h3 className="font-medium">Quick Observation</h3>
+        {onClose && (
+          <button 
+            onClick={onClose} 
+            className="text-gray-400 hover:text-gray-600" 
+            type="button"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Profile card */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-200 flex items-center">
-            <User className="h-5 w-5 text-emerald-500 mr-2" />
-            <h2 className="text-lg font-medium text-gray-900">Profile</h2>
-          </div>
-          
-          <div className="p-6">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Full Name</h3>
-                <p className="mt-1 text-gray-900">{child.name}</p>
-              </div>
-              
-              {(child.birthDate || child.birthDateString) && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Date of Birth</h3>
-                  <p className="mt-1 text-gray-900">{getDisplayBirthDate(child)}</p>
-                  <p className="text-sm text-gray-500">{calculateAge(getBirthDate(child))}</p>
-                </div>
-              )}
-              
-              {child.ageGroup && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Age Group</h3>
-                  <p className="mt-1 text-gray-900">{child.ageGroup}</p>
-                </div>
-              )}
-              
-              {child.interests && child.interests.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Interests</h3>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {child.interests.map(interest => (
-                      <span key={interest} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {child.notes && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Notes</h3>
-                  <p className="mt-1 text-gray-900 whitespace-pre-line">{child.notes}</p>
-                </div>
-              )}
-            </div>
+      
+      {/* Main form */}
+      <div className="p-4">
+        {/* Activity title display */}
+        <div className="mb-4">
+          <div className="text-sm text-gray-500 mb-1">Activity</div>
+          <div className="font-medium">{activityTitle || 'Untitled Activity'}</div>
+        </div>
+        
+        {/* Engagement selection with emoji faces */}
+        <div className="mb-4">
+          <div className="text-sm text-gray-500 mb-2">How did it go?</div>
+          <div className="flex justify-between text-center">
+            {/* Low engagement button */}
+            <button
+              onClick={() => handleEngagementSelect('low')}
+              className={`flex-1 py-2 px-1 rounded-l-lg flex flex-col items-center ${
+                engagement === 'low' ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'
+              }`}
+              type="button"
+            >
+              <Frown className={`h-6 w-6 mb-1 ${engagement === 'low' ? 'text-red-500' : 'text-gray-400'}`} />
+              <span className="text-xs">Challenging</span>
+            </button>
             
-            <div className="mt-6">
-              <Link
-                href={`/dashboard/children/${id}/edit`}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-              >
-                <Edit className="-ml-0.5 mr-2 h-4 w-4" />
-                Edit Profile
-              </Link>
-            </div>
+            {/* Medium engagement button */}
+            <button
+              onClick={() => handleEngagementSelect('medium')}
+              className={`flex-1 py-2 px-1 border-x border-white flex flex-col items-center ${
+                engagement === 'medium' ? 'bg-yellow-50 text-yellow-700' : 'bg-gray-50 text-gray-700'
+              }`}
+              type="button"
+            >
+              <Meh className={`h-6 w-6 mb-1 ${engagement === 'medium' ? 'text-yellow-500' : 'text-gray-400'}`} />
+              <span className="text-xs">OK</span>
+            </button>
+            
+            {/* High engagement button */}
+            <button
+              onClick={() => handleEngagementSelect('high')}
+              className={`flex-1 py-2 px-1 rounded-r-lg flex flex-col items-center ${
+                engagement === 'high' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'
+              }`}
+              type="button"
+            >
+              <Smile className={`h-6 w-6 mb-1 ${engagement === 'high' ? 'text-green-500' : 'text-gray-400'}`} />
+              <span className="text-xs">Great</span>
+            </button>
           </div>
         </div>
         
-        {/* Weekly Plan Recommendation */}
-        <div className="md:col-span-2">
-          <WeeklyPlanRecommendation 
-            childId={id} 
-            childName={child.name} 
-            userId={currentUser?.uid}
+        {/* Quick note */}
+        <div className="mb-4">
+          <div className="text-sm text-gray-500 mb-1">Quick note (optional)</div>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            placeholder="What did you notice?"
+            rows={2}
           />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 mb-6">
-        {/* Child Skill Progress */}
-        <ChildSkillProgress childId={id} />
-      </div>
-      
-      {/* Quick Actions */}
-      <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
-        <div className="px-6 py-5 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Quick Actions</h2>
-        </div>
         
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              href={`/dashboard/children/${id}/weekly-plan`}
-              className="inline-flex flex-col items-center px-4 py-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-            >
-              <Calendar className="mb-2 h-6 w-6 text-emerald-500" />
-              <span>Weekly Plan</span>
-            </Link>
-            
-            <Link
-              href={`/dashboard/children/${id}/activities`}
-              className="inline-flex flex-col items-center px-4 py-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-            >
-              <BookOpen className="mb-2 h-6 w-6 text-emerald-500" />
-              <span>Activity Library</span>
-            </Link>
-            
-            <Link
-              href={`/dashboard/children/${id}/progress`}
-              className="inline-flex flex-col items-center px-4 py-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-            >
-              <BarChart className="mb-2 h-6 w-6 text-emerald-500" />
-              <span>Progress Reports</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-      
-      {/* Recent Activities */}
-      <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
-        <div className="px-6 py-5 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
-        </div>
-        
-        <div className="p-6">
-          <RecentActivities childId={id} />
-        </div>
-      </div>
-      
-      {/* Siblings */}
-      {siblings.length > 0 && (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Siblings</h2>
+        {/* Photo capture */}
+        <div className="mb-4">
+          <div className="flex items-center">
+            <label className="flex items-center justify-center w-full py-2 bg-gray-50 hover:bg-gray-100 rounded-md cursor-pointer">
+              <Camera className="h-5 w-5 mr-2 text-gray-500" />
+              <span className="text-sm">Take a photo</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handlePhotoCapture} 
+                capture="environment"
+              />
+            </label>
           </div>
           
-          <div className="divide-y divide-gray-200">
-            {siblings.map(sibling => (
-              <Link
-                key={sibling.id}
-                href={`/dashboard/children/${sibling.id}`}
-                className="block p-6 hover:bg-gray-50"
+          {photoPreview && (
+            <div className="mt-2 relative">
+              <img 
+                src={photoPreview} 
+                alt="Preview" 
+                className="h-20 w-20 object-cover rounded-md border border-gray-200"
+              />
+              <button
+                onClick={() => setPhotoPreview(null)}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                type="button"
               >
-                <div className="flex items-center">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">{sibling.name}</p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {sibling.ageGroup || calculateAge(getBirthDate(sibling))}
-                    </p>
-                  </div>
-                  <div>
-                    <svg
-                      className="h-5 w-5 text-gray-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      aria-hidden="true"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
-      )}
+        
+        {/* Advanced options toggle */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center justify-between w-full py-2 px-3 bg-gray-50 hover:bg-gray-100 rounded-md text-sm"
+            type="button"
+          >
+            <span>Advanced options</span>
+            {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          
+          {showAdvanced && (
+            <div className="mt-3 p-3 border border-gray-200 rounded-md">
+              <div className="text-sm text-gray-500 mb-2">Skills observed</div>
+              <div className="space-y-2">
+                {skillOptions.map(skill => (
+                  <label key={skill.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedSkills.includes(skill.id)}
+                      onChange={() => handleSkillToggle(skill.id)}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{skill.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Submit button */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md flex items-center disabled:opacity-50"
+            type="button"
+          >
+            {submitting ? (
+              <>
+                <div className="animate-spin h-4 w-4 border-2 border-white border-opacity-20 border-t-white rounded-full mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Save Observation
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default QuickObservationForm;

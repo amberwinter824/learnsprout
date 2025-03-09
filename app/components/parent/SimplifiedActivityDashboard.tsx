@@ -7,18 +7,36 @@ import {
   Camera, 
   Star, 
   ChevronRight,
-  MoreHorizontal
+  Loader2,
+  BookOpen
 } from 'lucide-react';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  getDoc, 
+  Timestamp,
+  serverTimestamp,
+  updateDoc
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import QuickObservationForm from './QuickObservationForm';
+import { format } from 'date-fns';
 
 // Define types for our component
 interface Activity {
   id: string;
+  activityId: string;
   title: string;
   description: string;
-  duration: number;
-  area: string;
-  completed: boolean;
-  isHomeSchoolConnection: boolean;
+  duration?: number;
+  area?: string;
+  status: 'suggested' | 'confirmed' | 'completed';
+  isHomeSchoolConnection?: boolean;
+  timeSlot?: string;
+  order?: number;
 }
 
 interface SimplifiedActivityDashboardProps {
@@ -32,153 +50,231 @@ const SimplifiedActivityDashboard: React.FC<SimplifiedActivityDashboardProps> = 
 }) => {
   const [todayActivities, setTodayActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [showQuickObserve, setShowQuickObserve] = useState<boolean>(false);
+  const [weeklyPlanId, setWeeklyPlanId] = useState<string | null>(null);
 
+  // Fetch today's activities from Firebase
   useEffect(() => {
-    // Simulate fetching today's activities
-    setTimeout(() => {
-      setTodayActivities([
-        {
-          id: 'act1',
-          title: 'Pouring Exercise',
-          description: 'Practice pouring water between containers',
-          duration: 15,
-          area: 'practical_life',
-          completed: false,
-          isHomeSchoolConnection: true
-        },
-        {
-          id: 'act2',
-          title: 'Letter Sound Matching',
-          description: 'Match objects with their beginning sounds',
-          duration: 20,
-          area: 'language',
-          completed: false,
-          isHomeSchoolConnection: false
-        },
-        {
-          id: 'act3',
-          title: 'Counting Objects Game',
-          description: 'Count objects and match with numbers',
-          duration: 15,
-          area: 'mathematics',
-          completed: true,
-          isHomeSchoolConnection: true
+    const fetchTodayActivities = async () => {
+      if (!childId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get today's date in the format used in the database (day of week lowercase)
+        const today = new Date();
+        const dayOfWeek = format(today, 'EEEE').toLowerCase();
+        
+        // Find the current week's plan
+        const weekStartDate = new Date(today);
+        const day = weekStartDate.getDay();
+        const diff = weekStartDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust to get Monday
+        weekStartDate.setDate(diff);
+        weekStartDate.setHours(0, 0, 0, 0);
+        
+        const weekStartString = format(weekStartDate, 'yyyy-MM-dd');
+        
+        // Query for this week's plan
+        const plansQuery = query(
+          collection(db, 'weeklyPlans'),
+          where('childId', '==', childId),
+          where('weekStarting', '==', weekStartString)
+        );
+        
+        const plansSnapshot = await getDocs(plansQuery);
+        
+        // Handle case where no plan exists for this week
+        if (plansSnapshot.empty) {
+          console.log('No weekly plan found for this week');
+          setTodayActivities([]);
+          setLoading(false);
+          return;
         }
-      ]);
-      setLoading(false);
-    }, 1000);
+        
+        // Use the first plan (should only be one per week)
+        const planDoc = plansSnapshot.docs[0];
+        const planData = planDoc.data();
+        const planId = planDoc.id;
+        
+        setWeeklyPlanId(planId);
+        
+        // Get today's activities from the plan
+        const dayActivities = planData[dayOfWeek] || [];
+        
+        if (dayActivities.length === 0) {
+          setTodayActivities([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch activity details for each activity ID
+        const activitiesWithDetails = await Promise.all(
+          dayActivities.map(async (activity: any) => {
+            try {
+              const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
+              
+              if (activityDoc.exists()) {
+                const activityData = activityDoc.data();
+                return {
+                  id: `${planId}_${dayOfWeek}_${activity.activityId}`,
+                  activityId: activity.activityId,
+                  title: activityData.title || 'Untitled Activity',
+                  description: activityData.description || '',
+                  area: activityData.area || '',
+                  duration: activityData.duration || 15,
+                  isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                         !!activityData.classroomExtension,
+                  status: activity.status,
+                  timeSlot: activity.timeSlot,
+                  order: activity.order
+                };
+              }
+              
+              // If activity not found, still return the basic info
+              return {
+                id: `${planId}_${dayOfWeek}_${activity.activityId}`,
+                activityId: activity.activityId,
+                title: 'Unknown Activity',
+                description: 'Activity details not found',
+                status: activity.status,
+                timeSlot: activity.timeSlot,
+                order: activity.order
+              };
+            } catch (error) {
+              console.error(`Error fetching activity ${activity.activityId}:`, error);
+              return {
+                id: `${planId}_${dayOfWeek}_${activity.activityId}`,
+                activityId: activity.activityId,
+                title: 'Error Loading Activity',
+                description: 'Could not load activity details',
+                status: activity.status
+              };
+            }
+          })
+        );
+        
+        // Sort activities by order
+        const sortedActivities = activitiesWithDetails.sort((a, b) => 
+          (a.order || 0) - (b.order || 0)
+        );
+        
+        setTodayActivities(sortedActivities);
+      } catch (err) {
+        console.error('Error fetching activities:', err);
+        setError('Failed to load today\'s activities');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTodayActivities();
   }, [childId]);
 
   const handleActivitySelect = (activity: Activity): void => {
     setSelectedActivity(activity);
   };
 
-  const markComplete = (activityId: string): void => {
-    setTodayActivities(prev => 
-      prev.map(act => 
-        act.id === activityId ? {...act, completed: true} : act
-      )
-    );
-    setShowQuickObserve(true);
+  const markComplete = async (activityId: string): Promise<void> => {
+    if (!weeklyPlanId) {
+      console.error('No weekly plan ID available');
+      return;
+    }
+    
+    try {
+      // Update local state first for instant feedback
+      setTodayActivities(prev => 
+        prev.map(act => 
+          act.activityId === activityId ? {...act, status: 'completed'} : act
+        )
+      );
+      
+      // Set the selected activity for quick observation
+      const activity = todayActivities.find(a => a.activityId === activityId);
+      if (activity) {
+        setSelectedActivity(activity);
+        setShowQuickObserve(true);
+      }
+      
+      // Update the activity status in Firestore
+      const today = new Date();
+      const dayOfWeek = format(today, 'EEEE').toLowerCase();
+      
+      const planRef = doc(db, 'weeklyPlans', weeklyPlanId);
+      
+      // Get the current plan data
+      const planDoc = await getDoc(planRef);
+      if (!planDoc.exists()) {
+        throw new Error('Weekly plan not found');
+      }
+      
+      const planData = planDoc.data();
+      
+      // Find and update the activity
+      const dayActivities = planData[dayOfWeek] || [];
+      const updatedDayActivities = dayActivities.map((activity: any) => 
+        activity.activityId === activityId ? 
+          {...activity, status: 'completed'} : 
+          activity
+      );
+      
+      // Update the day's activities in Firebase
+      await updateDoc(planRef, {
+        [dayOfWeek]: updatedDayActivities,
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log(`Activity ${activityId} marked as completed`);
+    } catch (error) {
+      console.error('Error marking activity as complete:', error);
+      
+      // Revert the optimistic update
+      setTodayActivities(prev => 
+        prev.map(act => 
+          act.activityId === activityId && act.status === 'completed'
+            ? {...act, status: 'suggested'} 
+            : act
+        )
+      );
+      
+      setError('Failed to mark activity as complete');
+    }
   };
 
-  const getAreaColor = (area: string): string => {
+  const getAreaColor = (area?: string) => {
     const areaColors: Record<string, string> = {
       'practical_life': 'bg-pink-100 text-pink-800',
       'sensorial': 'bg-purple-100 text-purple-800',
       'language': 'bg-blue-100 text-blue-800',
       'mathematics': 'bg-green-100 text-green-800',
-      'cultural': 'bg-yellow-100 text-yellow-800'
+      'cultural': 'bg-yellow-100 text-yellow-800',
+      'science': 'bg-teal-100 text-teal-800',
+      'art': 'bg-indigo-100 text-indigo-800'
     };
-    return areaColors[area] || 'bg-gray-100 text-gray-800';
+    
+    return area && areaColors[area] ? areaColors[area] : 'bg-gray-100 text-gray-800';
   };
 
-  // Simple Quick Observation component
-  interface QuickObserveFormProps {
-    activity: Activity;
-    onClose: () => void;
-  }
-  
-  type EngagementLevel = 'low' | 'medium' | 'high';
-
-  const QuickObserveForm: React.FC<QuickObserveFormProps> = ({ activity, onClose }) => {
-    const [note, setNote] = useState<string>('');
-    const [engagement, setEngagement] = useState<EngagementLevel>('medium');
+  const handleObservationComplete = () => {
+    setShowQuickObserve(false);
+    setSelectedActivity(null);
     
-    const handleSubmit = (): void => {
-      // Submit the observation
-      console.log("Observation recorded:", { 
-        activityId: activity.id, 
-        note, 
-        engagement,
-        completionStatus: 'completed'
-      });
-      
-      // Close the form
-      onClose();
+    // Refresh the activity list
+    const fetchTodayActivities = async () => {
+      // Implementation would be similar to the useEffect
+      // But to avoid duplication, we'll just reload the page
+      window.location.reload();
     };
     
-    return (
-      <div className="bg-white p-4 rounded-lg shadow-lg">
-        <h3 className="font-medium mb-3">Quick Observation</h3>
-        
-        <div className="mb-3">
-          <label className="block text-sm mb-1">How did it go?</label>
-          <div className="flex space-x-2">
-            {(['low', 'medium', 'high'] as EngagementLevel[]).map(level => (
-              <button
-                key={level}
-                onClick={() => setEngagement(level)}
-                className={`px-3 py-1 rounded text-sm ${
-                  engagement === level 
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {level === 'high' && '😃 '}
-                {level === 'medium' && '🙂 '}
-                {level === 'low' && '😐 '}
-                {level.charAt(0).toUpperCase() + level.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        <div className="mb-3">
-          <label className="block text-sm mb-1">Quick note (optional)</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full p-2 border rounded"
-            placeholder="What did you notice?"
-            rows={2}
-          />
-        </div>
-        
-        <div className="flex justify-between">
-          <button 
-            onClick={onClose}
-            className="px-3 py-1 bg-gray-100 rounded"
-          >
-            Skip
-          </button>
-          <button 
-            onClick={handleSubmit}
-            className="px-3 py-1 bg-emerald-600 text-white rounded"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    );
+    fetchTodayActivities();
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-40">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
+        <Loader2 className="animate-spin h-8 w-8 text-emerald-500" />
       </div>
     );
   }
@@ -196,93 +292,68 @@ const SimplifiedActivityDashboard: React.FC<SimplifiedActivityDashboardProps> = 
       </div>
       
       <div className="p-4">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
+            {error}
+          </div>
+        )}
+        
         {showQuickObserve && selectedActivity && (
           <div className="mb-4">
-            <QuickObserveForm 
-              activity={selectedActivity} 
-              onClose={() => {
-                setShowQuickObserve(false);
-                setSelectedActivity(null);
-              }} 
+            <QuickObservationForm 
+              activityId={selectedActivity.activityId}
+              childId={childId}
+              activityTitle={selectedActivity.title}
+              weeklyPlanId={weeklyPlanId || undefined}
+              dayOfWeek={format(new Date(), 'EEEE')}
+              onSuccess={handleObservationComplete}
+              onClose={() => setShowQuickObserve(false)}
             />
           </div>
         )}
       
-        <div className="space-y-3">
-          {todayActivities.map(activity => (
-            <div 
-              key={activity.id}
-              className={`border rounded-lg overflow-hidden ${
-                activity.completed ? 'border-green-300 bg-green-50' : 'border-gray-200'
-              }`}
-            >
+        {todayActivities.length > 0 ? (
+          <div className="space-y-3">
+            {todayActivities.map(activity => (
               <div 
-                className="p-3 cursor-pointer"
-                onClick={() => handleActivitySelect(activity)}
+                key={activity.id}
+                className={`border rounded-lg overflow-hidden ${
+                  activity.status === 'completed' ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                }`}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-medium">{activity.title}</h3>
-                    <p className="text-sm text-gray-600">{activity.description}</p>
+                <div 
+                  className="p-3 cursor-pointer"
+                  onClick={() => handleActivitySelect(activity)}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-medium">{activity.title}</h3>
+                      <p className="text-sm text-gray-600">{activity.description}</p>
+                    </div>
+                    {activity.status === 'completed' ? (
+                      <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Done
+                      </span>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markComplete(activity.activityId);
+                        }}
+                        className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded text-sm"
+                      >
+                        Mark Done
+                      </button>
+                    )}
                   </div>
-                  {activity.completed ? (
-                    <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Done
-                    </span>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleActivitySelect(activity);
-                        markComplete(activity.id);
-                      }}
-                      className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded text-sm"
-                    >
-                      Mark Done
-                    </button>
-                  )}
-                </div>
-                
-                <div className="flex items-center text-xs text-gray-500 space-x-3">
-                  <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                    {activity.area.replace('_', ' ')}
-                  </span>
-                  <span className="flex items-center">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {activity.duration} min
-                  </span>
-                  {activity.isHomeSchoolConnection && (
-                    <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      <Star className="h-3 w-3 mr-1" />
-                      School Connection
-                    </span>
-                  )}
                 </div>
               </div>
-              
-              {activity.completed && (
-                <div className="flex border-t border-green-200 text-sm">
-                  <button className="flex items-center justify-center py-2 flex-1 text-green-700 hover:bg-green-100">
-                    <Camera className="h-4 w-4 mr-1" />
-                    Add Photo
-                  </button>
-                  <button className="flex items-center justify-center py-2 flex-1 text-green-700 hover:bg-green-100 border-l border-green-200">
-                    <FileText className="h-4 w-4 mr-1" />
-                    Add Notes
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        
-        <div className="mt-6">
-          <button className="flex items-center justify-center w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700">
-            See Activity History
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </button>
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-500">No activities for today.</div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-// middleware.ts - More tolerant version
+// middleware.ts - Updated version
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -14,11 +14,12 @@ export async function middleware(request: NextRequest) {
     path === '/reset-password' ||
     path === '/';
   
-  // Define protected paths
+  // Define protected paths - add 'view' path to protected paths
   const isProtectedPath = 
     path.startsWith('/dashboard') || 
     path.startsWith('/children') || 
-    path.startsWith('/activities');
+    path.startsWith('/activities') ||
+    path.startsWith('/view');
   
   // Define role-specific paths
   const isAdminPath = path.startsWith('/admin');
@@ -89,6 +90,7 @@ export const config = {
     '/activities/:path*',
     '/admin/:path*',
     '/educator/:path*',
-    '/specialist/:path*'
+    '/specialist/:path*',
+    '/view/:path*'  // Add the view path to the matcher
   ],
 };
