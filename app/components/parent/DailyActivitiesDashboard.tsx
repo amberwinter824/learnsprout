@@ -97,9 +97,14 @@ export default function DailyActivitiesDashboard({
 
   // Fetch activities for the current date
   useEffect(() => {
+    // Track if component is mounted to prevent state updates after unmounting
+    let isMounted = true;
+    // Track if we're currently generating a plan to prevent loops
+    let isGeneratingPlan = false;
+    
     const fetchActivities = async () => {
       try {
-        setLoading(true);
+        if (isMounted) setLoading(true);
         
         // Format date for query
         const dateString = format(currentDate, 'yyyy-MM-dd');
@@ -118,85 +123,119 @@ export default function DailyActivitiesDashboard({
         
         const plansSnapshot = await getDocs(plansQuery);
         
-        // If no plan exists, generate one automatically
-        if (plansSnapshot.empty) {
+        // If no plan exists, generate one automatically (but only if not already generating)
+        if (plansSnapshot.empty && !isGeneratingPlan) {
           console.log('No weekly plan found, generating one...');
-          await generateDailyActivities();
-          return;
+          isGeneratingPlan = true;
+          try {
+            await generateDailyActivities();
+            // After generating, we'll fetch activities in a separate call
+            if (isMounted) setLoading(false);
+            return;
+          } catch (genError) {
+            console.error('Error in plan generation:', genError);
+            if (isMounted) {
+              setError('Failed to generate weekly plan');
+              setLoading(false);
+            }
+            return;
+          } finally {
+            isGeneratingPlan = false;
+          }
         }
         
-        // Use the first plan (should only be one per week)
-        const planDoc = plansSnapshot.docs[0];
-        const planData = planDoc.data();
-        const planId = planDoc.id;
-        setWeekPlanId(planId);
-        
-        // Get activities for today
-        const dayActivities = planData[dayOfWeek] || [];
-        
-        if (dayActivities.length === 0) {
-          console.log(`No activities for ${dayOfWeek}, plan may need updating`);
-          setActivities([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Get full activity details
-        const activitiesWithDetails = await Promise.all(
-          dayActivities.map(async (activity: any) => {
-            try {
-              const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
-              
-              if (activityDoc.exists()) {
-                const activityData = activityDoc.data();
+        // If we have plans, continue with existing logic
+        if (!plansSnapshot.empty) {
+          // Use the first plan (should only be one per week)
+          const planDoc = plansSnapshot.docs[0];
+          const planData = planDoc.data();
+          const planId = planDoc.id;
+          if (isMounted) setWeekPlanId(planId);
+          
+          // Get activities for today
+          const dayActivities = planData[dayOfWeek] || [];
+          
+          if (dayActivities.length === 0) {
+            console.log(`No activities for ${dayOfWeek}, plan may need updating`);
+            if (isMounted) {
+              setActivities([]);
+              setLoading(false);
+            }
+            return;
+          }
+          
+          // Get full activity details
+          const activitiesWithDetails = await Promise.all(
+            dayActivities.map(async (activity: any) => {
+              try {
+                const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
+                
+                if (activityDoc.exists()) {
+                  const activityData = activityDoc.data();
+                  return {
+                    id: `${planId}_${dayOfWeek}_${activity.activityId}`,
+                    activityId: activity.activityId,
+                    title: activityData.title || 'Untitled Activity',
+                    description: activityData.description || '',
+                    area: activityData.area || '',
+                    duration: activityData.duration || 15,
+                    isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                          !!activityData.classroomExtension,
+                    status: activity.status,
+                    timeSlot: activity.timeSlot,
+                    order: activity.order
+                  };
+                }
+                
+                // If activity not found, return with basic info
                 return {
                   id: `${planId}_${dayOfWeek}_${activity.activityId}`,
                   activityId: activity.activityId,
-                  title: activityData.title || 'Untitled Activity',
-                  description: activityData.description || '',
-                  area: activityData.area || '',
-                  duration: activityData.duration || 15,
-                  isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                        !!activityData.classroomExtension,
+                  title: 'Unknown Activity',
                   status: activity.status,
                   timeSlot: activity.timeSlot,
                   order: activity.order
                 };
+              } catch (error) {
+                console.error(`Error fetching activity ${activity.activityId}:`, error);
+                return {
+                  id: `${planId}_${dayOfWeek}_${activity.activityId}`,
+                  activityId: activity.activityId,
+                  title: 'Error Loading Activity',
+                  status: activity.status
+                };
               }
-              
-              // If activity not found, return with basic info
-              return {
-                id: `${planId}_${dayOfWeek}_${activity.activityId}`,
-                activityId: activity.activityId,
-                title: 'Unknown Activity',
-                status: activity.status,
-                timeSlot: activity.timeSlot,
-                order: activity.order
-              };
-            } catch (error) {
-              console.error(`Error fetching activity ${activity.activityId}:`, error);
-              return {
-                id: `${planId}_${dayOfWeek}_${activity.activityId}`,
-                activityId: activity.activityId,
-                title: 'Error Loading Activity',
-                status: activity.status
-              };
-            }
-          })
-        );
-        
-        setActivities(activitiesWithDetails.sort((a, b) => (a.order || 0) - (b.order || 0)));
-        setLoading(false);
+            })
+          );
+          
+          if (isMounted) {
+            setActivities(activitiesWithDetails.sort((a, b) => (a.order || 0) - (b.order || 0)));
+            setLoading(false);
+          }
+        } else {
+          // No plans and not generating
+          if (isMounted) {
+            setActivities([]);
+            setLoading(false);
+          }
+        }
       } catch (error) {
         console.error('Error fetching activities:', error);
-        setError('Failed to load daily activities');
-        setLoading(false);
+        if (isMounted) {
+          setError('Failed to load daily activities');
+          setLoading(false);
+        }
       }
     };
     
     if (childId) {
       fetchActivities();
     }
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [childId, currentDate, userId]);
 
   // Generate activities if none exist
@@ -205,21 +244,97 @@ export default function DailyActivitiesDashboard({
       setLoading(true);
       
       // Use planGenerator to create a new weekly plan
-      // In a real implementation, this would call your back-end API
       const { generateWeeklyPlan } = await import('@/lib/planGenerator');
+      
+      // Generate a unique plan ID to use for checking if it already exists
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(weekStart.getDate() - (weekStart.getDay() === 0 ? 6 : weekStart.getDay() - 1));
+      const weekStartString = format(weekStart, 'yyyy-MM-dd');
+      const expectedPlanId = `${childId}_${weekStartString}`;
+      
+      // Check if this plan already exists (to avoid duplicate creation)
+      const existingPlanDoc = await getDoc(doc(db, 'weeklyPlans', expectedPlanId));
+      
+      if (existingPlanDoc.exists()) {
+        console.log(`Plan ${expectedPlanId} already exists, using existing plan`);
+        const planData = existingPlanDoc.data();
+        setWeekPlanId(expectedPlanId);
+        
+        // Fetch activities for the current day
+        const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
+        const dayActivities = planData[dayOfWeek] || [];
+        
+        // Get activity details and update state
+        if (dayActivities.length > 0) {
+          const activitiesWithDetails = await Promise.all(
+            dayActivities.map(async (activity: any) => {
+              try {
+                const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
+                
+                if (activityDoc.exists()) {
+                  const activityData = activityDoc.data();
+                  return {
+                    id: `${expectedPlanId}_${dayOfWeek}_${activity.activityId}`,
+                    activityId: activity.activityId,
+                    title: activityData.title || 'Untitled Activity',
+                    description: activityData.description || '',
+                    area: activityData.area || '',
+                    duration: activityData.duration || 15,
+                    isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                          !!activityData.classroomExtension,
+                    status: activity.status,
+                    timeSlot: activity.timeSlot,
+                    order: activity.order
+                  };
+                }
+                
+                return {
+                  id: `${expectedPlanId}_${dayOfWeek}_${activity.activityId}`,
+                  activityId: activity.activityId,
+                  title: 'Unknown Activity',
+                  status: activity.status,
+                  timeSlot: activity.timeSlot,
+                  order: activity.order
+                };
+              } catch (error) {
+                console.error(`Error fetching activity ${activity.activityId}:`, error);
+                return {
+                  id: `${expectedPlanId}_${dayOfWeek}_${activity.activityId}`,
+                  activityId: activity.activityId,
+                  title: 'Error Loading Activity',
+                  status: activity.status
+                };
+              }
+            })
+          );
+          
+          setActivities(activitiesWithDetails.sort((a, b) => (a.order || 0) - (b.order || 0)));
+        } else {
+          setActivities([]);
+        }
+        
+        setLoading(false);
+        return;
+      }
+      
+      // If no existing plan, generate a new one
+      console.log(`Generating new plan with ID ${expectedPlanId}`);
       const newPlan = await generateWeeklyPlan(childId, userId);
       
       if (newPlan && newPlan.id) {
-        // Refetch activities after generating
-        setCurrentDate(new Date()); // Reset to today
+        console.log(`Successfully generated new weekly plan with ID: ${newPlan.id}`);
+        setWeekPlanId(newPlan.id);
         
-        // Ideally would call fetchActivities directly, but for now just refresh the effect
-        setLoading(true);
+        // Clear loading state and initiate a clean fetch in the next cycle
+        setLoading(false);
+        
+        // After a brief delay, refresh the component to fetch the new plan's activities
         setTimeout(() => {
-          console.log('Generated new weekly plan, fetching activities...');
-          // This will trigger the useEffect to re-run
-          setLoading(false);
-        }, 1000);
+          // This will force the component to re-render and fetch activities
+          setCurrentDate(new Date(currentDate));
+        }, 500);
+      } else {
+        throw new Error("Failed to generate plan - no plan ID returned");
       }
     } catch (error) {
       console.error('Error generating activities:', error);
