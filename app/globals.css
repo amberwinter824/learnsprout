@@ -20,49 +20,55 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Make paragraph text darker */
-p.text-gray-500 {
-  color: #374151 !important; /* Darker gray */
+/* Global Contrast Fixes - Higher Specificity Selectors */
+html body .text-gray-400,
+html body .text-gray-500,
+html body .text-gray-600,
+html body [class*="text-gray-4"],
+html body [class*="text-gray-5"],
+html body [class*="text-gray-6"] {
+  color: #334155 !important; /* Significantly darker than standard gray-500 */
 }
 
-p.text-gray-600 {
-  color: #1f2937 !important; /* Even darker */
+/* Ensure small text is always readable */
+html body .text-xs,
+html body .text-sm {
+  font-weight: 500 !important;
+  color: #334155 !important;
 }
 
-/* Ensure all gray text elements have sufficient contrast */
-.text-gray-400 {
-  color: #4b5563 !important; /* Darker than default */
+/* Specifically target text elements for better visibility */
+html body p,
+html body span,
+html body label,
+html body div:not([class*="bg-"]):not([class*="border-"]),
+html body a:not([class*="text-emerald"]):not([class*="text-blue"]):not([class*="text-red"]) {
+  color: inherit !important;
 }
 
-.text-gray-500 {
-  color: #374151 !important;
+/* Make labels specifically darker */
+html body label {
+  color: #1e293b !important; /* Even darker for form fields labels */
 }
 
-.text-gray-600 {
-  color: #1f2937 !important;
-}
-
-/* Add these simple text color overrides */
-.text-gray-400 {
-  color: #4b5563 !important;
-}
-
-.text-gray-500 {
-  color: #374151 !important;
-}
-
-.text-gray-600 {
-  color: #1f2937 !important;
-}
-
-/* Make form labels darker */
-label.text-gray-700 {
-  color: #111827 !important;
-}
-
-/* Make paragraph text darker */
-p.text-gray-600 {
-  color: #1f2937 !important;
+/* Protect button text & special elements colors */
+html body .text-white, 
+html body .bg-emerald-500 *,
+html body .bg-emerald-600 *,
+html body .bg-emerald-700 *,
+html body [class*="bg-blue"] *,
+html body [class*="bg-red"] *,
+html body [class*="bg-green"] *,
+html body button[class*="bg-emerald"] *,
+html body button[class*="bg-blue"] *,
+html body .text-emerald-500,
+html body .text-emerald-600,
+html body .text-emerald-700,
+html body .text-emerald-800,
+html body .text-blue-500,
+html body .text-blue-600,
+html body .text-blue-700 {
+  color: initial !important; /* Reset to let their original color classes work */
 }
 
 /* Improve form field text readability */
@@ -78,12 +84,30 @@ input:focus, select:focus, textarea:focus {
 
 /* Placeholder text color */
 ::placeholder {
-  color: #9ca3af !important;
+  color: #64748b !important; /* Darker placeholder text */
   opacity: 1 !important;
 }
 
 /* Make disabled fields more distinct */
 input:disabled, select:disabled, textarea:disabled {
   background-color: #f3f4f6 !important;
-  color: #6b7280 !important;
+  color: #4b5563 !important;
+}
+
+/* Fix specific components with potential text issues */
+.flex.items-center svg + span, /* Target spans next to icons */
+.mb-2 + p, /* Target paragraphs after margins */
+button span, /* Text in buttons */
+.bg-gray-50 p, /* Paragraphs in gray backgrounds */
+.bg-white p { /* Paragraphs in white backgrounds */
+  color: #334155 !important; 
+}
+
+/* Weekly Plan Page Specific Fixes */
+.bg-blue-50 p.text-sm.text-blue-600 {
+  color: #1e40af !important; /* Darker blue for better contrast */
+}
+
+.text-sm.text-gray-600 p {
+  color: #1e293b !important; /* Very dark for small text */
 }

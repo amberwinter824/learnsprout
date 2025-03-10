@@ -2,23 +2,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  getChild, 
-  getWeeklyPlan,
-  getChildWeeklyPlans
-} from '@/lib/dataService';
+import { getChild } from '@/lib/dataService';
 import { 
   ArrowLeft, 
   Calendar,
   ListIcon,
-  Lightbulb,
   Loader2,
   InfoIcon
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
 import DailyActivitiesDashboard from '@/app/components/parent/DailyActivitiesDashboard';
-import { Timestamp } from 'firebase/firestore';
 
 interface WeeklyPlanPageProps {
   params: {
@@ -33,73 +27,90 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
   const planIdFromUrl = searchParams.get('planId');
   const viewFromUrl = searchParams.get('view');
   
-  const { currentUser, activeRole } = useAuth();
+  const { currentUser } = useAuth();
   const [child, setChild] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
-  // Use a ref to track if we've already processed the URL parameters
-  // This prevents infinite loops by ensuring we only process URL changes once
-  const processedUrlParams = useRef(false);
+  // State for active tab with a default that doesn't depend on URL initially
+  const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>('daily');
   
-  // State for active tab
-  const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>(
-    viewFromUrl === 'weekly' ? 'weekly' : 'daily'
-  );
+  // Use a ref to prevent URL update loops
+  const isUrlUpdating = useRef(false);
+  const initialRender = useRef(true);
 
+  // Fetch child data once on initial render
   useEffect(() => {
+    let isMounted = true;
+    
     async function fetchData() {
       try {
-        // Fetch child data
         const childData = await getChild(childId);
         if (!childData) {
-          setError('Child not found');
-          setLoading(false);
+          if (isMounted) {
+            setError('Child not found');
+            setLoading(false);
+          }
           return;
         }
-        setChild(childData);
-        setLoading(false);
+        
+        if (isMounted) {
+          setChild(childData);
+          setLoading(false);
+          
+          // Only after loading child data, set the initial tab from URL
+          if (initialRender.current && viewFromUrl === 'weekly') {
+            setActiveTab('weekly');
+            initialRender.current = false;
+          }
+        }
       } catch (error: any) {
-        setError('Error fetching data: ' + error.message);
-        setLoading(false);
+        if (isMounted) {
+          setError('Error fetching data: ' + error.message);
+          setLoading(false);
+        }
       }
     }
 
     fetchData();
-  }, [childId]);
-
-  // Process URL parameters only once on initial render
-  useEffect(() => {
-    if (!processedUrlParams.current) {
-      if (viewFromUrl === 'weekly') {
-        setActiveTab('weekly');
-      } else if (viewFromUrl === 'daily') {
-        setActiveTab('daily');
-      }
-      
-      // Mark URL parameters as processed
-      processedUrlParams.current = true;
-    }
-  }, [viewFromUrl]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [childId, viewFromUrl]);
 
   const handleTabChange = (tab: 'daily' | 'weekly') => {
-    // Only update the URL if the tab is actually changing
-    if (activeTab !== tab) {
-      setActiveTab(tab);
-      
-      // Update URL using a more stable approach
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('view', tab);
-      
-      if (planIdFromUrl) {
-        params.set('planId', planIdFromUrl);
+    // Avoid setting state if it's the same tab
+    if (activeTab === tab) return;
+    
+    // Update local state first
+    setActiveTab(tab);
+    
+    // Prevent URL update if we're already updating
+    if (isUrlUpdating.current) return;
+    
+    // Set flag to indicate we're updating URL
+    isUrlUpdating.current = true;
+    
+    // Update URL after a small delay to prevent race conditions
+    setTimeout(() => {
+      try {
+        // Build URL parameters
+        const params = new URLSearchParams();
+        params.set('view', tab);
+        
+        if (planIdFromUrl) {
+          params.set('planId', planIdFromUrl);
+        }
+        
+        // Update URL
+        router.replace(`/dashboard/children/${childId}/weekly-plan?${params.toString()}`);
+      } finally {
+        // Always reset the flag
+        isUrlUpdating.current = false;
       }
-      
-      // Use router.push to update URL without causing a full page reload
-      const url = `/dashboard/children/${childId}/weekly-plan?${params.toString()}`;
-      router.push(url);
-    }
+    }, 50);
   };
 
   // Handle day selection from weekly view
@@ -107,21 +118,27 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
     setSelectedDate(date);
     setActiveTab('daily');
     
-    // Update URL to reflect day selection
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('view', 'daily');
-    params.set('date', date.toISOString().split('T')[0]);
-    
-    if (planIdFromUrl) {
-      params.set('planId', planIdFromUrl);
+    // Only update URL if we're not already updating
+    if (!isUrlUpdating.current) {
+      isUrlUpdating.current = true;
+      
+      setTimeout(() => {
+        try {
+          // Update URL
+          const params = new URLSearchParams();
+          params.set('view', 'daily');
+          params.set('date', date.toISOString().split('T')[0]);
+          
+          if (planIdFromUrl) {
+            params.set('planId', planIdFromUrl);
+          }
+          
+          router.replace(`/dashboard/children/${childId}/weekly-plan?${params.toString()}`);
+        } finally {
+          isUrlUpdating.current = false;
+        }
+      }, 50);
     }
-    
-    router.push(`/dashboard/children/${childId}/weekly-plan?${params.toString()}`);
-  };
-  
-  // Handle back to child profile
-  const handleBackToProfile = () => {
-    router.push(`/dashboard/children/${childId}`);
   };
 
   if (loading) {
