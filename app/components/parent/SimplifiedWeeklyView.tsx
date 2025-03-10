@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, 
   ChevronLeft, 
@@ -61,8 +61,14 @@ const SimplifiedWeeklyView: React.FC<SimplifiedWeeklyViewProps> = (props) => {
   const [activeDay, setActiveDay] = useState<string>(format(new Date(), 'EEEE'));
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
   
+  // Use a ref to track if we've already fetched for this week's date
+  // This prevents infinite loop of fetching when no plan exists
+  const fetchedWeeks = useRef<Set<string>>(new Set());
+  
   // Calculate dates for week view
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Start on Monday
+  const weekStartKey = format(weekStart, 'yyyy-MM-dd');
+  
   const weekDays: DayInfo[] = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(weekStart, i);
     return {
@@ -77,11 +83,17 @@ const SimplifiedWeeklyView: React.FC<SimplifiedWeeklyViewProps> = (props) => {
   // Fetch weekly plan and activities from Firebase
   useEffect(() => {
     const fetchWeeklyPlan = async () => {
+      // Only fetch if we haven't already fetched for this week
+      if (fetchedWeeks.current.has(weekStartKey)) {
+        return;
+      }
+      
       try {
         setLoading(true);
+        fetchedWeeks.current.add(weekStartKey);
         
         // Format date for query
-        const weekStartDate = format(weekStart, 'yyyy-MM-dd');
+        const weekStartDate = weekStartKey;
         
         // Query for the weekly plan for this child and week
         const plansQuery = query(
@@ -192,7 +204,7 @@ const SimplifiedWeeklyView: React.FC<SimplifiedWeeklyViewProps> = (props) => {
     if (childId) {
       fetchWeeklyPlan();
     }
-  }, [childId, weekStart]);
+  }, [childId, weekStartKey]);
   
   const getAreaColor = (area?: string): string => {
     const areaColors: Record<string, string> = {
@@ -274,11 +286,10 @@ const SimplifiedWeeklyView: React.FC<SimplifiedWeeklyViewProps> = (props) => {
       
       // Revert the optimistic update if there was an error
       // Reload the current data
-      const weekStartDate = format(weekStart, 'yyyy-MM-dd');
       const plansQuery = query(
         collection(db, 'weeklyPlans'),
         where('childId', '==', childId),
-        where('weekStarting', '==', weekStartDate)
+        where('weekStarting', '==', weekStartKey)
       );
       
       const plansSnapshot = await getDocs(plansQuery);
