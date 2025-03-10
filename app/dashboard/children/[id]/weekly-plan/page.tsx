@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -39,6 +39,10 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
   const [error, setError] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
+  // Use a ref to track if we've already processed the URL parameters
+  // This prevents infinite loops by ensuring we only process URL changes once
+  const processedUrlParams = useRef(false);
+  
   // State for active tab
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>(
     viewFromUrl === 'weekly' ? 'weekly' : 'daily'
@@ -65,22 +69,37 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
     fetchData();
   }, [childId]);
 
+  // Process URL parameters only once on initial render
+  useEffect(() => {
+    if (!processedUrlParams.current) {
+      if (viewFromUrl === 'weekly') {
+        setActiveTab('weekly');
+      } else if (viewFromUrl === 'daily') {
+        setActiveTab('daily');
+      }
+      
+      // Mark URL parameters as processed
+      processedUrlParams.current = true;
+    }
+  }, [viewFromUrl]);
+
   const handleTabChange = (tab: 'daily' | 'weekly') => {
-    setActiveTab(tab);
-    
-    // Update URL to reflect the current view
-    const newUrl = new URL(window.location.href);
-    if (tab === 'weekly') {
-      newUrl.searchParams.set('view', 'weekly');
-    } else {
-      newUrl.searchParams.set('view', 'daily');
+    // Only update the URL if the tab is actually changing
+    if (activeTab !== tab) {
+      setActiveTab(tab);
+      
+      // Update URL using a more stable approach
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('view', tab);
+      
+      if (planIdFromUrl) {
+        params.set('planId', planIdFromUrl);
+      }
+      
+      // Use router.push to update URL without causing a full page reload
+      const url = `/dashboard/children/${childId}/weekly-plan?${params.toString()}`;
+      router.push(url);
     }
-    
-    if (planIdFromUrl) {
-      newUrl.searchParams.set('planId', planIdFromUrl);
-    }
-    
-    router.push(newUrl.pathname + newUrl.search);
   };
 
   // Handle day selection from weekly view
@@ -89,15 +108,15 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
     setActiveTab('daily');
     
     // Update URL to reflect day selection
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('view', 'daily');
-    newUrl.searchParams.set('date', date.toISOString().split('T')[0]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('view', 'daily');
+    params.set('date', date.toISOString().split('T')[0]);
     
     if (planIdFromUrl) {
-      newUrl.searchParams.set('planId', planIdFromUrl);
+      params.set('planId', planIdFromUrl);
     }
     
-    router.push(newUrl.pathname + newUrl.search);
+    router.push(`/dashboard/children/${childId}/weekly-plan?${params.toString()}`);
   };
   
   // Handle back to child profile
