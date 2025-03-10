@@ -17,11 +17,14 @@ import {
   X,
   Filter,
   Loader2,
-  CalendarDays
+  CalendarDays,
+  BookOpen,
+  Info
 } from 'lucide-react';
 import { format, isToday, parseISO, addDays, isSameDay } from 'date-fns';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, getDoc, doc, updateDoc, serverTimestamp, addDoc, Timestamp } from 'firebase/firestore';
+import ActivityDetailsPopup from './ActivityDetailsPopup';
 
 // Define types for our component
 interface Activity {
@@ -78,6 +81,10 @@ export default function DailyActivitiesDashboard({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submittingObservation, setSubmittingObservation] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  
+  // Activity details popup
+  const [showDetailsPopup, setShowDetailsPopup] = useState(false);
+  const [detailsActivityId, setDetailsActivityId] = useState<string | null>(null);
   
   // Simple skill options
   const skillOptions = [
@@ -744,15 +751,28 @@ export default function DailyActivitiesDashboard({
                         Done
                       </span>
                     ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          markComplete(activity);
-                        }}
-                        className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded text-sm"
-                      >
-                        Mark Done
-                      </button>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailsActivityId(activity.activityId);
+                            setShowDetailsPopup(true);
+                          }}
+                          className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded text-sm"
+                        >
+                          <Info className="h-3 w-3 inline mr-1" />
+                          How To
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markComplete(activity);
+                          }}
+                          className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded text-sm"
+                        >
+                          Mark Done
+                        </button>
+                      </div>
                     )}
                   </div>
                   
@@ -809,6 +829,14 @@ export default function DailyActivitiesDashboard({
               Generate Activities
             </button>
           </div>
+        )}
+        
+        {/* Render the activity details popup */}
+        {showDetailsPopup && detailsActivityId && (
+          <ActivityDetailsPopup 
+            activityId={detailsActivityId} 
+            onClose={() => setShowDetailsPopup(false)}
+          />
         )}
         
         {/* Navigation to weekly view */}
