@@ -20,6 +20,28 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Make paragraph text darker */
+p.text-gray-500 {
+  color: #374151 !important; /* Darker gray */
+}
+
+p.text-gray-600 {
+  color: #1f2937 !important; /* Even darker */
+}
+
+/* Ensure all gray text elements have sufficient contrast */
+.text-gray-400 {
+  color: #4b5563 !important; /* Darker than default */
+}
+
+.text-gray-500 {
+  color: #374151 !important;
+}
+
+.text-gray-600 {
+  color: #1f2937 !important;
+}
+
 /* Add these simple text color overrides */
 .text-gray-400 {
   color: #4b5563 !important;
