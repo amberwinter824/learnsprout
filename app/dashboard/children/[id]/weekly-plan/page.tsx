@@ -12,7 +12,8 @@ import {
   Calendar,
   ListIcon,
   Lightbulb,
-  Loader2
+  Loader2,
+  InfoIcon
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
@@ -125,13 +126,32 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
   
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <div className="mb-6">
+      <div className="mb-2">
         <Link href={`/dashboard/children/${childId}`} className="inline-flex items-center text-emerald-500 hover:text-emerald-600">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back to {child?.name}'s Profile
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Activities Plan</h1>
       </div>
+      
+      {/* Weekly Planning Mode Banner */}
+      <div className="bg-blue-50 p-4 rounded-md mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="font-medium text-blue-800">Weekly Planning Mode</h2>
+          <p className="text-sm text-blue-600">
+            This is an optional feature for parents who prefer weekly structure.
+          </p>
+        </div>
+        
+        <button
+          onClick={() => router.push(`/dashboard/children/${childId}`)}
+          className="px-4 py-2 bg-white border border-blue-300 rounded-md text-blue-700 hover:bg-blue-50"
+        >
+          <ArrowLeft className="h-4 w-4 inline mr-1" />
+          Back to Daily View
+        </button>
+      </div>
+      
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Weekly Activities Plan</h1>
 
       {/* Tab Navigation */}
       <div className="bg-white shadow-sm rounded-lg overflow-hidden mb-6">
@@ -178,6 +198,22 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
           onBackToDaily={() => handleTabChange('daily')}
         />
       )}
+      
+      {/* Help Info Box */}
+      <div className="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <div className="flex items-start">
+          <InfoIcon className="h-5 w-5 text-gray-400 mt-0.5 mr-2 flex-shrink-0" />
+          <div className="text-sm text-gray-600">
+            <p className="mb-2">
+              <strong>What is Weekly Planning?</strong> This feature helps you organize activities for your child throughout the week.
+            </p>
+            <p>
+              You can use the tabs above to toggle between viewing one day at a time (Daily View) or seeing the entire week at once (Weekly View).
+              Activities are auto-generated based on your child's age and interests, but you can customize them anytime.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

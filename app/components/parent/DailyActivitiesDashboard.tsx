@@ -15,7 +15,6 @@ import {
   Frown, 
   Camera, 
   X,
-  Filter,
   Loader2,
   CalendarDays,
   BookOpen,
@@ -71,7 +70,6 @@ export default function DailyActivitiesDashboard({
   // Date and view state
   const [currentDate, setCurrentDate] = useState<Date>(selectedDate || new Date());
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
-  const [showWeeklyView, setShowWeeklyView] = useState(false);
   
   // Quick observation form state
   const [showQuickObserve, setShowQuickObserve] = useState(false);
@@ -519,7 +517,6 @@ export default function DailyActivitiesDashboard({
     // Navigate to weekly plan page
     router.push(`/dashboard/children/${childId}/weekly-plan`);
   };
-
   // Render loading state
   if (loading) {
     return (

@@ -6,9 +6,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import DailyActivitiesDashboard from '@/app/components/parent/DailyActivitiesDashboard';
-import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
 import { getUserChildren } from '@/lib/dataService';
-import { Loader2, PlusCircle, User, Calendar, BarChart, BookOpen, ChevronRight } from 'lucide-react';
+import { 
+  Loader2, 
+  PlusCircle, 
+  User, 
+  Calendar, 
+  BarChart, 
+  BookOpen, 
+  ChevronRight, 
+  Lightbulb 
+} from 'lucide-react';
 
 export default function ImprovedParentDashboard() {
   const { currentUser } = useAuth();
@@ -18,8 +26,6 @@ export default function ImprovedParentDashboard() {
   const [children, setChildren] = useState<any[]>([]);
   const [activeChild, setActiveChild] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'daily' | 'weekly'>('daily');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   // Fetch children on load
   useEffect(() => {
@@ -47,26 +53,9 @@ export default function ImprovedParentDashboard() {
     fetchChildren();
   }, [currentUser]);
   
-  // Switch to weekly view
-  const handleViewWeekly = () => {
-    setView('weekly');
-  };
-  
-  // Switch to daily view
-  const handleViewDaily = () => {
-    setView('daily');
-  };
-  
-  // Handle day selection from weekly view
-  const handleDaySelected = (date: Date) => {
-    setSelectedDate(date);
-    setView('daily');
-  };
-  
   // Change active child
   const changeActiveChild = (child: any) => {
     setActiveChild(child);
-    setView('daily'); // Reset to daily view when changing child
   };
   
   // Loading state
@@ -129,38 +118,6 @@ export default function ImprovedParentDashboard() {
             )}
           </div>
           
-          {/* View selection */}
-          {activeChild && (
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="text-lg font-medium text-gray-900 mb-3">Views</h2>
-              <div className="space-y-2">
-                <button
-                  onClick={handleViewDaily}
-                  className={`w-full text-left px-3 py-2 rounded-lg flex items-center ${
-                    view === 'daily' 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Calendar className="h-5 w-5 mr-2 text-gray-500" />
-                  <span>Daily Activities</span>
-                </button>
-                
-                <button
-                  onClick={handleViewWeekly}
-                  className={`w-full text-left px-3 py-2 rounded-lg flex items-center ${
-                    view === 'weekly' 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <BarChart className="h-5 w-5 mr-2 text-gray-500" />
-                  <span>Weekly Overview</span>
-                </button>
-              </div>
-            </div>
-          )}
-          
           {/* Quick Links */}
           <div className="bg-white rounded-lg shadow-sm p-4">
             <h2 className="text-lg font-medium text-gray-900 mb-3">Quick Links</h2>
@@ -197,26 +154,26 @@ export default function ImprovedParentDashboard() {
         <div className="flex-1 w-full">
           {activeChild ? (
             <>
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">
-                {activeChild.name}'s Dashboard
-              </h1>
+              <div className="flex justify-between items-center mb-4">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {activeChild.name}'s Dashboard
+                </h1>
+                
+                <Link 
+                  href={`/dashboard/children/${activeChild.id}/weekly-plan`}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
+                >
+                  <Calendar className="h-4 w-4 mr-1" />
+                  View Weekly Plan
+                </Link>
+              </div>
               
-              {view === 'daily' ? (
-                // Daily activities view
-                <DailyActivitiesDashboard 
-                  childId={activeChild.id} 
-                  childName={activeChild.name}
-                  userId={currentUser?.uid || ''}
-                />
-              ) : (
-                // Weekly view
-                <WeekAtAGlanceView 
-                  childId={activeChild.id} 
-                  childName={activeChild.name}
-                  onSelectDay={handleDaySelected}
-                  onBackToDaily={handleViewDaily}
-                />
-              )}
+              {/* Daily activities view - Always shown by default */}
+              <DailyActivitiesDashboard 
+                childId={activeChild.id} 
+                childName={activeChild.name}
+                userId={currentUser?.uid || ''}
+              />
               
               {/* Additional dashboard widgets */}
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -253,6 +210,26 @@ export default function ImprovedParentDashboard() {
                     <p className="text-xs mt-2">Track progress as you complete activities</p>
                   </div>
                 </div>
+              </div>
+              
+              {/* Weekly Planning Card */}
+              <div className="mt-6 bg-white rounded-lg shadow-sm p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium">Weekly Activity Planning</h3>
+                  <span className="text-xs text-gray-500">Optional Feature</span>
+                </div>
+                
+                <p className="text-sm text-gray-600 mb-3">
+                  Need structure for the week? Our system can auto-generate a balanced weekly plan of age-appropriate activities.
+                </p>
+                
+                <Link 
+                  href={`/dashboard/children/${activeChild.id}/weekly-plan`}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
+                >
+                  <Lightbulb className="h-4 w-4 mr-1" />
+                  View or Generate Weekly Plan
+                </Link>
               </div>
             </>
           ) : (

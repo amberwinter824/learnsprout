@@ -13,11 +13,14 @@ import {
   ArrowLeft,
   Filter,
   Clock,
-  X
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns';
 import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import Link from 'next/link';
 
 // Activity interface
 interface Activity {
@@ -68,6 +71,7 @@ export default function WeekAtAGlanceView({
   const [error, setError] = useState<string | null>(null);
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [showSimpleView, setShowSimpleView] = useState<boolean>(true);
 
   // Calculate dates for week view
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Start on Monday
@@ -231,6 +235,11 @@ export default function WeekAtAGlanceView({
     }
   };
   
+  // Toggle view mode
+  const toggleViewMode = () => {
+    setShowSimpleView(!showSimpleView);
+  };
+  
   // Get color for activity area
   const getAreaColor = (area?: string): string => {
     const areaColors: Record<string, string> = {
@@ -294,41 +303,46 @@ export default function WeekAtAGlanceView({
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
         <div className="flex items-center">
-          <button
-            onClick={handleBackToDailyView}
-            className="mr-2 text-gray-500 hover:text-gray-700"
-            aria-label="Back to daily view"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
           <Calendar className="h-5 w-5 text-emerald-500 mr-2" />
           <h2 className="text-lg font-medium">Weekly View</h2>
         </div>
         
-        <div className="flex items-center">
-          <button 
-            onClick={handlePrevWeek}
-            className="p-1 rounded-full hover:bg-gray-100"
-            aria-label="Previous week"
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={toggleViewMode}
+            className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center"
           >
-            <ChevronLeft className="h-5 w-5" />
+            {showSimpleView ? 
+              <><Eye className="h-3 w-3 mr-1" />Detailed View</> : 
+              <><EyeOff className="h-3 w-3 mr-1" />Simple View</>
+            }
           </button>
           
-          <span className="mx-2 text-sm font-medium">
-            {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
-          </span>
-          
-          <button 
-            onClick={handleNextWeek}
-            className="p-1 rounded-full hover:bg-gray-100"
-            aria-label="Next week"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          <div className="flex items-center">
+            <button 
+              onClick={handlePrevWeek}
+              className="p-1 rounded-full hover:bg-gray-100"
+              aria-label="Previous week"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            
+            <span className="mx-2 text-sm font-medium">
+              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
+            </span>
+            
+            <button 
+              onClick={handleNextWeek}
+              className="p-1 rounded-full hover:bg-gray-100"
+              aria-label="Next week"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
       
-      {/* Week grid */}
+      {/* Week content */}
       <div className="p-4">
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
@@ -336,154 +350,269 @@ export default function WeekAtAGlanceView({
           </div>
         )}
         
-        <div className="grid grid-cols-7 gap-2 mb-6">
-          {weekDays.map((day) => (
-            <div key={day.dayName} className="flex flex-col">
-              {/* Day header */}
-              <button
-                onClick={() => handleDaySelect(day)}
-                className={`flex flex-col items-center p-2 rounded-t-lg ${
-                  day.isToday 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : selectedDay === day.dayName
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-gray-50 hover:bg-gray-100'
-                }`}
-              >
-                <span className="text-xs font-medium">{day.dayShort}</span>
-                <span className="text-lg font-bold">{day.dayNumber}</span>
-              </button>
-              
-              {/* Activity count */}
-              <div className="bg-white border-x border-b border-gray-200 p-2 rounded-b-lg h-14 flex flex-col items-center justify-center">
-                {weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
-                  <>
-                    <span className="text-sm font-semibold text-gray-800">
-                      {weekActivities[day.dayName].length}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {weekActivities[day.dayName].length === 1 ? 'Activity' : 'Activities'}
-                    </span>
-                    {weekActivities[day.dayName].some(a => a.status === 'completed') && (
-                      <div className="mt-1 flex items-center text-green-600 text-xs">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        <span>
-                          {weekActivities[day.dayName].filter(a => a.status === 'completed').length}
+        {/* Simple view - activity counts by day */}
+        {showSimpleView ? (
+          <div>
+            <div className="grid grid-cols-7 gap-2 mb-6">
+              {weekDays.map((day) => (
+                <button
+                  key={day.dayName}
+                  onClick={() => handleDaySelect(day)}
+                  className="flex flex-col"
+                >
+                  {/* Day header */}
+                  <div className={`flex flex-col items-center p-2 rounded-t-lg ${
+                    day.isToday 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : selectedDay === day.dayName
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-gray-50 hover:bg-gray-100'
+                  }`}>
+                    <span className="text-xs font-medium">{day.dayShort}</span>
+                    <span className="text-lg font-bold">{day.dayNumber}</span>
+                  </div>
+                  
+                  {/* Activity count */}
+                  <div className="bg-white border-x border-b border-gray-200 p-2 rounded-b-lg h-14 flex flex-col items-center justify-center">
+                    {weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
+                      <>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {weekActivities[day.dayName].length}
                         </span>
-                      </div>
+                        <span className="text-xs text-gray-500">
+                          {weekActivities[day.dayName].length === 1 ? 'Activity' : 'Activities'}
+                        </span>
+                        {weekActivities[day.dayName].some(a => a.status === 'completed') && (
+                          <div className="mt-1 flex items-center text-green-600 text-xs">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            <span>
+                              {weekActivities[day.dayName].filter(a => a.status === 'completed').length}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-400">No activities</span>
                     )}
-                  </>
-                ) : (
-                  <span className="text-xs text-gray-400">No activities</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Selected day activities or weekly summary */}
-        {selectedDay ? (
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-medium text-lg">{selectedDay}'s Activities</h3>
-              <button
-                onClick={() => setSelectedDay(null)}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Close day view"
-              >
-                <X className="h-5 w-5" />
-              </button>
+                  </div>
+                </button>
+              ))}
             </div>
             
-            {weekActivities[selectedDay] && weekActivities[selectedDay].length > 0 ? (
-              <div className="space-y-3">
-                {weekActivities[selectedDay].map(activity => (
-                  <div 
-                    key={activity.id}
-                    className={`border rounded-lg p-3 ${
-                      activity.status === 'completed' 
-                        ? 'border-green-300 bg-green-50' 
-                        : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-medium">{activity.title}</h4>
-                      
-                      {activity.status === 'completed' ? (
-                        <span className="flex items-center text-green-600 bg-green-100 px-2 py-0.5 rounded-full text-xs">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          <span>Completed</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-500">
-                          {activity.timeSlot === 'morning' ? 'Morning' : 
-                           activity.timeSlot === 'afternoon' ? 'Afternoon' : 
-                           'Anytime'}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                      {activity.area && (
-                        <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                          {activity.area.replace('_', ' ')}
-                        </span>
-                      )}
-                      
-                      {activity.duration && (
-                        <span className="flex items-center text-gray-500 px-2 py-0.5 rounded-full">
-                          <Clock className="h-3 w-3 mr-1" />
-                          <span>{activity.duration} min</span>
-                        </span>
-                      )}
-                      
-                      {activity.isHomeSchoolConnection && (
-                        <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                          <Star className="h-3 w-3 mr-1" />
-                          <span>School Connection</span>
-                        </span>
-                      )}
+            {/* Weekly Summary */}
+            {!selectedDay ? (
+              // Weekly Summary
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-medium">Weekly Summary</h3>
+                  <span className="text-sm text-gray-500">
+                    Week of {format(weekStart, 'MMM d, yyyy')}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="border border-gray-200 rounded-lg p-3">
+                    <div className="text-sm text-gray-500 mb-1">Total Activities</div>
+                    <div className="text-xl font-medium">{weekStats.totalActivities}</div>
+                  </div>
+                  
+                  <div className="border border-gray-200 rounded-lg p-3">
+                    <div className="text-sm text-gray-500 mb-1">Completed</div>
+                    <div className="flex items-baseline">
+                      <span className="text-xl font-medium text-green-600">
+                        {weekStats.completedActivities}
+                      </span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        ({weekStats.percentComplete}%)
+                      </span>
                     </div>
                   </div>
-                ))}
+                </div>
+                
+                <div className="border border-gray-200 rounded-lg p-3">
+                  <div className="text-sm text-gray-500 mb-2">Areas Covered</div>
+                  <div className="flex flex-wrap gap-1">
+                    {weekStats.uniqueAreas.map(area => (
+                      <span 
+                        key={area} 
+                        className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(area)}`}
+                      >
+                        {area.replace('_', ' ')}
+                      </span>
+                    ))}
+                    
+                    {weekStats.uniqueAreas.length === 0 && (
+                      <span className="text-sm text-gray-500">No areas covered yet</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-500 mb-2">
+                    Tap on any day above to see detailed activities
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-500">
-                <p>No activities planned for {selectedDay}.</p>
+              // Selected Day Activities
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-medium text-lg">{selectedDay}'s Activities</h3>
+                  <button
+                    onClick={() => setSelectedDay(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close day view"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                {weekActivities[selectedDay] && weekActivities[selectedDay].length > 0 ? (
+                  <div className="space-y-3">
+                    {weekActivities[selectedDay].map(activity => (
+                      <div 
+                        key={activity.id}
+                        className={`border rounded-lg p-3 ${
+                          activity.status === 'completed' 
+                            ? 'border-green-300 bg-green-50' 
+                            : 'border-gray-200'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium">{activity.title}</h4>
+                          
+                          {activity.status === 'completed' ? (
+                            <span className="flex items-center text-green-600 bg-green-100 px-2 py-0.5 rounded-full text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <span>Completed</span>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">
+                              {activity.timeSlot === 'morning' ? 'Morning' : 
+                               activity.timeSlot === 'afternoon' ? 'Afternoon' : 
+                               'Anytime'}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                          {activity.area && (
+                            <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                              {activity.area.replace('_', ' ')}
+                            </span>
+                          )}
+                          
+                          {activity.duration && (
+                            <span className="flex items-center text-gray-500 px-2 py-0.5 rounded-full">
+                              <Clock className="h-3 w-3 mr-1" />
+                              <span>{activity.duration} min</span>
+                            </span>
+                          )}
+                          
+                          {activity.isHomeSchoolConnection && (
+                            <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                              <Star className="h-3 w-3 mr-1" />
+                              <span>School Connection</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <p>No activities planned for {selectedDay}.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
         ) : (
-          // Weekly Summary
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-medium">Weekly Summary</h3>
-              <span className="text-sm text-gray-500">
-                Week of {format(weekStart, 'MMM d, yyyy')}
-              </span>
+          // Detailed View - Full weekly calendar
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-7 gap-2 min-w-max">
+              {weekDays.map((day) => (
+                <div key={day.dayName} className="w-56 border rounded-lg">
+                  {/* Day header */}
+                  <div className={`p-2 text-center ${
+                    day.isToday ? 'bg-blue-100 text-blue-800' : 'bg-gray-50 text-gray-800'
+                  } rounded-t-lg`}>
+                    <div className="font-medium">{day.dayName}</div>
+                    <div className="text-lg font-bold">{day.dayNumber}</div>
+                  </div>
+                  
+                  {/* Activities for the day */}
+                  <div className="p-2 space-y-2 min-h-[200px]">
+                    {weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
+                      weekActivities[day.dayName].map(activity => (
+                        <div 
+                          key={activity.id} 
+                          className={`p-2 border rounded ${
+                            activity.status === 'completed' 
+                              ? 'border-green-300 bg-green-50' 
+                              : 'border-gray-200'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                              activity.timeSlot === 'morning' 
+                                ? 'bg-amber-100 text-amber-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {activity.timeSlot === 'morning' ? 'AM' : 'PM'}
+                            </span>
+                            
+                            {activity.status === 'completed' && (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            )}
+                          </div>
+                          
+                          <h5 className="font-medium text-sm mt-1">{activity.title}</h5>
+                          
+                          <div className="mt-1 flex items-center text-xs text-gray-500">
+                            {activity.duration && (
+                              <span className="flex items-center mr-2">
+                                <Clock className="h-3 w-3 mr-0.5" />
+                                {activity.duration}m
+                              </span>
+                            )}
+                            
+                            {activity.area && (
+                              <span className={`px-1.5 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                                {activity.area.split('_')[0]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <p className="text-xs text-gray-400">No activities</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
             
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="text-sm text-gray-500 mb-1">Total Activities</div>
-                <div className="text-xl font-medium">{weekStats.totalActivities}</div>
+            {/* Week summary - shown below calendar in detailed view */}
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-medium">Weekly Overview</h3>
+                <span className="text-sm text-gray-500">
+                  {weekStats.completedActivities} of {weekStats.totalActivities} activities completed
+                </span>
               </div>
               
-              <div className="border border-gray-200 rounded-lg p-3">
-                <div className="text-sm text-gray-500 mb-1">Completed</div>
-                <div className="flex items-baseline">
-                  <span className="text-xl font-medium text-green-600">
-                    {weekStats.completedActivities}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-2">
-                    ({weekStats.percentComplete}%)
-                  </span>
-                </div>
+              {/* Progress bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                <div 
+                  className="bg-emerald-500 h-2.5 rounded-full" 
+                  style={{ width: `${weekStats.percentComplete}%` }}
+                ></div>
               </div>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg p-3">
-              <div className="text-sm text-gray-500 mb-2">Areas Covered</div>
+              
+              {/* Areas covered */}
               <div className="flex flex-wrap gap-1">
                 {weekStats.uniqueAreas.map(area => (
                   <span 
@@ -493,17 +622,7 @@ export default function WeekAtAGlanceView({
                     {area.replace('_', ' ')}
                   </span>
                 ))}
-                
-                {weekStats.uniqueAreas.length === 0 && (
-                  <span className="text-sm text-gray-500">No areas covered yet</span>
-                )}
               </div>
-            </div>
-            
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-500 mb-2">
-                Tap on any day above to see detailed activities
-              </p>
             </div>
           </div>
         )}
