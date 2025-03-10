@@ -5,6 +5,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --text-dark: #111827;      /* Almost black */
+  --text-medium: #1f2937;    /* Very dark gray */
+  --text-standard: #374151;  /* Dark enough for good contrast */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,94 +23,81 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Global Contrast Fixes - Higher Specificity Selectors */
+/* Force override ALL gray text with !important and extremely high specificity */
+html body [class*="text-gray-"],
+html body [class*="text-gray-4"],
+html body [class*="text-gray-5"],
+html body [class*="text-gray-6"],
 html body .text-gray-400,
 html body .text-gray-500,
 html body .text-gray-600,
-html body [class*="text-gray-4"],
-html body [class*="text-gray-5"],
-html body [class*="text-gray-6"] {
-  color: #334155 !important; /* Significantly darker than standard gray-500 */
+html body p.text-gray-400,
+html body p.text-gray-500,
+html body p.text-gray-600,
+html body span.text-gray-400,
+html body span.text-gray-500,
+html body span.text-gray-600,
+html body div.text-gray-400,
+html body div.text-gray-500,
+html body div.text-gray-600 {
+  color: var(--text-standard) !important;
 }
 
-/* Ensure small text is always readable */
-html body .text-xs,
-html body .text-sm {
+/* Target specific problematic elements */
+/* Targeting the "10 min" text in activity cards */
+html body .cognitive + span,
+html body [class*="min"],
+html body span:has(+ .cognitive) {
+  color: var(--text-medium) !important;
+}
+
+/* Target the small text for "Complete activities..." and similar */
+html body p:has(+ span),
+html body span:has(+ span),
+html body p small,
+html body .text-sm,
+html body .text-xs {
+  color: var(--text-medium) !important;
   font-weight: 500 !important;
-  color: #334155 !important;
 }
 
-/* Specifically target text elements for better visibility */
-html body p,
-html body span,
-html body label,
-html body div:not([class*="bg-"]):not([class*="border-"]),
-html body a:not([class*="text-emerald"]):not([class*="text-blue"]):not([class*="text-red"]) {
-  color: inherit !important;
+/* Apply to all likely text elements regardless of class */
+html body p, 
+html body label, 
+html body span:not([class*="bg-"]), 
+html body div:not([class*="bg-"]) > span {
+  color: var(--text-medium) !important;
 }
 
-/* Make labels specifically darker */
-html body label {
-  color: #1e293b !important; /* Even darker for form fields labels */
+/* Target specific layout elements */
+html body aside span,
+html body nav span,
+html body section span {
+  color: var(--text-medium) !important;
 }
 
-/* Protect button text & special elements colors */
-html body .text-white, 
-html body .bg-emerald-500 *,
-html body .bg-emerald-600 *,
-html body .bg-emerald-700 *,
+/* Especially target elements inside box containers */
+html body .bg-white *:not(button):not(a),
+html body .rounded-lg *:not(button):not(a),
+html body .shadow-sm *:not(button):not(a) {
+  color: var(--text-medium) !important;
+}
+
+/* Exempt specific elements we don't want to change */
+html body a[href],
+html body button,
+html body [class*="text-emerald"],
+html body [class*="text-blue"],
+html body [class*="text-red"],
+html body [class*="bg-emerald"] *,
 html body [class*="bg-blue"] *,
-html body [class*="bg-red"] *,
 html body [class*="bg-green"] *,
-html body button[class*="bg-emerald"] *,
-html body button[class*="bg-blue"] *,
-html body .text-emerald-500,
-html body .text-emerald-600,
-html body .text-emerald-700,
-html body .text-emerald-800,
-html body .text-blue-500,
-html body .text-blue-600,
-html body .text-blue-700 {
-  color: initial !important; /* Reset to let their original color classes work */
+html body [class*="bg-red"] * {
+  color: initial !important;
 }
 
-/* Improve form field text readability */
+/* Ensure form inputs remain readable */
 input, select, textarea {
   color: #000000 !important;
   font-weight: 500 !important;
-}
-
-/* Add background highlight on focus for better visibility */
-input:focus, select:focus, textarea:focus {
-  background-color: #f0fff4 !important; /* Light green background on focus */
-}
-
-/* Placeholder text color */
-::placeholder {
-  color: #64748b !important; /* Darker placeholder text */
-  opacity: 1 !important;
-}
-
-/* Make disabled fields more distinct */
-input:disabled, select:disabled, textarea:disabled {
-  background-color: #f3f4f6 !important;
-  color: #4b5563 !important;
-}
-
-/* Fix specific components with potential text issues */
-.flex.items-center svg + span, /* Target spans next to icons */
-.mb-2 + p, /* Target paragraphs after margins */
-button span, /* Text in buttons */
-.bg-gray-50 p, /* Paragraphs in gray backgrounds */
-.bg-white p { /* Paragraphs in white backgrounds */
-  color: #334155 !important; 
-}
-
-/* Weekly Plan Page Specific Fixes */
-.bg-blue-50 p.text-sm.text-blue-600 {
-  color: #1e40af !important; /* Darker blue for better contrast */
-}
-
-.text-sm.text-gray-600 p {
-  color: #1e293b !important; /* Very dark for small text */
 }
