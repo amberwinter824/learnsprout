@@ -16,14 +16,16 @@ import {
   X,
   Eye,
   EyeOff,
-  Camera
+  Camera,
+  Info
 } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns';
-import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import ActivityDetailModal from '@/app/components/ActivityDetailModal';
 import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
+import ActivityDetailsPopup from './ActivityDetailsPopup';
 
 // Activity interface
 interface Activity {
@@ -84,6 +86,10 @@ export default function WeekAtAGlanceView({
   const [showQuickObservation, setShowQuickObservation] = useState(false);
   const [observationActivity, setObservationActivity] = useState<Activity | null>(null);
   
+  // Activity details popup state
+  const [showDetailsPopup, setShowDetailsPopup] = useState(false);
+  const [detailsActivityId, setDetailsActivityId] = useState<string | null>(null);
+  
   // Calculate week days for display
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), i);
@@ -105,7 +111,7 @@ export default function WeekAtAGlanceView({
       try {
         setLoading(true);
         
-        // Format date for query - ensure it matches the format used when creating the plan
+        // Format date for query
         const weekStartDate = format(weekStart, 'yyyy-MM-dd');
         console.log('Fetching weekly plan for date:', weekStartDate);
         console.log('Child ID:', childId);
@@ -125,6 +131,13 @@ export default function WeekAtAGlanceView({
           console.log('Found plan by direct ID');
           planData = planDocSnap.data();
           foundPlanId = planDocSnap.id;
+          setWeekPlanId(foundPlanId);
+          
+          // Set the selected day to today if it's in the current week, otherwise to Monday
+          const today = format(new Date(), 'EEEE');
+          const todayInWeek = weekDays.some(day => day.dayName === today);
+          setSelectedDay(todayInWeek ? today : 'Monday');
+          
         } else {
           // If not found by ID, try the query approach
           console.log('Plan not found by ID, trying query...');
@@ -158,8 +171,6 @@ export default function WeekAtAGlanceView({
           foundPlanId = planDoc.id;
           console.log('Found plan via query with ID:', foundPlanId);
         }
-        
-        setWeekPlanId(foundPlanId);
         
         // Create a structure to hold activities by day
         const weekActivitiesData: WeekActivities = {};
@@ -244,7 +255,7 @@ export default function WeekAtAGlanceView({
     if (childId) {
       fetchWeeklyPlan();
     }
-  }, [childId, currentWeek]); // Only depend on childId and currentWeek
+  }, [childId, currentWeek, weekDays]);
   
   // Navigate to previous week
   const handlePrevWeek = () => {
@@ -269,23 +280,176 @@ export default function WeekAtAGlanceView({
   };
   
   // Handle observation success
-  const handleObservationSuccess = () => {
-    // Refresh activities after recording an observation
-    const fetchActivities = async () => {
-      // ... existing fetch code ...
-    };
-    
-    if (childId) {
-      fetchActivities();
+  const handleObservationSuccess = async () => {
+    try {
+      // Close the observation form
+      setShowQuickObservation(false);
+      
+      if (!weekPlanId || !childId) return;
+      
+      // Refresh the weekly plan data
+      setLoading(true);
+      
+      // Get the updated plan
+      const planDocRef = doc(db, 'weeklyPlans', weekPlanId);
+      const planDocSnap = await getDoc(planDocRef);
+      
+      if (!planDocSnap.exists()) {
+        console.error('Weekly plan not found after observation');
+        setLoading(false);
+        return;
+      }
+      
+      const planData = planDocSnap.data();
+      
+      // Process the updated plan data
+      const weekActivitiesData: WeekActivities = {
+        Monday: [],
+        Tuesday: [],
+        Wednesday: [],
+        Thursday: [],
+        Friday: [],
+        Saturday: [],
+        Sunday: []
+      };
+      
+      // Process each day's activities
+      const activitiesPromises: Promise<void>[] = [];
+      
+      Object.keys(planData).forEach(dayKey => {
+        if (dayKey !== 'childId' && dayKey !== 'weekStarting' && Array.isArray(planData[dayKey])) {
+          const dayActivities = planData[dayKey];
+          const formattedDayName = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+          
+          if (dayActivities.length > 0) {
+            const dayPromise = Promise.all(
+              dayActivities.map(async (activity) => {
+                try {
+                  // Get activity details
+                  const activityDocRef = doc(db, 'activities', activity.activityId);
+                  const activityDoc = await getDoc(activityDocRef);
+                  
+                  if (activityDoc.exists()) {
+                    const activityData = activityDoc.data();
+                    return {
+                      id: `${weekPlanId}_${formattedDayName}_${activity.activityId}`,
+                      activityId: activity.activityId,
+                      title: activityData.title,
+                      description: activityData.description,
+                      area: activityData.area,
+                      duration: activityData.duration || 15,
+                      isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                             !!activityData.classroomExtension,
+                      status: activity.status,
+                      timeSlot: activity.timeSlot,
+                      order: activity.order
+                    };
+                  }
+                  
+                  // If activity not found, still return the basic info
+                  return {
+                    id: `${weekPlanId}_${formattedDayName}_${activity.activityId}`,
+                    activityId: activity.activityId,
+                    title: 'Unknown Activity',
+                    status: activity.status,
+                    timeSlot: activity.timeSlot,
+                    order: activity.order
+                  };
+                } catch (error) {
+                  console.error(`Error fetching activity ${activity.activityId}:`, error);
+                  return {
+                    id: `${weekPlanId}_${formattedDayName}_${activity.activityId}`,
+                    activityId: activity.activityId,
+                    title: 'Error Loading Activity',
+                    status: activity.status
+                  };
+                }
+              })
+            );
+            
+            activitiesPromises.push(
+              dayPromise.then(activitiesWithDetails => {
+                weekActivitiesData[formattedDayName] = activitiesWithDetails.sort((a, b) => 
+                  (a.order || 0) - (b.order || 0)
+                );
+              })
+            );
+          }
+        }
+      });
+      
+      await Promise.all(activitiesPromises);
+      setWeekActivities(weekActivitiesData);
+      setLoading(false);
+      
+    } catch (error) {
+      console.error('Error refreshing activities after observation:', error);
+      setLoading(false);
     }
-    
-    setShowQuickObservation(false);
   };
   
   // Mark activity as completed
   const handleMarkCompleted = async (activity: Activity) => {
-    // Implementation for marking activity as completed
-    // This would update the activity status in Firestore
+    try {
+      if (!weekPlanId || !selectedDay) {
+        console.error('Cannot mark activity as complete: missing weekPlanId or selectedDay');
+        return;
+      }
+      
+      // Reference to the weekly plan document
+      const planRef = doc(db, 'weeklyPlans', weekPlanId);
+      
+      // Get the current plan data
+      const planDoc = await getDoc(planRef);
+      if (!planDoc.exists()) {
+        console.error('Weekly plan not found');
+        return;
+      }
+      
+      const planData = planDoc.data();
+      const dayKey = selectedDay.toLowerCase();
+      
+      if (!planData[dayKey]) {
+        console.error(`No activities found for ${selectedDay}`);
+        return;
+      }
+      
+      // Find the activity and update its status
+      const dayActivities = [...planData[dayKey]];
+      const activityIndex = dayActivities.findIndex(a => a.activityId === activity.activityId);
+      
+      if (activityIndex === -1) {
+        console.error(`Activity ${activity.activityId} not found in ${selectedDay}`);
+        return;
+      }
+      
+      // Update the activity status
+      dayActivities[activityIndex] = {
+        ...dayActivities[activityIndex],
+        status: 'completed'
+      };
+      
+      // Update the document
+      await updateDoc(planRef, {
+        [dayKey]: dayActivities
+      });
+      
+      console.log(`Activity ${activity.activityId} marked as completed`);
+      
+      // Update local state to reflect the change
+      setWeekActivities(prev => {
+        const updatedActivities = { ...prev };
+        if (updatedActivities[selectedDay]) {
+          updatedActivities[selectedDay] = updatedActivities[selectedDay].map(a => 
+            a.activityId === activity.activityId ? { ...a, status: 'completed' } : a
+          );
+        }
+        return updatedActivities;
+      });
+      
+    } catch (error) {
+      console.error('Error marking activity as complete:', error);
+    }
   };
   
   // Get color for activity area
@@ -334,6 +498,12 @@ export default function WeekAtAGlanceView({
   };
   
   const weekStats = calculateWeekStats();
+
+  // Handle "How To" button click
+  const handleHowTo = (activity: Activity) => {
+    setDetailsActivityId(activity.activityId);
+    setShowDetailsPopup(true);
+  };
 
   if (loading) {
     return (
@@ -425,20 +595,36 @@ export default function WeekAtAGlanceView({
         {/* Days of the week - vertical layout */}
         <div className="space-y-6">
           {weekDays.map((day) => (
-            <div key={day.dayName} className="border border-gray-200 rounded-lg overflow-hidden">
+            <div 
+              key={day.dayName}
+              className={`border rounded-lg overflow-hidden ${
+                day.isToday ? 'border-emerald-300' : 'border-gray-200'
+              } ${selectedDay === day.dayName ? 'ring-2 ring-emerald-500' : ''}`}
+              onClick={() => setSelectedDay(day.dayName)}
+            >
               {/* Day header */}
-              <div className={`p-3 ${
-                day.isToday ? 'bg-blue-100' : 'bg-gray-50'
+              <div className={`px-4 py-2 flex justify-between items-center ${
+                day.isToday ? 'bg-emerald-50' : 'bg-gray-50'
               }`}>
-                <div className="flex justify-between items-center">
-                  <h3 className={`font-medium ${day.isToday ? 'text-blue-800' : 'text-gray-800'}`}>
-                    {day.dayName} <span className="font-bold">{day.dayNumber}</span>
-                  </h3>
+                <div className="flex items-center">
+                  <span className={`text-lg font-medium ${
+                    day.isToday ? 'text-emerald-700' : 'text-gray-700'
+                  }`}>
+                    {day.dayName}
+                  </span>
+                  <span className="ml-2 text-sm text-gray-500">
+                    {day.dayNumber}
+                  </span>
                   {day.isToday && (
-                    <span className="text-xs font-medium bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">
+                    <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded-full">
                       Today
                     </span>
                   )}
+                </div>
+                
+                <div className="text-sm text-gray-500">
+                  {weekActivities[day.dayName]?.filter(a => a.status === 'completed').length || 0}/
+                  {weekActivities[day.dayName]?.length || 0} completed
                 </div>
               </div>
               
@@ -498,38 +684,36 @@ export default function WeekAtAGlanceView({
                         </div>
                         
                         {/* Activity description - truncated */}
-                        <div className="text-sm text-gray-600">
-                          <p className="line-clamp-2">
-                            {activity.description || "No description available for this activity."}
-                          </p>
-                        </div>
+                        {activity.description && (
+                          <div className="text-sm text-gray-600">
+                            <p className="line-clamp-2">
+                              {activity.description}
+                            </p>
+                          </div>
+                        )}
                         
-                        {/* Action buttons */}
+                        {/* Action buttons - updated to match daily view */}
                         <div className="flex flex-wrap gap-2 mt-1">
                           <button
-                            onClick={() => handleActivitySelect(activity)}
-                            className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md flex items-center"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleHowTo(activity);
+                            }}
+                            className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-md flex items-center"
                           >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View Details
+                            <Info className="h-3 w-3 mr-1" />
+                            How To
                           </button>
                           
-                          {activity.status !== 'completed' && (
-                            <button
-                              onClick={() => handleMarkCompleted(activity)}
-                              className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-md flex items-center"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Mark Complete
-                            </button>
-                          )}
-                          
                           <button
-                            onClick={() => handleAddObservation(activity)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddObservation(activity);
+                            }}
                             className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-md flex items-center"
                           >
                             <Camera className="h-3 w-3 mr-1" />
-                            Add Observation
+                            {activity.status === 'completed' ? 'Add Another Observation' : 'Record Observation'}
                           </button>
                         </div>
                       </div>
@@ -553,19 +737,17 @@ export default function WeekAtAGlanceView({
           childId={childId}
           isOpen={showActivityDetail}
           onClose={() => setShowActivityDetail(false)}
-          onObservationRecorded={() => {
-            setShowActivityDetail(false);
-            // Refresh activities after recording an observation
-            const fetchActivities = async () => {
-              // ... existing fetch code ...
-            };
-            
-            if (childId) {
-              fetchActivities();
-            }
-          }}
+          onObservationRecorded={handleObservationSuccess}
           weeklyPlanId={weekPlanId || undefined}
           dayOfWeek={selectedDay || undefined}
+        />
+      )}
+      
+      {/* Activity Details Popup */}
+      {showDetailsPopup && detailsActivityId && (
+        <ActivityDetailsPopup 
+          activityId={detailsActivityId} 
+          onClose={() => setShowDetailsPopup(false)}
         />
       )}
       
