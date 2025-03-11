@@ -34,6 +34,7 @@ interface Activity {
   status: 'suggested' | 'confirmed' | 'completed';
   timeSlot?: string;
   order?: number;
+  description?: string;
 }
 
 // Day info interface
@@ -186,7 +187,8 @@ export default function WeekAtAGlanceView({
                                              !!activityData.classroomExtension,
                       status: activity.status,
                       timeSlot: activity.timeSlot,
-                      order: activity.order
+                      order: activity.order,
+                      description: activityData.description || ''
                     };
                   }
                   
@@ -197,7 +199,8 @@ export default function WeekAtAGlanceView({
                     title: 'Unknown Activity',
                     status: activity.status,
                     timeSlot: activity.timeSlot,
-                    order: activity.order
+                    order: activity.order,
+                    description: ''
                   };
                 } catch (error) {
                   console.error(`Error fetching activity ${activity.activityId}:`, error);
@@ -205,7 +208,8 @@ export default function WeekAtAGlanceView({
                     id: `${foundPlanId}_${dayName}_${activity.activityId}`,
                     activityId: activity.activityId,
                     title: 'Error Loading Activity',
-                    status: activity.status
+                    status: activity.status,
+                    description: ''
                   };
                 }
               })
@@ -424,57 +428,89 @@ export default function WeekAtAGlanceView({
                   weekActivities[day.dayName].map(activity => (
                     <div 
                       key={activity.id} 
-                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                      className={`p-4 hover:bg-gray-50 transition-colors ${
                         activity.status === 'completed' ? 'bg-green-50' : ''
                       }`}
-                      onClick={() => handleActivitySelect(activity)}
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
+                      <div className="flex flex-col space-y-3">
+                        {/* Activity header */}
+                        <div className="flex justify-between items-start">
                           <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {activity.area && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                                {activity.area.replace('_', ' ')}
-                              </span>
-                            )}
-                            
-                            {activity.duration && (
-                              <span className="flex items-center text-xs text-gray-500">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {activity.duration} min
-                              </span>
-                            )}
-                            
-                            {activity.timeSlot && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                activity.timeSlot === 'morning' 
-                                  ? 'bg-amber-100 text-amber-800' 
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {activity.timeSlot === 'morning' ? 'Morning' : 'Afternoon'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center">
                           {activity.status === 'completed' ? (
                             <span className="flex items-center text-green-600 bg-green-100 px-2 py-0.5 rounded-full text-xs">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               <span>Completed</span>
                             </span>
-                          ) : (
+                          ) : null}
+                        </div>
+                        
+                        {/* Activity tags */}
+                        <div className="flex flex-wrap gap-2">
+                          {activity.area && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                              {activity.area.replace('_', ' ')}
+                            </span>
+                          )}
+                          
+                          {activity.duration && (
+                            <span className="flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {activity.duration} min
+                            </span>
+                          )}
+                          
+                          {activity.timeSlot && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              activity.timeSlot === 'morning' 
+                                ? 'bg-amber-100 text-amber-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {activity.timeSlot === 'morning' ? 'Morning' : 'Afternoon'}
+                            </span>
+                          )}
+                          
+                          {activity.isHomeSchoolConnection && (
+                            <span className="flex items-center text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                              <Star className="h-3 w-3 mr-1" />
+                              School Connection
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Activity description - truncated */}
+                        <div className="text-sm text-gray-600">
+                          <p className="line-clamp-2">
+                            {activity.description || "No description available for this activity."}
+                          </p>
+                        </div>
+                        
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <button
+                            onClick={() => handleActivitySelect(activity)}
+                            className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md flex items-center"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View Details
+                          </button>
+                          
+                          {activity.status !== 'completed' && (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMarkCompleted(activity);
-                              }}
-                              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md"
+                              onClick={() => handleMarkCompleted(activity)}
+                              className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-md flex items-center"
                             >
+                              <CheckCircle className="h-3 w-3 mr-1" />
                               Mark Complete
                             </button>
                           )}
+                          
+                          <button
+                            onClick={() => handleAddObservation(activity)}
+                            className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-md flex items-center"
+                          >
+                            <Camera className="h-3 w-3 mr-1" />
+                            Add Observation
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -531,7 +567,7 @@ export default function WeekAtAGlanceView({
               
               {/* Activity description would go here */}
               <div className="mb-6 text-gray-700">
-                <p>Activity description would appear here.</p>
+                <p>{selectedActivity.description || "No description available for this activity."}</p>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
