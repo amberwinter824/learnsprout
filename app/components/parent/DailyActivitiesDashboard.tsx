@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Calendar, 
@@ -50,17 +49,17 @@ interface DailyActivitiesDashboardProps {
   childId: string;
   childName: string;
   userId: string;
-  selectedDate?: Date; // New prop for selected date
+  selectedDate?: Date; // For selected date
+  onWeeklyViewRequest?: (childId: string) => void; // New callback prop for view switching
 }
 
 export default function DailyActivitiesDashboard({ 
   childId, 
   childName,
   userId,
-  selectedDate
+  selectedDate,
+  onWeeklyViewRequest
 }: DailyActivitiesDashboardProps) {
-  const router = useRouter();
-
   // Activity state
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +97,7 @@ export default function DailyActivitiesDashboard({
     if (selectedDate && !isSameDay(selectedDate, currentDate)) {
       setCurrentDate(selectedDate);
     }
-  }, [selectedDate]);
+  }, [selectedDate, currentDate]);
 
   // Fetch activities for the current date
   useEffect(() => {
@@ -353,6 +352,21 @@ export default function DailyActivitiesDashboard({
     setCurrentDate(prev => addDays(prev, days));
   };
   
+  // Handle request to view weekly view
+  const handleWeeklyViewRequest = () => {
+    // Use the callback if provided, otherwise emit an event
+    if (onWeeklyViewRequest) {
+      onWeeklyViewRequest(childId);
+    } else {
+      // Emit a custom event as a fallback
+      const event = new CustomEvent('weeklyViewRequested', { 
+        bubbles: true, 
+        detail: { childId } 
+      });
+      document.dispatchEvent(event);
+    }
+  };
+  
   // Get color for activity area
   const getAreaColor = (area?: string) => {
     const areaColors: Record<string, string> = {
@@ -512,11 +526,7 @@ export default function DailyActivitiesDashboard({
     }
     return format(date, 'EEEE, MMMM d');
   };
-  
-  const goToWeeklyView = () => {
-    // Navigate to weekly plan page
-    router.push(`/dashboard/children/${childId}/weekly-plan`);
-  };
+
   // Render loading state
   if (loading) {
     return (
@@ -540,8 +550,9 @@ export default function DailyActivitiesDashboard({
         
         <div className="flex items-center">
           <button 
-            onClick={goToWeeklyView}
+            onClick={handleWeeklyViewRequest}
             className="inline-flex items-center mr-4 text-sm text-emerald-600 hover:text-emerald-700"
+            type="button"
           >
             <CalendarDays className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">Weekly View</span>
@@ -551,6 +562,7 @@ export default function DailyActivitiesDashboard({
             onClick={() => handleDateChange(-1)}
             className="p-1 rounded-full hover:bg-gray-100"
             aria-label="Previous day"
+            type="button"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -565,6 +577,7 @@ export default function DailyActivitiesDashboard({
             onClick={() => handleDateChange(1)}
             className="p-1 rounded-full hover:bg-gray-100"
             aria-label="Next day"
+            type="button"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -592,6 +605,7 @@ export default function DailyActivitiesDashboard({
                   setSelectedActivity(null);
                 }}
                 className="text-gray-400 hover:text-gray-600"
+                type="button"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -599,7 +613,7 @@ export default function DailyActivitiesDashboard({
             
             <div className="mb-3">
               <div className="text-sm text-gray-500 mb-1">Activity</div>
-              <div className="font-medium">{selectedActivity.title}</div>
+              <div className="font-medium">{selectedActivity?.title}</div>
             </div>
             
             <div className="mb-4">
@@ -610,6 +624,7 @@ export default function DailyActivitiesDashboard({
                   className={`flex-1 py-2 px-1 rounded-l-lg flex flex-col items-center ${
                     observationEngagement === 'low' ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'
                   }`}
+                  type="button"
                 >
                   <Frown className={`h-6 w-6 mb-1 ${observationEngagement === 'low' ? 'text-red-500' : 'text-gray-400'}`} />
                   <span className="text-xs">Challenging</span>
@@ -620,6 +635,7 @@ export default function DailyActivitiesDashboard({
                   className={`flex-1 py-2 px-1 border-x border-white flex flex-col items-center ${
                     observationEngagement === 'medium' ? 'bg-yellow-50 text-yellow-700' : 'bg-gray-50 text-gray-700'
                   }`}
+                  type="button"
                 >
                   <Meh className={`h-6 w-6 mb-1 ${observationEngagement === 'medium' ? 'text-yellow-500' : 'text-gray-400'}`} />
                   <span className="text-xs">OK</span>
@@ -630,6 +646,7 @@ export default function DailyActivitiesDashboard({
                   className={`flex-1 py-2 px-1 rounded-r-lg flex flex-col items-center ${
                     observationEngagement === 'high' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'
                   }`}
+                  type="button"
                 >
                   <Smile className={`h-6 w-6 mb-1 ${observationEngagement === 'high' ? 'text-green-500' : 'text-gray-400'}`} />
                   <span className="text-xs">Great</span>
@@ -666,13 +683,14 @@ export default function DailyActivitiesDashboard({
               {photoPreview && (
                 <div className="mt-2 relative inline-block">
                   <img 
-                    src={photoPreview} 
+                    src={photoPreview || ''} 
                     alt="Preview" 
                     className="h-20 w-20 object-cover rounded-md border border-gray-200"
                   />
                   <button
                     onClick={handleClearPhoto}
                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                    type="button"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -692,6 +710,7 @@ export default function DailyActivitiesDashboard({
                         ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                         : 'bg-gray-100 text-gray-700 border border-gray-200'
                     }`}
+                    type="button"
                   >
                     {skill.name}
                   </button>
@@ -704,6 +723,7 @@ export default function DailyActivitiesDashboard({
                 onClick={submitObservation}
                 disabled={submittingObservation}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-md flex items-center disabled:opacity-50"
+                type="button"
               >
                 {submittingObservation ? (
                   <>
@@ -720,7 +740,6 @@ export default function DailyActivitiesDashboard({
             </div>
           </div>
         )}
-        
         {/* Activity list */}
         {activities.length > 0 ? (
           <div className="space-y-3">
@@ -756,6 +775,7 @@ export default function DailyActivitiesDashboard({
                             setShowDetailsPopup(true);
                           }}
                           className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded text-sm"
+                          type="button"
                         >
                           <Info className="h-3 w-3 inline mr-1" />
                           How To
@@ -766,6 +786,7 @@ export default function DailyActivitiesDashboard({
                             markComplete(activity);
                           }}
                           className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded text-sm"
+                          type="button"
                         >
                           Mark Done
                         </button>
@@ -831,7 +852,7 @@ export default function DailyActivitiesDashboard({
         {/* Render the activity details popup */}
         {showDetailsPopup && detailsActivityId && (
           <ActivityDetailsPopup 
-            activityId={detailsActivityId} 
+            activityId={detailsActivityId || ''} 
             onClose={() => setShowDetailsPopup(false)}
           />
         )}
@@ -842,7 +863,7 @@ export default function DailyActivitiesDashboard({
             {format(currentDate, 'MMMM yyyy')}
           </div>
           <button
-            onClick={goToWeeklyView}
+            onClick={handleWeeklyViewRequest}
             className="flex items-center text-sm text-emerald-600 hover:text-emerald-700"
           >
             View Weekly Calendar

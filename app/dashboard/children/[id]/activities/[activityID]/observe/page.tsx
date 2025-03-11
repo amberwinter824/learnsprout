@@ -1,38 +1,42 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { useSearchParams } from 'next/navigation';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
-import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import DailyActivitiesDashboard from '@/app/components/parent/DailyActivitiesDashboard';
+import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
+import { Loader2, ArrowLeft, AlertCircle, Calendar, ListIcon } from 'lucide-react';
 
-export default function ActivityObservationPage({ 
+export default function ChildActivitiesPage({ 
   params 
 }: { 
-  params: { childId: string; activityId: string } 
+  params: { id: string } 
 }) {
-  const router = useRouter();
   const { currentUser } = useAuth();
-  const { childId, activityId } = params;
+  const searchParams = useSearchParams();
+  const initialView = searchParams.get('view') || 'daily';
+  const childId = params.id;
   
+  // State
   const [childName, setChildName] = useState<string>('');
-  const [activityData, setActivityData] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<'daily' | 'weekly'>(initialView === 'weekly' ? 'weekly' : 'daily');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
-  // Fetch child and activity data
+  // Fetch child data
   useEffect(() => {
-    const fetchData = async () => {
-      if (!childId || !activityId || !currentUser) return;
+    const fetchChildData = async () => {
+      if (!childId || !currentUser) return;
       
       try {
         setLoading(true);
         setError(null);
         
-        // Fetch child data first to verify ownership
+        // Fetch child data to verify ownership
         const childRef = doc(db, 'children', childId);
         const childDoc = await getDoc(childRef);
         
@@ -46,43 +50,52 @@ export default function ActivityObservationPage({
         
         // Verify this child belongs to the current user
         if (childData.userId !== currentUser.uid) {
-          setError('You do not have permission to access this page');
+          setError('You do not have permission to view this child');
           setLoading(false);
           return;
         }
         
         setChildName(childData.name);
-        
-        // Fetch activity data
-        const activityRef = doc(db, 'activities', activityId);
-        const activityDoc = await getDoc(activityRef);
-        
-        if (!activityDoc.exists()) {
-          setError('Activity not found');
-          setLoading(false);
-          return;
-        }
-        
-        setActivityData({
-          id: activityDoc.id,
-          ...activityDoc.data()
-        });
-        
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load information');
+        console.error('Error fetching child data:', err);
+        setError('Failed to load child information');
         setLoading(false);
       }
     };
     
-    fetchData();
-  }, [childId, activityId, currentUser]);
+    fetchChildData();
+  }, [childId, currentUser]);
   
-  const handleObservationSuccess = () => {
-    // Redirect back to the child's activity page or dashboard
-    router.push(`/dashboard/children/${childId}/activities`);
+  // Handle view toggle
+  const handleViewToggle = (view: 'daily' | 'weekly') => {
+    setActiveView(view);
+    
+    // Remember this preference in localStorage
+    try {
+      localStorage.setItem(`${childId}_preferred_activity_view`, view);
+    } catch (e) {
+      // Ignore localStorage errors
+    }
   };
+  
+  // Handle day selection from weekly view
+  const handleDaySelected = (date: Date) => {
+    setSelectedDate(date);
+    setActiveView('daily');
+  };
+  
+  // Load user preference on first render
+  useEffect(() => {
+    try {
+      const savedPreference = localStorage.getItem(`${childId}_preferred_activity_view`);
+      if (savedPreference === 'daily' || savedPreference === 'weekly') {
+        setActiveView(savedPreference);
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }, [childId]);
   
   if (loading) {
     return (
@@ -102,27 +115,62 @@ export default function ActivityObservationPage({
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <div className="flex items-center mb-6">
-        <Link href={`/dashboard/children/${childId}/activities`} className="mr-4 text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="h-5 w-5" />
+    <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <div className="mb-6">
+        <Link href={`/dashboard/children/${childId}`} className="inline-flex items-center text-emerald-500 hover:text-emerald-600">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to {childName}'s Profile
         </Link>
-        <h1 className="text-xl font-semibold">Record Observation</h1>
+        <h1 className="mt-2 text-2xl font-bold text-gray-900">{childName}'s Activities</h1>
       </div>
-      
-      <div className="bg-white rounded-lg shadow-sm p-1">
-        <QuickObservationForm 
-          childId={childId}
-          activityId={activityId}
-          activityTitle={activityData?.title || 'Activity'} 
-          onSuccess={handleObservationSuccess}
-          onClose={() => router.back()}
+
+      {/* Toggle between daily and weekly views */}
+      <div className="bg-white shadow-sm rounded-lg overflow-hidden mb-6">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => handleViewToggle('daily')}
+            className={`flex items-center px-4 py-3 text-sm font-medium ${
+              activeView === 'daily' 
+                ? 'text-emerald-600 border-b-2 border-emerald-500' 
+                : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+            type="button"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Daily View
+          </button>
+          
+          <button
+            onClick={() => handleViewToggle('weekly')}
+            className={`flex items-center px-4 py-3 text-sm font-medium ${
+              activeView === 'weekly' 
+                ? 'text-emerald-600 border-b-2 border-emerald-500' 
+                : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+            type="button"
+          >
+            <ListIcon className="h-4 w-4 mr-2" />
+            Weekly View
+          </button>
+        </div>
+      </div>
+
+      {/* Render the appropriate view */}
+      {activeView === 'daily' ? (
+        <DailyActivitiesDashboard 
+          childId={childId} 
+          childName={childName}
+          userId={currentUser?.uid || ''}
+          selectedDate={selectedDate}
         />
-      </div>
-      
-      <div className="mt-6 text-sm text-gray-500">
-        <p>Recording an observation helps track {childName}'s progress and engagement with activities.</p>
-      </div>
+      ) : (
+        <WeekAtAGlanceView 
+          childId={childId} 
+          childName={childName}
+          onSelectDay={handleDaySelected}
+          onBackToDaily={() => handleViewToggle('daily')}
+        />
+      )}
     </div>
   );
 }
