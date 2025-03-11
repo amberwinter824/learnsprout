@@ -33,12 +33,13 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
   const [error, setError] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
-  // State for active tab with a default that doesn't depend on URL initially
-  const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>('daily');
+  // Initialize activeTab based on URL parameter or default to 'daily'
+  const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>(
+    viewFromUrl === 'weekly' ? 'weekly' : 'daily'
+  );
   
   // Use a ref to prevent URL update loops
   const isUrlUpdating = useRef(false);
-  const initialRender = useRef(true);
 
   // Fetch child data once on initial render
   useEffect(() => {
@@ -58,12 +59,6 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
         if (isMounted) {
           setChild(childData);
           setLoading(false);
-          
-          // Only set the tab from URL on initial render, not on every URL change
-          if (viewFromUrl === 'weekly' && initialRender.current) {
-            setActiveTab('weekly');
-            initialRender.current = false;
-          }
         }
       } catch (error: any) {
         if (isMounted) {
@@ -79,6 +74,14 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
       isMounted = false;
     };
   }, [childId]);
+
+  // Separate effect to handle URL changes
+  useEffect(() => {
+    // Only update the tab if we're not in the middle of a URL update
+    if (!isUrlUpdating.current) {
+      setActiveTab(viewFromUrl === 'weekly' ? 'weekly' : 'daily');
+    }
+  }, [viewFromUrl]);
 
   const handleTabChange = (tab: 'daily' | 'weekly') => {
     // Avoid setting state if it's the same tab

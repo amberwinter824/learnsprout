@@ -72,11 +72,10 @@ export default function WeekAtAGlanceView({
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showSimpleView, setShowSimpleView] = useState<boolean>(true);
-
-  // Calculate dates for week view
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Start on Monday
-  const weekDays: DayInfo[] = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(weekStart, i);
+  
+  // Calculate week days for display
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), i);
     return {
       date,
       dayName: format(date, 'EEEE'),
@@ -85,7 +84,10 @@ export default function WeekAtAGlanceView({
       isToday: isToday(date)
     };
   });
-  
+
+  // Calculate weekStart for data fetching
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+
   // Fetch weekly plan data
   useEffect(() => {
     const fetchWeeklyPlan = async () => {
@@ -205,7 +207,7 @@ export default function WeekAtAGlanceView({
     if (childId) {
       fetchWeeklyPlan();
     }
-  }, [childId, weekStart]);
+  }, [childId, currentWeek]); // Only depend on childId and currentWeek
   
   // Navigate to previous week
   const handlePrevWeek = () => {
