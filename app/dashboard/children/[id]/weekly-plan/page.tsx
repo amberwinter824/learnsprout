@@ -172,23 +172,6 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
         </Link>
       </div>
       
-      {/* Weekly Planning Mode Banner */}
-      <div className="bg-blue-50 p-4 rounded-md mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="font-medium text-blue-800">Weekly Planning Mode</h2>
-          <p className="text-sm text-blue-600">
-            This is an optional feature for parents who prefer weekly structure.
-          </p>
-        </div>
-        
-        <button
-          onClick={() => router.push(`/dashboard/children/${childId}`)}
-          className="px-4 py-2 bg-white border border-blue-300 rounded-md text-blue-700 hover:bg-blue-50"
-        >
-          <ArrowLeft className="h-4 w-4 inline mr-1" />
-          Back to Daily View
-        </button>
-      </div>
       
       <h1 className="text-2xl font-bold text-gray-900 mb-4">Weekly Activities Plan</h1>
 
@@ -222,7 +205,7 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'daily' ? (
+      {activeTab === 'weekly' ? (
         <DailyActivitiesDashboard 
           childId={childId} 
           childName={child?.name || ''}
@@ -248,7 +231,7 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
             </p>
             <p>
               You can use the tabs above to toggle between viewing one day at a time (Daily View) or seeing the entire week at once (Weekly View).
-              Activities are auto-generated based on your child's age and interests, but you can customize them anytime.
+              Activities are auto-generated based on your child's age and interests.
             </p>
           </div>
         </div>

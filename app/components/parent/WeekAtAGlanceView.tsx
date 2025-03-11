@@ -94,40 +94,61 @@ export default function WeekAtAGlanceView({
       try {
         setLoading(true);
         
-        // Format date for query
+        // Format date for query - ensure it matches the format used when creating the plan
         const weekStartDate = format(weekStart, 'yyyy-MM-dd');
+        console.log('Fetching weekly plan for date:', weekStartDate);
+        console.log('Child ID:', childId);
         
-        // Query for the weekly plan for this child and week
-        const plansQuery = query(
-          collection(db, 'weeklyPlans'),
-          where('childId', '==', childId),
-          where('weekStarting', '==', weekStartDate)
-        );
+        // First try to fetch by the plan ID format (childId_date)
+        const planId = `${childId}_${weekStartDate}`;
+        console.log('Looking for plan with ID:', planId);
         
-        const plansSnapshot = await getDocs(plansQuery);
+        // Try to get the plan directly by ID first
+        const planDocRef = doc(db, 'weeklyPlans', planId);
+        const planDocSnap = await getDoc(planDocRef);
         
-        // If no plan exists, create an empty structure
-        if (plansSnapshot.empty) {
-          console.log('No weekly plan found for this week');
-          const emptyWeek: WeekActivities = {
-            Monday: [],
-            Tuesday: [],
-            Wednesday: [],
-            Thursday: [],
-            Friday: [],
-            Saturday: [],
-            Sunday: []
-          };
-          setWeekActivities(emptyWeek);
-          setLoading(false);
-          return;
+        let planData;
+        let foundPlanId;
+        
+        if (planDocSnap.exists()) {
+          console.log('Found plan by direct ID');
+          planData = planDocSnap.data();
+          foundPlanId = planDocSnap.id;
+        } else {
+          // If not found by ID, try the query approach
+          console.log('Plan not found by ID, trying query...');
+          const plansQuery = query(
+            collection(db, 'weeklyPlans'),
+            where('childId', '==', childId),
+            where('weekStarting', '==', weekStartDate)
+          );
+          
+          const plansSnapshot = await getDocs(plansQuery);
+          
+          if (plansSnapshot.empty) {
+            console.log('No weekly plan found for this week via query either');
+            const emptyWeek: WeekActivities = {
+              Monday: [],
+              Tuesday: [],
+              Wednesday: [],
+              Thursday: [],
+              Friday: [],
+              Saturday: [],
+              Sunday: []
+            };
+            setWeekActivities(emptyWeek);
+            setLoading(false);
+            return;
+          }
+          
+          // Use the first plan (should only be one per week)
+          const planDoc = plansSnapshot.docs[0];
+          planData = planDoc.data();
+          foundPlanId = planDoc.id;
+          console.log('Found plan via query with ID:', foundPlanId);
         }
         
-        // Use the first plan (should only be one per week)
-        const planDoc = plansSnapshot.docs[0];
-        const planData = planDoc.data();
-        const planId = planDoc.id;
-        setWeekPlanId(planId);
+        setWeekPlanId(foundPlanId);
         
         // Create a structure to hold activities by day
         const weekActivitiesData: WeekActivities = {};
@@ -142,6 +163,7 @@ export default function WeekAtAGlanceView({
         // Get activities for each day
         const activitiesPromises = dayNames.map(async (dayName) => {
           const dayActivities = planData[dayName] || [];
+          console.log(`Activities for ${dayName}:`, dayActivities);
           const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
           
           if (dayActivities.length > 0) {
@@ -154,7 +176,7 @@ export default function WeekAtAGlanceView({
                   if (activityDoc.exists()) {
                     const activityData = activityDoc.data();
                     return {
-                      id: `${planId}_${dayName}_${activity.activityId}`,
+                      id: `${foundPlanId}_${dayName}_${activity.activityId}`,
                       activityId: activity.activityId,
                       title: activityData.title || 'Untitled Activity',
                       area: activityData.area || '',
@@ -169,7 +191,7 @@ export default function WeekAtAGlanceView({
                   
                   // If activity not found, still return the basic info
                   return {
-                    id: `${planId}_${dayName}_${activity.activityId}`,
+                    id: `${foundPlanId}_${dayName}_${activity.activityId}`,
                     activityId: activity.activityId,
                     title: 'Unknown Activity',
                     status: activity.status,
@@ -179,7 +201,7 @@ export default function WeekAtAGlanceView({
                 } catch (error) {
                   console.error(`Error fetching activity ${activity.activityId}:`, error);
                   return {
-                    id: `${planId}_${dayName}_${activity.activityId}`,
+                    id: `${foundPlanId}_${dayName}_${activity.activityId}`,
                     activityId: activity.activityId,
                     title: 'Error Loading Activity',
                     status: activity.status
@@ -195,6 +217,7 @@ export default function WeekAtAGlanceView({
         });
         
         await Promise.all(activitiesPromises);
+        console.log('Final week activities data:', weekActivitiesData);
         setWeekActivities(weekActivitiesData);
         setLoading(false);
       } catch (error) {
