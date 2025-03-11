@@ -1,7 +1,7 @@
 // app/components/parent/WeekAtAGlanceView.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Calendar, 
@@ -91,19 +91,23 @@ export default function WeekAtAGlanceView({
   const [detailsActivityId, setDetailsActivityId] = useState<string | null>(null);
   
   // Calculate week days for display
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), i);
-    return {
-      date,
-      dayName: format(date, 'EEEE'),
-      dayShort: format(date, 'EEE'),
-      dayNumber: format(date, 'd'),
-      isToday: isToday(date)
-    };
-  });
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), i);
+      return {
+        date,
+        dayName: format(date, 'EEEE'),
+        dayShort: format(date, 'EEE'),
+        dayNumber: format(date, 'd'),
+        isToday: isToday(date)
+      };
+    });
+  }, [currentWeek]);
 
   // Calculate weekStart for data fetching
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+  const weekStart = useMemo(() => {
+    return startOfWeek(currentWeek, { weekStartsOn: 1 });
+  }, [currentWeek]);
 
   // Fetch weekly plan data
   useEffect(() => {
@@ -255,7 +259,7 @@ export default function WeekAtAGlanceView({
     if (childId) {
       fetchWeeklyPlan();
     }
-  }, [childId, currentWeek, weekDays]);
+  }, [childId, currentWeek, weekStart]);
   
   // Navigate to previous week
   const handlePrevWeek = () => {
