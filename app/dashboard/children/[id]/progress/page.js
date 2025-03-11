@@ -288,39 +288,37 @@ export default function ProgressTrackingPage({ params }) {
     }
   };
 
-  const handleChange = (e) => {
+  const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      // Create a new progress record
+      // Create new progress record
       const newRecord = {
         childId,
         activityId: formData.activityId,
+        activityTitle: activities.find(a => a.id === formData.activityId)?.title || '',
         notes: formData.notes,
         completionStatus: formData.completionStatus,
         engagementLevel: formData.engagementLevel,
-        date: serverTimestamp()
+        date: new Date(formData.date),
+        createdAt: serverTimestamp()
       };
       
       const docRef = await addDoc(collection(db, 'progressRecords'), newRecord);
       
       // Add the new record to the state
-      setProgressRecords(prev => [
-        { 
-          id: docRef.id, 
-          ...newRecord, 
-          date: new Date() // Use current date for immediate display
-        }, 
-        ...prev
-      ]);
+      setProgressRecords(prev => [{
+        id: docRef.id,
+        ...newRecord,
+        date: new Date(formData.date) // Use the JavaScript Date object for the UI
+      }, ...prev]);
       
-      // Close the modal and reset form
-      setShowAddRecord(false);
+      // Reset form
       setFormData({
         activityId: '',
         notes: '',
@@ -329,6 +327,7 @@ export default function ProgressTrackingPage({ params }) {
         date: new Date().toISOString().slice(0, 10)
       });
       
+      setShowAddRecord(false);
     } catch (error) {
       console.error('Error adding record:', error);
       setError('Failed to add record: ' + error.message);
@@ -899,7 +898,7 @@ export default function ProgressTrackingPage({ params }) {
             </div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleFormSubmit}>
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <div className="sm:flex sm:items-start">
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -916,7 +915,7 @@ export default function ProgressTrackingPage({ params }) {
                           id="activityId"
                           name="activityId"
                           value={formData.activityId}
-                          onChange={handleChange}
+                          onChange={handleFormChange}
                           className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                           required
                         >
@@ -938,7 +937,7 @@ export default function ProgressTrackingPage({ params }) {
                           id="date"
                           name="date"
                           value={formData.date}
-                          onChange={handleChange}
+                          onChange={handleFormChange}
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                           required
                         />
@@ -952,7 +951,7 @@ export default function ProgressTrackingPage({ params }) {
                           id="completionStatus"
                           name="completionStatus"
                           value={formData.completionStatus}
-                          onChange={handleChange}
+                          onChange={handleFormChange}
                           className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                         >
                           <option value="completed">Completed</option>
@@ -969,7 +968,7 @@ export default function ProgressTrackingPage({ params }) {
                           id="engagementLevel"
                           name="engagementLevel"
                           value={formData.engagementLevel}
-                          onChange={handleChange}
+                          onChange={handleFormChange}
                           className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                         >
                           <option value="high">High</option>
@@ -987,7 +986,7 @@ export default function ProgressTrackingPage({ params }) {
                           name="notes"
                           rows={4}
                           value={formData.notes}
-                          onChange={handleChange}
+                          onChange={handleFormChange}
                           placeholder="Describe what you observed during the activity..."
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                         />
@@ -1017,54 +1016,6 @@ export default function ProgressTrackingPage({ params }) {
       )}
     </div>
   );
-  
-  // Form change handler
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  }
-  
-  // Form submit handler
-  async function handleSubmit(e) {
-    e.preventDefault();
-    try {
-      // Create a new progress record
-      const newRecord = {
-        childId,
-        activityId: formData.activityId,
-        date: new Date(formData.date),
-        completionStatus: formData.completionStatus,
-        engagementLevel: formData.engagementLevel,
-        notes: formData.notes,
-        createdAt: serverTimestamp()
-      };
-      
-      const docRef = await addDoc(collection(db, 'progressRecords'), newRecord);
-      
-      // Add the new record to the state
-      setProgressRecords(prev => [
-        { 
-          id: docRef.id, 
-          ...newRecord, 
-          date: new Date(formData.date) // Ensure date is a Date object for UI
-        }, 
-        ...prev
-      ]);
-      
-      // Reset form and close modal
-      setFormData({
-        activityId: '',
-        notes: '',
-        completionStatus: 'completed',
-        engagementLevel: 'high',
-        date: new Date().toISOString().slice(0, 10)
-      });
-      setShowAddRecord(false);
-    } catch (error) {
-      console.error('Error adding record:', error);
-      setError('Failed to add record: ' + error.message);
-    }
-  }
 }
 
 // Helper functions
