@@ -59,8 +59,8 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
           setChild(childData);
           setLoading(false);
           
-          // Only after loading child data, set the initial tab from URL
-          if (initialRender.current && viewFromUrl === 'weekly') {
+          // Only set the tab from URL on initial render, not on every URL change
+          if (viewFromUrl === 'weekly' && initialRender.current) {
             setActiveTab('weekly');
             initialRender.current = false;
           }
@@ -78,7 +78,7 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
     return () => {
       isMounted = false;
     };
-  }, [childId, viewFromUrl]);
+  }, [childId]);
 
   const handleTabChange = (tab: 'daily' | 'weekly') => {
     // Avoid setting state if it's the same tab
