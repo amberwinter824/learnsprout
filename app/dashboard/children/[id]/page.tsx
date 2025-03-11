@@ -221,15 +221,7 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
         
         {/* Quick Links */}
         <div className="border-t border-gray-200 px-6 py-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Link 
-              href={`/dashboard/children/${childId}/weekly-plan`}
-              className="flex flex-col items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              <Calendar className="h-6 w-6 text-emerald-500 mb-1" />
-              <span className="text-sm font-medium">Weekly Plan</span>
-            </Link>
-            
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Link 
               href={`/dashboard/children/${childId}/activities`}
               className="flex flex-col items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
@@ -299,12 +291,25 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
           
           {/* Activities View (Daily or Weekly) */}
           {activeView === 'daily' ? (
-            <DailyActivitiesDashboard 
-              childId={childId} 
-              childName={child.name}
-              userId={currentUser?.uid || ''}
-              selectedDate={selectedDate}
-            />
+            <div>
+              <DailyActivitiesDashboard 
+                childId={childId} 
+                childName={child.name}
+                userId={currentUser?.uid || ''}
+                selectedDate={selectedDate}
+              />
+              
+              {/* Link to Weekly Plan at bottom of daily view */}
+              <div className="mt-4 text-center">
+                <Link
+                  href={`/dashboard/children/${childId}/weekly-plan`}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-100 rounded-md hover:bg-emerald-200"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  View Weekly Calendar
+                </Link>
+              </div>
+            </div>
           ) : (
             <WeekAtAGlanceView
               childId={childId}

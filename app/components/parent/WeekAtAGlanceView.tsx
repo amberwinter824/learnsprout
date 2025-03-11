@@ -15,7 +15,8 @@ import {
   Clock,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Camera
 } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns';
 import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
@@ -71,7 +72,7 @@ export default function WeekAtAGlanceView({
   const [error, setError] = useState<string | null>(null);
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [showSimpleView, setShowSimpleView] = useState<boolean>(true);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   
   // Calculate week days for display
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -242,27 +243,25 @@ export default function WeekAtAGlanceView({
     setCurrentWeek(prev => addDays(prev, 7));
   };
   
-  // Handle day selection
-  const handleDaySelect = (day: DayInfo) => {
-    setSelectedDay(day.dayName);
-    
-    if (onSelectDay) {
-      onSelectDay(day.date);
-    }
+  // Handle activity selection
+  const handleActivitySelect = (activity: Activity) => {
+    setSelectedActivity(activity);
   };
   
-  // Handle back to daily view
-  const handleBackToDailyView = () => {
-    if (onBackToDaily) {
-      onBackToDaily();
-    } else {
-      router.push(`/dashboard/children/${childId}`);
-    }
+  // Close activity details modal
+  const handleCloseActivityDetails = () => {
+    setSelectedActivity(null);
   };
   
-  // Toggle view mode
-  const toggleViewMode = () => {
-    setShowSimpleView(!showSimpleView);
+  // Mark activity as completed
+  const handleMarkCompleted = async (activity: Activity) => {
+    // Implementation for marking activity as completed
+    // This would update the activity status in Firestore
+  };
+  
+  // Add observation for activity
+  const handleAddObservation = (activity: Activity) => {
+    router.push(`/dashboard/children/${childId}/observations/new?activityId=${activity.activityId}`);
   };
   
   // Get color for activity area
@@ -334,36 +333,22 @@ export default function WeekAtAGlanceView({
         
         <div className="flex items-center space-x-3">
           <button
-            onClick={toggleViewMode}
+            onClick={handlePrevWeek}
             className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center"
           >
-            {showSimpleView ? 
-              <><Eye className="h-3 w-3 mr-1" />Detailed View</> : 
-              <><EyeOff className="h-3 w-3 mr-1" />Simple View</>
-            }
+            <ChevronLeft className="h-5 w-5" />
           </button>
           
-          <div className="flex items-center">
-            <button 
-              onClick={handlePrevWeek}
-              className="p-1 rounded-full hover:bg-gray-100"
-              aria-label="Previous week"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            
-            <span className="mx-2 text-sm font-medium">
-              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
-            </span>
-            
-            <button 
-              onClick={handleNextWeek}
-              className="p-1 rounded-full hover:bg-gray-100"
-              aria-label="Next week"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
+          <span className="mx-2 text-sm font-medium">
+            {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
+          </span>
+          
+          <button 
+            onClick={handleNextWeek}
+            className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       </div>
       
@@ -375,283 +360,209 @@ export default function WeekAtAGlanceView({
           </div>
         )}
         
-        {/* Simple view - activity counts by day */}
-        {showSimpleView ? (
-          <div>
-            <div className="grid grid-cols-7 gap-2 mb-6">
-              {weekDays.map((day) => (
-                <button
-                  key={day.dayName}
-                  onClick={() => handleDaySelect(day)}
-                  className="flex flex-col"
-                >
-                  {/* Day header */}
-                  <div className={`flex flex-col items-center p-2 rounded-t-lg ${
-                    day.isToday 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : selectedDay === day.dayName
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-gray-50 hover:bg-gray-100'
-                  }`}>
-                    <span className="text-xs font-medium">{day.dayShort}</span>
-                    <span className="text-lg font-bold">{day.dayNumber}</span>
-                  </div>
-                  
-                  {/* Activity count */}
-                  <div className="bg-white border-x border-b border-gray-200 p-2 rounded-b-lg h-14 flex flex-col items-center justify-center">
-                    {weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
-                      <>
-                        <span className="text-sm font-semibold text-gray-800">
-                          {weekActivities[day.dayName].length}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {weekActivities[day.dayName].length === 1 ? 'Activity' : 'Activities'}
-                        </span>
-                        {weekActivities[day.dayName].some(a => a.status === 'completed') && (
-                          <div className="mt-1 flex items-center text-green-600 text-xs">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            <span>
-                              {weekActivities[day.dayName].filter(a => a.status === 'completed').length}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-xs text-gray-400">No activities</span>
-                    )}
-                  </div>
-                </button>
-              ))}
+        {/* Weekly Summary */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-medium">Weekly Overview</h3>
+            <span className="text-sm text-gray-500">
+              Week of {format(weekStart, 'MMM d, yyyy')}
+            </span>
+          </div>
+          
+          {/* Progress stats */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="border border-gray-200 bg-white rounded-lg p-3">
+              <div className="text-sm text-gray-500 mb-1">Total Activities</div>
+              <div className="text-xl font-medium">
+                {Object.values(weekActivities).reduce((sum, day) => sum + day.length, 0)}
+              </div>
             </div>
             
-            {/* Weekly Summary */}
-            {!selectedDay ? (
-              // Weekly Summary
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-medium">Weekly Summary</h3>
-                  <span className="text-sm text-gray-500">
-                    Week of {format(weekStart, 'MMM d, yyyy')}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="border border-gray-200 rounded-lg p-3">
-                    <div className="text-sm text-gray-500 mb-1">Total Activities</div>
-                    <div className="text-xl font-medium">{weekStats.totalActivities}</div>
-                  </div>
-                  
-                  <div className="border border-gray-200 rounded-lg p-3">
-                    <div className="text-sm text-gray-500 mb-1">Completed</div>
-                    <div className="flex items-baseline">
-                      <span className="text-xl font-medium text-green-600">
-                        {weekStats.completedActivities}
-                      </span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        ({weekStats.percentComplete}%)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="border border-gray-200 rounded-lg p-3">
-                  <div className="text-sm text-gray-500 mb-2">Areas Covered</div>
-                  <div className="flex flex-wrap gap-1">
-                    {weekStats.uniqueAreas.map(area => (
-                      <span 
-                        key={area} 
-                        className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(area)}`}
-                      >
-                        {area.replace('_', ' ')}
-                      </span>
-                    ))}
-                    
-                    {weekStats.uniqueAreas.length === 0 && (
-                      <span className="text-sm text-gray-500">No areas covered yet</span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-gray-500 mb-2">
-                    Tap on any day above to see detailed activities
-                  </p>
+            <div className="border border-gray-200 bg-white rounded-lg p-3">
+              <div className="text-sm text-gray-500 mb-1">Completed</div>
+              <div className="flex items-baseline">
+                <span className="text-xl font-medium text-green-600">
+                  {Object.values(weekActivities).reduce(
+                    (sum, day) => sum + day.filter(a => a.status === 'completed').length, 0
+                  )}
+                </span>
+                <span className="text-sm text-gray-500 ml-2">
+                  ({Object.values(weekActivities).reduce((sum, day) => sum + day.length, 0) > 0 
+                    ? Math.round((Object.values(weekActivities).reduce(
+                        (sum, day) => sum + day.filter(a => a.status === 'completed').length, 0
+                      ) / Object.values(weekActivities).reduce((sum, day) => sum + day.length, 0)) * 100) 
+                    : 0}%)
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Days of the week - vertical layout */}
+        <div className="space-y-6">
+          {weekDays.map((day) => (
+            <div key={day.dayName} className="border border-gray-200 rounded-lg overflow-hidden">
+              {/* Day header */}
+              <div className={`p-3 ${
+                day.isToday ? 'bg-blue-100' : 'bg-gray-50'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <h3 className={`font-medium ${day.isToday ? 'text-blue-800' : 'text-gray-800'}`}>
+                    {day.dayName} <span className="font-bold">{day.dayNumber}</span>
+                  </h3>
+                  {day.isToday && (
+                    <span className="text-xs font-medium bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">
+                      Today
+                    </span>
+                  )}
                 </div>
               </div>
-            ) : (
-              // Selected Day Activities
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-medium text-lg">{selectedDay}'s Activities</h3>
-                  <button
-                    onClick={() => setSelectedDay(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                    aria-label="Close day view"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                
-                {weekActivities[selectedDay] && weekActivities[selectedDay].length > 0 ? (
-                  <div className="space-y-3">
-                    {weekActivities[selectedDay].map(activity => (
-                      <div 
-                        key={activity.id}
-                        className={`border rounded-lg p-3 ${
-                          activity.status === 'completed' 
-                            ? 'border-green-300 bg-green-50' 
-                            : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-medium">{activity.title}</h4>
-                          
+              
+              {/* Activities for the day */}
+              <div className="divide-y divide-gray-100">
+                {weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
+                  weekActivities[day.dayName].map(activity => (
+                    <div 
+                      key={activity.id} 
+                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                        activity.status === 'completed' ? 'bg-green-50' : ''
+                      }`}
+                      onClick={() => handleActivitySelect(activity)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{activity.title}</h4>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {activity.area && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                                {activity.area.replace('_', ' ')}
+                              </span>
+                            )}
+                            
+                            {activity.duration && (
+                              <span className="flex items-center text-xs text-gray-500">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {activity.duration} min
+                              </span>
+                            )}
+                            
+                            {activity.timeSlot && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                activity.timeSlot === 'morning' 
+                                  ? 'bg-amber-100 text-amber-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {activity.timeSlot === 'morning' ? 'Morning' : 'Afternoon'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center">
                           {activity.status === 'completed' ? (
                             <span className="flex items-center text-green-600 bg-green-100 px-2 py-0.5 rounded-full text-xs">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               <span>Completed</span>
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-500">
-                              {activity.timeSlot === 'morning' ? 'Morning' : 
-                               activity.timeSlot === 'afternoon' ? 'Afternoon' : 
-                               'Anytime'}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                          {activity.area && (
-                            <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                              {activity.area.replace('_', ' ')}
-                            </span>
-                          )}
-                          
-                          {activity.duration && (
-                            <span className="flex items-center text-gray-500 px-2 py-0.5 rounded-full">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>{activity.duration} min</span>
-                            </span>
-                          )}
-                          
-                          {activity.isHomeSchoolConnection && (
-                            <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                              <Star className="h-3 w-3 mr-1" />
-                              <span>School Connection</span>
-                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkCompleted(activity);
+                              }}
+                              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md"
+                            >
+                              Mark Complete
+                            </button>
                           )}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))
                 ) : (
-                  <div className="text-center py-6 text-gray-500">
-                    <p>No activities planned for {selectedDay}.</p>
+                  <div className="p-6 text-center text-gray-500">
+                    <p>No activities planned for {day.dayName}.</p>
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        ) : (
-          // Detailed View - Full weekly calendar
-          <div className="overflow-x-auto">
-            <div className="grid grid-cols-7 gap-2 min-w-max">
-              {weekDays.map((day) => (
-                <div key={day.dayName} className="w-56 border rounded-lg">
-                  {/* Day header */}
-                  <div className={`p-2 text-center ${
-                    day.isToday ? 'bg-blue-100 text-blue-800' : 'bg-gray-50 text-gray-800'
-                  } rounded-t-lg`}>
-                    <div className="font-medium">{day.dayName}</div>
-                    <div className="text-lg font-bold">{day.dayNumber}</div>
-                  </div>
-                  
-                  {/* Activities for the day */}
-                  <div className="p-2 space-y-2 min-h-[200px]">
-                    {weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
-                      weekActivities[day.dayName].map(activity => (
-                        <div 
-                          key={activity.id} 
-                          className={`p-2 border rounded ${
-                            activity.status === 'completed' 
-                              ? 'border-green-300 bg-green-50' 
-                              : 'border-gray-200'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                              activity.timeSlot === 'morning' 
-                                ? 'bg-amber-100 text-amber-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {activity.timeSlot === 'morning' ? 'AM' : 'PM'}
-                            </span>
-                            
-                            {activity.status === 'completed' && (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            )}
-                          </div>
-                          
-                          <h5 className="font-medium text-sm mt-1">{activity.title}</h5>
-                          
-                          <div className="mt-1 flex items-center text-xs text-gray-500">
-                            {activity.duration && (
-                              <span className="flex items-center mr-2">
-                                <Clock className="h-3 w-3 mr-0.5" />
-                                {activity.duration}m
-                              </span>
-                            )}
-                            
-                            {activity.area && (
-                              <span className={`px-1.5 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                                {activity.area.split('_')[0]}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="h-full flex items-center justify-center">
-                        <p className="text-xs text-gray-400">No activities</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Activity Details Modal */}
+      {selectedActivity && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="font-medium text-lg">Activity Details</h3>
+              <button 
+                onClick={handleCloseActivityDetails}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
             
-            {/* Week summary - shown below calendar in detailed view */}
-            <div className="mt-6 border-t border-gray-200 pt-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-medium">Weekly Overview</h3>
-                <span className="text-sm text-gray-500">
-                  {weekStats.completedActivities} of {weekStats.totalActivities} activities completed
-                </span>
-              </div>
+            <div className="p-4">
+              <h2 className="text-xl font-bold mb-2">{selectedActivity.title}</h2>
               
-              {/* Progress bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-                <div 
-                  className="bg-emerald-500 h-2.5 rounded-full" 
-                  style={{ width: `${weekStats.percentComplete}%` }}
-                ></div>
-              </div>
-              
-              {/* Areas covered */}
-              <div className="flex flex-wrap gap-1">
-                {weekStats.uniqueAreas.map(area => (
-                  <span 
-                    key={area} 
-                    className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(area)}`}
-                  >
-                    {area.replace('_', ' ')}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedActivity.area && (
+                  <span className={`text-xs px-2 py-1 rounded-full ${getAreaColor(selectedActivity.area)}`}>
+                    {selectedActivity.area.replace('_', ' ')}
                   </span>
-                ))}
+                )}
+                
+                {selectedActivity.duration && (
+                  <span className="flex items-center text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {selectedActivity.duration} minutes
+                  </span>
+                )}
+                
+                {selectedActivity.isHomeSchoolConnection && (
+                  <span className="flex items-center text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
+                    <Star className="h-3 w-3 mr-1" />
+                    School Connection
+                  </span>
+                )}
+              </div>
+              
+              {/* Activity description would go here */}
+              <div className="mb-6 text-gray-700">
+                <p>Activity description would appear here.</p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                {selectedActivity.status !== 'completed' && (
+                  <button
+                    onClick={() => {
+                      handleMarkCompleted(selectedActivity);
+                      handleCloseActivityDetails();
+                    }}
+                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-md text-sm font-medium"
+                  >
+                    <CheckCircle className="h-4 w-4 inline mr-1" />
+                    Mark as Completed
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => {
+                    handleAddObservation(selectedActivity);
+                    handleCloseActivityDetails();
+                  }}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium"
+                >
+                  <Camera className="h-4 w-4 inline mr-1" />
+                  Add Observation
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
