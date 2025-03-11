@@ -130,9 +130,12 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
     setActiveView('daily');
   };
   
-  const handleDaySelected = (date: Date) => {
+  const handleDateChange = (date: Date) => {
     setSelectedDate(date);
-    setActiveView('daily');
+    
+    if (activeView === 'weekly') {
+      setActiveView('daily');
+    }
   };
   
   // Loading state
@@ -297,9 +300,9 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
                 childName={child.name}
                 userId={currentUser?.uid || ''}
                 selectedDate={selectedDate}
+                onWeeklyViewRequest={handleViewWeekly}
               />
               
-              {/* Link to Weekly Plan at bottom of daily view */}
               <div className="mt-4 text-center">
                 <Link
                   href={`/dashboard/children/${childId}/weekly-plan`}
@@ -314,7 +317,7 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
             <WeekAtAGlanceView
               childId={childId}
               childName={child.name}
-              onSelectDay={handleDaySelected}
+              onSelectDay={handleDateChange}
               onBackToDaily={handleViewDaily}
             />
           )}

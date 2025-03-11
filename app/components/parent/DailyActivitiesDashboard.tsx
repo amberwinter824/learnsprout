@@ -354,16 +354,12 @@ export default function DailyActivitiesDashboard({
   
   // Handle request to view weekly view
   const handleWeeklyViewRequest = () => {
-    // Use the callback if provided, otherwise emit an event
+    // Use the callback if provided, otherwise navigate directly
     if (onWeeklyViewRequest) {
       onWeeklyViewRequest(childId);
     } else {
-      // Emit a custom event as a fallback
-      const event = new CustomEvent('weeklyViewRequested', { 
-        bubbles: true, 
-        detail: { childId } 
-      });
-      document.dispatchEvent(event);
+      // Direct navigation as a fallback
+      window.location.href = `/dashboard/children/${childId}/weekly-plan`;
     }
   };
   
@@ -551,11 +547,10 @@ export default function DailyActivitiesDashboard({
         <div className="flex items-center">
           <button 
             onClick={handleWeeklyViewRequest}
-            className="inline-flex items-center mr-4 text-sm text-emerald-600 hover:text-emerald-700"
-            type="button"
+            className="flex items-center text-sm text-emerald-600 hover:text-emerald-700"
           >
             <CalendarDays className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Weekly View</span>
+            Weekly View
           </button>
           
           <button
