@@ -22,6 +22,8 @@ import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns';
 import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
+import ActivityDetailModal from '@/app/components/ActivityDetailModal';
+import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
 
 // Activity interface
 interface Activity {
@@ -73,7 +75,14 @@ export default function WeekAtAGlanceView({
   const [error, setError] = useState<string | null>(null);
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  
+  // Activity detail modal state
+  const [showActivityDetail, setShowActivityDetail] = useState(false);
+  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+  
+  // Quick observation form state
+  const [showQuickObservation, setShowQuickObservation] = useState(false);
+  const [observationActivity, setObservationActivity] = useState<Activity | null>(null);
   
   // Calculate week days for display
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -247,25 +256,36 @@ export default function WeekAtAGlanceView({
     setCurrentWeek(prev => addDays(prev, 7));
   };
   
-  // Handle activity selection
+  // Handle activity selection for details
   const handleActivitySelect = (activity: Activity) => {
-    setSelectedActivity(activity);
+    setSelectedActivityId(activity.activityId);
+    setShowActivityDetail(true);
   };
   
-  // Close activity details modal
-  const handleCloseActivityDetails = () => {
-    setSelectedActivity(null);
+  // Handle adding observation
+  const handleAddObservation = (activity: Activity) => {
+    setObservationActivity(activity);
+    setShowQuickObservation(true);
+  };
+  
+  // Handle observation success
+  const handleObservationSuccess = () => {
+    // Refresh activities after recording an observation
+    const fetchActivities = async () => {
+      // ... existing fetch code ...
+    };
+    
+    if (childId) {
+      fetchActivities();
+    }
+    
+    setShowQuickObservation(false);
   };
   
   // Mark activity as completed
   const handleMarkCompleted = async (activity: Activity) => {
     // Implementation for marking activity as completed
     // This would update the activity status in Firestore
-  };
-  
-  // Add observation for activity
-  const handleAddObservation = (activity: Activity) => {
-    router.push(`/dashboard/children/${childId}/observations/new?activityId=${activity.activityId}`);
   };
   
   // Get color for activity area
@@ -526,76 +546,42 @@ export default function WeekAtAGlanceView({
         </div>
       </div>
       
-      {/* Activity Details Modal */}
-      {selectedActivity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="font-medium text-lg">Activity Details</h3>
-              <button 
-                onClick={handleCloseActivityDetails}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Activity Detail Modal */}
+      {showActivityDetail && selectedActivityId && (
+        <ActivityDetailModal
+          activityId={selectedActivityId}
+          childId={childId}
+          isOpen={showActivityDetail}
+          onClose={() => setShowActivityDetail(false)}
+          onObservationRecorded={() => {
+            setShowActivityDetail(false);
+            // Refresh activities after recording an observation
+            const fetchActivities = async () => {
+              // ... existing fetch code ...
+            };
             
-            <div className="p-4">
-              <h2 className="text-xl font-bold mb-2">{selectedActivity.title}</h2>
-              
-              <div className="flex flex-wrap gap-2 mb-4">
-                {selectedActivity.area && (
-                  <span className={`text-xs px-2 py-1 rounded-full ${getAreaColor(selectedActivity.area)}`}>
-                    {selectedActivity.area.replace('_', ' ')}
-                  </span>
-                )}
-                
-                {selectedActivity.duration && (
-                  <span className="flex items-center text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {selectedActivity.duration} minutes
-                  </span>
-                )}
-                
-                {selectedActivity.isHomeSchoolConnection && (
-                  <span className="flex items-center text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
-                    <Star className="h-3 w-3 mr-1" />
-                    School Connection
-                  </span>
-                )}
-              </div>
-              
-              {/* Activity description would go here */}
-              <div className="mb-6 text-gray-700">
-                <p>{selectedActivity.description || "No description available for this activity."}</p>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                {selectedActivity.status !== 'completed' && (
-                  <button
-                    onClick={() => {
-                      handleMarkCompleted(selectedActivity);
-                      handleCloseActivityDetails();
-                    }}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-md text-sm font-medium"
-                  >
-                    <CheckCircle className="h-4 w-4 inline mr-1" />
-                    Mark as Completed
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => {
-                    handleAddObservation(selectedActivity);
-                    handleCloseActivityDetails();
-                  }}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium"
-                >
-                  <Camera className="h-4 w-4 inline mr-1" />
-                  Add Observation
-                </button>
-              </div>
-            </div>
+            if (childId) {
+              fetchActivities();
+            }
+          }}
+          weeklyPlanId={weekPlanId || undefined}
+          dayOfWeek={selectedDay || undefined}
+        />
+      )}
+      
+      {/* Quick Observation Form */}
+      {showQuickObservation && observationActivity && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <QuickObservationForm
+              activityId={observationActivity.activityId}
+              childId={childId}
+              activityTitle={observationActivity.title}
+              weeklyPlanId={weekPlanId || undefined}
+              dayOfWeek={selectedDay || undefined}
+              onSuccess={handleObservationSuccess}
+              onClose={() => setShowQuickObservation(false)}
+            />
           </div>
         </div>
       )}
