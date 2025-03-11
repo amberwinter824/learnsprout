@@ -19,7 +19,8 @@ import {
   Eye,
   Clock,
   Star,
-  Info
+  Info,
+  ArrowRight
 } from 'lucide-react';
 import { format, parseISO, isAfter, subMonths, addDays, startOfWeek, isToday } from 'date-fns';
 import { db } from '@/lib/firebase';
