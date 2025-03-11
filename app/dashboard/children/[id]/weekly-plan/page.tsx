@@ -6,13 +6,12 @@ import { getChild } from '@/lib/dataService';
 import { 
   ArrowLeft, 
   Calendar,
-  ListIcon,
   Loader2,
-  InfoIcon
+  InfoIcon,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
-import DailyActivitiesDashboard from '@/app/components/parent/DailyActivitiesDashboard';
 
 interface WeeklyPlanPageProps {
   params: {
@@ -25,18 +24,13 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
   const searchParams = useSearchParams();
   const { id: childId } = params;
   const planIdFromUrl = searchParams.get('planId');
-  const viewFromUrl = searchParams.get('view');
   
   const { currentUser } = useAuth();
   const [child, setChild] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  // Initialize activeTab based on URL parameter or default to 'daily'
-  const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>(
-    viewFromUrl === 'weekly' ? 'weekly' : 'daily'
-  );
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState<boolean>(false);
   
   // Use a ref to prevent URL update loops
   const isUrlUpdating = useRef(false);
@@ -75,72 +69,19 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
     };
   }, [childId]);
 
-  // Separate effect to handle URL changes
-  useEffect(() => {
-    // Only update the tab if we're not in the middle of a URL update
-    if (!isUrlUpdating.current) {
-      setActiveTab(viewFromUrl === 'weekly' ? 'weekly' : 'daily');
-    }
-  }, [viewFromUrl]);
-
-  const handleTabChange = (tab: 'daily' | 'weekly') => {
-    // Avoid setting state if it's the same tab
-    if (activeTab === tab) return;
-    
-    // Update local state first
-    setActiveTab(tab);
-    
-    // Prevent URL update if we're already updating
-    if (isUrlUpdating.current) return;
-    
-    // Set flag to indicate we're updating URL
-    isUrlUpdating.current = true;
-    
-    // Update URL after a small delay to prevent race conditions
-    setTimeout(() => {
-      try {
-        // Build URL parameters
-        const params = new URLSearchParams();
-        params.set('view', tab);
-        
-        if (planIdFromUrl) {
-          params.set('planId', planIdFromUrl);
-        }
-        
-        // Update URL
-        router.replace(`/dashboard/children/${childId}/weekly-plan?${params.toString()}`);
-      } finally {
-        // Always reset the flag
-        isUrlUpdating.current = false;
-      }
-    }, 50);
-  };
-
-  // Handle day selection from weekly view
-  const handleDaySelected = (date: Date) => {
-    setSelectedDate(date);
-    setActiveTab('daily');
-    
-    // Only update URL if we're not already updating
-    if (!isUrlUpdating.current) {
-      isUrlUpdating.current = true;
-      
+  // Handle generating a new weekly plan
+  const handleGenerateWeeklyPlan = async () => {
+    setIsGeneratingPlan(true);
+    try {
+      // Here you would call your API to generate a new weekly plan
+      // For now, we'll just refresh the page after a delay to simulate
       setTimeout(() => {
-        try {
-          // Update URL
-          const params = new URLSearchParams();
-          params.set('view', 'daily');
-          params.set('date', date.toISOString().split('T')[0]);
-          
-          if (planIdFromUrl) {
-            params.set('planId', planIdFromUrl);
-          }
-          
-          router.replace(`/dashboard/children/${childId}/weekly-plan?${params.toString()}`);
-        } finally {
-          isUrlUpdating.current = false;
-        }
-      }, 50);
+        router.refresh();
+        setIsGeneratingPlan(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error generating weekly plan:', error);
+      setIsGeneratingPlan(false);
     }
   };
 
@@ -172,54 +113,33 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
         </Link>
       </div>
       
-      
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Weekly Activities Plan</h1>
-
-      {/* Tab Navigation */}
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden mb-6">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => handleTabChange('daily')}
-            className={`flex items-center px-4 py-3 text-sm font-medium ${
-              activeTab === 'daily' 
-                ? 'text-emerald-600 border-b-2 border-emerald-500' 
-                : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Daily View
-          </button>
-          
-          <button
-            onClick={() => handleTabChange('weekly')}
-            className={`flex items-center px-4 py-3 text-sm font-medium ${
-              activeTab === 'weekly' 
-                ? 'text-emerald-600 border-b-2 border-emerald-500' 
-                : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <ListIcon className="h-4 w-4 mr-2" />
-            Weekly View
-          </button>
-        </div>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Weekly Activities Plan</h1>
+        
+        <button
+          onClick={handleGenerateWeeklyPlan}
+          disabled={isGeneratingPlan}
+          className="inline-flex items-center px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isGeneratingPlan ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Generate New Plan
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'weekly' ? (
-        <DailyActivitiesDashboard 
-          childId={childId} 
-          childName={child?.name || ''}
-          userId={currentUser?.uid || ''}
-          selectedDate={selectedDate}
-        />
-      ) : (
-        <WeekAtAGlanceView 
-          childId={childId} 
-          childName={child?.name || ''}
-          onSelectDay={handleDaySelected}
-          onBackToDaily={() => handleTabChange('daily')}
-        />
-      )}
+      {/* Weekly Plan View */}
+      <WeekAtAGlanceView 
+        childId={childId} 
+        childName={child?.name || ''}
+      />
       
       {/* Help Info Box */}
       <div className="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -229,9 +149,11 @@ export default function WeeklyPlanPage({ params }: WeeklyPlanPageProps) {
             <p className="mb-2">
               <strong>What is Weekly Planning?</strong> This feature helps you organize activities for your child throughout the week.
             </p>
+            <p className="mb-2">
+              Activities are auto-generated based on your child's age, interests, and developmental needs. You can view the entire week at once to plan ahead.
+            </p>
             <p>
-              You can use the tabs above to toggle between viewing one day at a time (Daily View) or seeing the entire week at once (Weekly View).
-              Activities are auto-generated based on your child's age and interests.
+              <strong>Need a new plan?</strong> Click the "Generate New Plan" button above to create a fresh set of activities tailored to your child's current development.
             </p>
           </div>
         </div>
