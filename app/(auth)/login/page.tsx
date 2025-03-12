@@ -91,6 +91,9 @@ export default function Login() {
       // Login will fetch user data including roles
       await login(email, password);
       
+      // Mark that user has recently logged in - this triggers the PWA install prompt
+      sessionStorage.setItem('recent-login', 'true');
+      
       // Don't redirect here - let the useEffect handle it
       console.log("Login successful");
     } catch (error: any) {
