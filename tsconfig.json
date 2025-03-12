@@ -44,7 +44,7 @@
     "**/*.tsx",
     "**/*.js",
     "**/*.jsx",
-    "next.config.cjs",
+    "next.config.mjs",
     "adminDevelopmentalSkillsSeeder.cjs",
     ".next/types/**/*.ts"
   ],

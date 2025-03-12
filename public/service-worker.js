@@ -7,7 +7,23 @@ const STATIC_ASSETS = [
   '/dashboard',
   '/dashboard/activities',
   '/globals.css',
-  '/offline.html'
+  '/offline.html',
+  // Add icon and splash screen assets
+  '/icons/icon-192x192.png',
+  '/icons/icon-384x384.png',
+  '/icons/icon-512x512.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/favicon-16x16.png',
+  '/icons/favicon-32x32.png',
+  // Add splash screens for iOS devices
+  '/splash/apple-splash-1125x2436.png',
+  '/splash/apple-splash-1242x2208.png',
+  '/splash/apple-splash-750x1334.png',
+  '/splash/apple-splash-2048x2732.png',
+  '/splash/apple-splash-1668x2224.png',
+  '/splash/apple-splash-1536x2048.png',
+  // Add manifest file
+  '/manifest.json'
 ];
 
 // Static assets to cache immediately during installation
@@ -70,12 +86,30 @@ const isActivityRequest = (url) => {
   return parsedUrl.pathname.includes('/activities/');
 };
 
+// Helper function to determine if a request is for an asset that should always be cached
+const isAssetRequest = (url) => {
+  const parsedUrl = new URL(url);
+  const path = parsedUrl.pathname;
+  return path.startsWith('/icons/') || 
+         path.startsWith('/splash/') || 
+         path === '/manifest.json' ||
+         path.endsWith('.css') || 
+         path.endsWith('.js') ||
+         path.endsWith('.png') || 
+         path.endsWith('.jpg') || 
+         path.endsWith('.svg') ||
+         path.endsWith('.ico');
+};
+
 // Fetch event - serve from cache with network fallback
 self.addEventListener('fetch', event => {
   const request = event.request;
   
   // Skip non-GET requests
   if (request.method !== 'GET') return;
+  
+  // Skip cross-origin requests
+  if (!request.url.startsWith(self.location.origin) && !isAssetRequest(request.url)) return;
   
   // Special handling for different types of requests
   if (isApiRequest(request.url)) {
@@ -84,6 +118,9 @@ self.addEventListener('fetch', event => {
   } else if (isActivityRequest(request.url)) {
     // Activity requests: Cache first, then network
     event.respondWith(cacheFirstStrategy(request, ACTIVITY_CACHE_NAME));
+  } else if (isAssetRequest(request.url)) {
+    // Asset requests: Cache first, then network
+    event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
   } else {
     // Other requests: Cache first with network fallback
     event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
@@ -145,6 +182,17 @@ async function networkFirstStrategy(request, cacheName) {
       return caches.match('/offline.html');
     }
     
+    // For API requests, return a JSON error
+    if (isApiRequest(request.url)) {
+      return new Response(JSON.stringify({ 
+        error: 'You are offline and this data is not cached',
+        offline: true
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     return new Response('Network error happened', {
       status: 408,
       headers: { 'Content-Type': 'text/plain' }
@@ -193,7 +241,7 @@ self.addEventListener('push', event => {
   const options = {
     body: data.body || 'New notification',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/badge-72x72.png',
+    badge: '/icons/apple-touch-icon.png',
     data: {
       url: data.url || '/'
     }

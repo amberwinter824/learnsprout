@@ -16,6 +16,7 @@ import {
     Timestamp 
   } from 'firebase/firestore';
   import { db } from './firebase';
+  import offlineStorage from './offlineStorage';
   
   interface UserData extends DocumentData {
     id?: string;
@@ -162,9 +163,24 @@ import {
   }
   
   export async function getChild(childId: string): Promise<ChildData | null> {
-    const docRef = doc(db, "children", childId);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...(docSnap.data() as ChildData) } : null;
+    try {
+      // Try to get from Firestore first
+      const childDoc = await getDoc(doc(db, 'children', childId));
+      
+      if (childDoc.exists()) {
+        return {
+          id: childDoc.id,
+          ...childDoc.data()
+        };
+      }
+      
+      // If not found or offline, try offline storage
+      return await offlineStorage.getItem('userChildren', childId);
+    } catch (error) {
+      console.error('Error fetching child:', error);
+      // Try offline storage as fallback
+      return await offlineStorage.getItem('userChildren', childId);
+    }
   }
   
   export async function updateChild(childId: string, data: Partial<ChildData>) {
@@ -202,9 +218,24 @@ import {
   }
   
   export async function getActivity(activityId: string): Promise<ActivityData | null> {
-    const docRef = doc(db, "activities", activityId);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...(docSnap.data() as ActivityData) } : null;
+    try {
+      // Try to get from Firestore first
+      const activityDoc = await getDoc(doc(db, 'activities', activityId));
+      
+      if (activityDoc.exists()) {
+        return {
+          id: activityDoc.id,
+          ...activityDoc.data()
+        };
+      }
+      
+      // If not found or offline, try offline storage
+      return await offlineStorage.getItem('activities', activityId);
+    } catch (error) {
+      console.error('Error fetching activity:', error);
+      // Try offline storage as fallback
+      return await offlineStorage.getItem('activities', activityId);
+    }
   }
   
   export async function updateActivity(activityId: string, data: Partial<ActivityData>) {

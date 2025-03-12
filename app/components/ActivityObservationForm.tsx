@@ -7,6 +7,8 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { addProgressRecord, getActivityProgress } from '../../lib/progressTracking';
 import { AlertCircle, CheckCircle, Loader2, X, Camera, Eye, EyeOff } from 'lucide-react';
+import CameraCapture from './CameraCapture';
+import { uploadPhotoToStorage } from '@/lib/storageService';
 
 interface Skill {
   id: string;
@@ -84,8 +86,8 @@ export function ActivityObservationForm({
   const [visibilityType, setVisibilityType] = useState<"private" | "educators" | "all">("all");
   
   // Photo state
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [showCameraCapture, setShowCameraCapture] = useState<boolean>(false);
   
   useEffect(() => {
     const fetchActivityAndSkills = async () => {
@@ -144,26 +146,15 @@ export function ActivityObservationForm({
     }
   }, [activityId, childId]);
 
-  // Handle photo capture
-  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setPhotoFile(file);
-      
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target) {
-          setPhotoPreview(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  // Add this function to handle photo capture
+  const handlePhotoCapture = (url: string, file?: File) => {
+    setPhotoUrl(url);
+    setShowCameraCapture(false);
   };
-  
-  // Reset photo state
+
+  // Add this function to clear the photo
   const handleClearPhoto = () => {
-    setPhotoFile(null);
-    setPhotoPreview(null);
+    setPhotoUrl(null);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -209,7 +200,8 @@ export function ActivityObservationForm({
         visibility: visibilityIds,
         // Keep existing fields
         weeklyPlanId,
-        dayOfWeek
+        dayOfWeek,
+        photoUrl: photoUrl || null,
       };
       
       // Add the progress record
@@ -498,28 +490,25 @@ export function ActivityObservationForm({
             </div>
           </div>
           
-          {/* Photo Upload */}
+          {/* Photo Capture UI */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Add Photo (Optional)
+              Photo Documentation
             </label>
-            <div className="mt-1 flex items-center space-x-4">
-              <label className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
-                <Camera className="h-4 w-4 mr-2 text-gray-500" />
-                <span>Take Photo</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handlePhotoCapture} 
-                  className="hidden" 
-                  capture="environment"
-                />
-              </label>
-              
-              {photoPreview && (
+            <div className="flex items-center space-x-4">
+              {!photoUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCameraCapture(true)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
+                >
+                  <Camera className="h-4 w-4 mr-2 text-gray-500" />
+                  <span>Add Photo</span>
+                </button>
+              ) : (
                 <div className="relative">
                   <img 
-                    src={photoPreview} 
+                    src={photoUrl} 
                     alt="Preview" 
                     className="h-20 w-20 object-cover rounded-md"
                   />
@@ -708,6 +697,20 @@ export function ActivityObservationForm({
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Camera Capture Modal */}
+      {showCameraCapture && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-md w-full">
+            <CameraCapture
+              onCapture={handlePhotoCapture}
+              onCancel={() => setShowCameraCapture(false)}
+              childId={childId}
+              mode="both"
+            />
           </div>
         </div>
       )}

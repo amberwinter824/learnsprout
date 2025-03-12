@@ -1,3 +1,5 @@
+import withPWA from 'next-pwa';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -31,4 +33,17 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Configure PWA
+const pwaConfig = {
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  // Use your existing service worker file
+  sw: 'service-worker.js',
+  // Exclude manifest from the build process
+  buildExcludes: [/manifest\.json$/]
+};
+
+// Apply PWA configuration to Next.js config
+export default withPWA(pwaConfig)(nextConfig);
