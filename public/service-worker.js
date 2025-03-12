@@ -103,27 +103,32 @@ const isAssetRequest = (url) => {
 
 // Fetch event - serve from cache with network fallback
 self.addEventListener('fetch', event => {
-  const request = event.request;
-  
   // Skip non-GET requests
-  if (request.method !== 'GET') return;
+  if (event.request.method !== 'GET') return;
   
   // Skip cross-origin requests
-  if (!request.url.startsWith(self.location.origin) && !isAssetRequest(request.url)) return;
+  if (!event.request.url.startsWith(self.location.origin) && !isAssetRequest(event.request.url)) return;
   
-  // Special handling for different types of requests
-  if (isApiRequest(request.url)) {
-    // API requests: Network first, then cache
-    event.respondWith(networkFirstStrategy(request, API_CACHE_NAME));
-  } else if (isActivityRequest(request.url)) {
-    // Activity requests: Cache first, then network
-    event.respondWith(cacheFirstStrategy(request, ACTIVITY_CACHE_NAME));
-  } else if (isAssetRequest(request.url)) {
-    // Asset requests: Cache first, then network
-    event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
-  } else {
-    // Other requests: Cache first with network fallback
-    event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
+  // Add better error handling
+  try {
+    // Special handling for different types of requests
+    if (isApiRequest(event.request.url)) {
+      // API requests: Network first, then cache
+      event.respondWith(networkFirstStrategy(event.request, API_CACHE_NAME));
+    } else if (isActivityRequest(event.request.url)) {
+      // Activity requests: Cache first, then network
+      event.respondWith(cacheFirstStrategy(event.request, ACTIVITY_CACHE_NAME));
+    } else if (isAssetRequest(event.request.url)) {
+      // Asset requests: Cache first, then network
+      event.respondWith(cacheFirstStrategy(event.request, CACHE_NAME));
+    } else {
+      // Other requests: Cache first with network fallback
+      event.respondWith(cacheFirstStrategy(event.request, CACHE_NAME));
+    }
+  } catch (error) {
+    console.error('Error in fetch handler:', error);
+    // Don't let service worker errors break the page
+    return;
   }
 });
 
