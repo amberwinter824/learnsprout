@@ -4,8 +4,8 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getActivity, getChild } from '../../../lib/dataService';
-import ActivityObservationForm from '../../../app/components/ActivityObservationForm';
+import { getActivity, getChild } from '@/lib/dataService';
+import ActivityObservationForm from '@/app/components/ActivityObservationForm';
 import { ArrowLeft, Clock, BarChart2, Target, Book } from 'lucide-react';
 
 // Define TypeScript interfaces
