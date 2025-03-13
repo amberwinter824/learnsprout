@@ -114,157 +114,89 @@ export default function WeekAtAGlanceView({
     return startOfWeek(currentWeek, { weekStartsOn: 1 });
   }, [currentWeek]);
 
-  // Fetch weekly plan data
-  useEffect(() => {
-    const fetchWeeklyPlan = async () => {
-      try {
-        setLoading(true);
+  // Extract fetchWeeklyPlan from useEffect to make it accessible
+  const fetchWeeklyPlan = async () => {
+    try {
+      setLoading(true);
+      
+      // Format date for query
+      const weekStartDate = format(weekStart, 'yyyy-MM-dd');
+      
+      // First try to fetch by the plan ID format (childId_date)
+      const planId = `${childId}_${weekStartDate}`;
+      
+      // Try to get the plan directly by ID first
+      const planDocRef = doc(db, 'weeklyPlans', planId);
+      const planDocSnap = await getDoc(planDocRef);
+      
+      let planData;
+      let foundPlanId;
+      
+      if (planDocSnap.exists()) {
+        planData = planDocSnap.data();
+        foundPlanId = planDocSnap.id;
+        setWeekPlanId(foundPlanId);
         
-        // Format date for query
-        const weekStartDate = format(weekStart, 'yyyy-MM-dd');
-        console.log('Fetching weekly plan for date:', weekStartDate);
-        console.log('Child ID:', childId);
+        // Set the selected day to today if it's in the current week, otherwise to Monday
+        const today = format(new Date(), 'EEEE');
+        const todayInWeek = weekDays.some(day => day.dayName === today);
+        setSelectedDay(todayInWeek ? today : 'Monday');
         
-        // First try to fetch by the plan ID format (childId_date)
-        const planId = `${childId}_${weekStartDate}`;
-        console.log('Looking for plan with ID:', planId);
+      } else {
+        // If not found by ID, try the query approach
+        const plansQuery = query(
+          collection(db, 'weeklyPlans'),
+          where('childId', '==', childId),
+          where('weekStarting', '==', weekStartDate)
+        );
         
-        // Try to get the plan directly by ID first
-        const planDocRef = doc(db, 'weeklyPlans', planId);
-        const planDocSnap = await getDoc(planDocRef);
+        const plansSnapshot = await getDocs(plansQuery);
         
-        let planData;
-        let foundPlanId;
-        
-        if (planDocSnap.exists()) {
-          console.log('Found plan by direct ID');
-          planData = planDocSnap.data();
-          foundPlanId = planDocSnap.id;
-          setWeekPlanId(foundPlanId);
-          
-          // Set the selected day to today if it's in the current week, otherwise to Monday
-          const today = format(new Date(), 'EEEE');
-          const todayInWeek = weekDays.some(day => day.dayName === today);
-          setSelectedDay(todayInWeek ? today : 'Monday');
-          
-        } else {
-          // If not found by ID, try the query approach
-          console.log('Plan not found by ID, trying query...');
-          const plansQuery = query(
-            collection(db, 'weeklyPlans'),
-            where('childId', '==', childId),
-            where('weekStarting', '==', weekStartDate)
-          );
-          
-          const plansSnapshot = await getDocs(plansQuery);
-          
-          if (plansSnapshot.empty) {
-            console.log('No weekly plan found for this week via query either');
-            const emptyWeek: WeekActivities = {
-              Monday: [],
-              Tuesday: [],
-              Wednesday: [],
-              Thursday: [],
-              Friday: [],
-              Saturday: [],
-              Sunday: []
-            };
-            setWeekActivities(emptyWeek);
-            setLoading(false);
-            return;
-          }
-          
-          // Use the first plan (should only be one per week)
-          const planDoc = plansSnapshot.docs[0];
-          planData = planDoc.data();
-          foundPlanId = planDoc.id;
-          console.log('Found plan via query with ID:', foundPlanId);
+        if (plansSnapshot.empty) {
+          const emptyWeek: WeekActivities = {
+            Monday: [],
+            Tuesday: [],
+            Wednesday: [],
+            Thursday: [],
+            Friday: [],
+            Saturday: [],
+            Sunday: []
+          };
+          setWeekActivities(emptyWeek);
+          setLoading(false);
+          return;
         }
         
-        // Create a structure to hold activities by day
-        const weekActivitiesData: WeekActivities = {};
-        const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-        
-        // Initialize each day
-        for (const dayName of dayNames) {
-          const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-          weekActivitiesData[formattedDayName] = [];
-        }
-        
-        // Get activities for each day
-        const activitiesPromises = dayNames.map(async (dayName) => {
-          const dayActivities = planData[dayName] || [];
-          console.log(`Activities for ${dayName}:`, dayActivities);
-          const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-          
-          if (dayActivities.length > 0) {
-            // Fetch activity details for each activity ID
-            const activitiesWithDetails = await Promise.all(
-              dayActivities.map(async (activity: any) => {
-                try {
-                  const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
-                  
-                  if (activityDoc.exists()) {
-                    const activityData = activityDoc.data();
-                    return {
-                      id: `${foundPlanId}_${dayName}_${activity.activityId}`,
-                      activityId: activity.activityId,
-                      title: activityData.title || 'Untitled Activity',
-                      area: activityData.area || '',
-                      duration: activityData.duration || 15,
-                      isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                             !!activityData.classroomExtension,
-                      status: activity.status,
-                      timeSlot: activity.timeSlot,
-                      order: activity.order,
-                      description: activityData.description || ''
-                    };
-                  }
-                  
-                  // If activity not found, still return the basic info
-                  return {
-                    id: `${foundPlanId}_${dayName}_${activity.activityId}`,
-                    activityId: activity.activityId,
-                    title: 'Unknown Activity',
-                    status: activity.status,
-                    timeSlot: activity.timeSlot,
-                    order: activity.order,
-                    description: ''
-                  };
-                } catch (error) {
-                  console.error(`Error fetching activity ${activity.activityId}:`, error);
-                  return {
-                    id: `${foundPlanId}_${dayName}_${activity.activityId}`,
-                    activityId: activity.activityId,
-                    title: 'Error Loading Activity',
-                    status: activity.status,
-                    description: ''
-                  };
-                }
-              })
-            );
-            
-            weekActivitiesData[formattedDayName] = activitiesWithDetails.sort((a, b) => 
-              (a.order || 0) - (b.order || 0)
-            );
-          }
-        });
-        
-        await Promise.all(activitiesPromises);
-        console.log('Final week activities data:', weekActivitiesData);
-        setWeekActivities(weekActivitiesData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching weekly plan:', error);
-        setError('Failed to load weekly plan');
-        setLoading(false);
+        // Use the first plan (should only be one per week)
+        const planDoc = plansSnapshot.docs[0];
+        planData = planDoc.data();
+        foundPlanId = planDoc.id;
       }
-    };
-    
-    if (childId) {
-      fetchWeeklyPlan();
+      
+      // Create a structure to hold activities by day
+      const weekActivitiesData: WeekActivities = {};
+      
+      // Process each day's activities
+      for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
+        const dayKey = day.toLowerCase();
+        const dayActivities = planData[dayKey] || [];
+        weekActivitiesData[day] = dayActivities;
+      }
+      
+      setWeekActivities(weekActivitiesData);
+      setWeekPlanId(foundPlanId);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching weekly plan:', err);
+      setError('Failed to load weekly plan');
+      setLoading(false);
     }
-  }, [childId, currentWeek, weekStart]);
+  };
+
+  // Then in useEffect, just call this function
+  useEffect(() => {
+    fetchWeeklyPlan();
+  }, [currentWeek, childId, weekStart]);
   
   // Navigate to previous week
   const handlePrevWeek = () => {

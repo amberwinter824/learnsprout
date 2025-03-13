@@ -39,6 +39,7 @@ interface Activity {
   isHomeSchoolConnection?: boolean;
   timeSlot?: string;
   order?: number;
+  lastObservedDate?: Date | any;
 }
 
 interface Child {
@@ -175,6 +176,33 @@ export default function AllChildrenDailyActivities({
                     const activityDocRef = doc(db, 'activities', activity.activityId);
                     const activityDocSnap = await getDoc(activityDocRef);
                     
+                    // Check if there are any observations for this activity for this child
+                    let lastObservedDate = null;
+                    if (activity.observationIds && activity.observationIds.length > 0) {
+                      // If we have observation IDs, we can just use the latest one
+                      lastObservedDate = activity.lastObservedDate || null;
+                    } else {
+                      // Otherwise, we can query for observations
+                      try {
+                        const observationsQuery = query(
+                          collection(db, 'progressRecords'),
+                          where('childId', '==', child.id),
+                          where('activityId', '==', activity.activityId),
+                          orderBy('date', 'desc'),
+                          // Limit to 1 to get the most recent
+                          // limit(1)
+                        );
+                        
+                        const observationsSnapshot = await getDocs(observationsQuery);
+                        if (!observationsSnapshot.empty) {
+                          const latestObservation = observationsSnapshot.docs[0].data();
+                          lastObservedDate = latestObservation.date || null;
+                        }
+                      } catch (observationError) {
+                        console.error('Error fetching observations:', observationError);
+                      }
+                    }
+                    
                     if (activityDocSnap.exists()) {
                       const activityData = activityDocSnap.data() as {
                         title?: string;
@@ -194,9 +222,10 @@ export default function AllChildrenDailyActivities({
                         description: activityData.description || '',
                         area: activityData.area || '',
                         duration: activityData.duration || null,
-                        status: activity.status || 'suggested',
+                        status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
                         timeSlot: activity.timeSlot || '',
                         order: activity.order || 0,
+                        lastObservedDate: lastObservedDate,
                         isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
                                                !!activityData.classroomExtension
                       };
@@ -302,6 +331,31 @@ export default function AllChildrenDailyActivities({
       return 'Today';
     }
     return format(date, 'EEEE, MMMM d');
+  };
+  
+  // Format observed date for display
+  const formatObservedDate = (date: Date | string | any) => {
+    if (!date) return '';
+    
+    let dateObj: Date;
+    
+    // Handle different date formats
+    if (typeof date === 'string') {
+      dateObj = new Date(date);
+    } else if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'object' && 'seconds' in date) {
+      // Firestore timestamp
+      dateObj = new Date(date.seconds * 1000);
+    } else {
+      dateObj = new Date();
+    }
+    
+    if (isToday(dateObj)) {
+      return 'Today';
+    }
+    
+    return format(dateObj, 'MMM d');
   };
 
   // Button functions to open popups
@@ -498,18 +552,15 @@ export default function AllChildrenDailyActivities({
                                   <p className="text-sm text-gray-600">{activity.description}</p>
                                 )}
                               </div>
-                              {activity.status === 'completed' ? (
+                              {activity.status === 'completed' && (
                                 <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs">
                                   <CheckCircle className="h-3 w-3 mr-1" />
-                                  Done
+                                  {activity.lastObservedDate ? (
+                                    <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
+                                  ) : (
+                                    <>Observed</>
+                                  )}
                                 </span>
-                              ) : (
-                                <Link 
-                                  href={`/dashboard/children/${child.id}/activities/${activity.activityId}/observe`}
-                                  className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded text-sm"
-                                >
-                                  Mark Complete
-                                </Link>
                               )}
                             </div>
                             
@@ -547,16 +598,14 @@ export default function AllChildrenDailyActivities({
                               <InfoIcon className="h-3 w-3 mr-1" />
                               How to
                             </button>
-                            {activity.status !== 'completed' && (
-                              <button
-                                onClick={() => openObservationForm(activity)}
-                                className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
-                                type="button"
-                              >
-                                <PlusCircle className="h-3 w-3 mr-1" />
-                                Add Observation
-                              </button>
-                            )}
+                            <button
+                              onClick={() => openObservationForm(activity)}
+                              className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
+                              type="button"
+                            >
+                              <PlusCircle className="h-3 w-3 mr-1" />
+                              {activity.status === 'completed' ? 'Add Another Observation' : 'Add Observation'}
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -598,9 +647,31 @@ export default function AllChildrenDailyActivities({
                 activityTitle={selectedActivityForObservation.title}
                 onSuccess={() => {
                   setShowObservationForm(false);
-                  // Refresh activities
-                  const newDate = new Date(currentDate);
-                  setCurrentDate(newDate);
+                  
+                  // Update the local state to mark the activity as completed
+                  setChildActivities(prevChildActivities => 
+                    prevChildActivities.map(childActivity => {
+                      if (childActivity.child.id !== selectedActivityForObservation?.childId) {
+                        return childActivity;
+                      }
+                      
+                      return {
+                        ...childActivity,
+                        activities: childActivity.activities.map(activity => {
+                          if (activity.id !== selectedActivityForObservation?.id) {
+                            return activity;
+                          }
+                          
+                          // Mark as completed and set the observation date
+                          return {
+                            ...activity,
+                            status: 'completed' as const,
+                            lastObservedDate: new Date()
+                          };
+                        })
+                      };
+                    })
+                  );
                 }}
                 onClose={() => setShowObservationForm(false)}
               />
