@@ -1,11 +1,11 @@
 // app/components/parent/ImprovedParentDashboard.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { 
   Plus, 
   Calendar, 
@@ -22,6 +22,8 @@ import Link from 'next/link';
 import ChildCard from './ChildCard';
 import WeekAtAGlanceView from './WeekAtAGlanceView';
 import QuickObservationForm from '../QuickObservationForm';
+import { format, startOfWeek, addDays } from 'date-fns';
+import { generateWeeklyPlan } from '@/lib/planGenerator';
 
 interface Child {
   id: string;
@@ -48,6 +50,11 @@ export default function ImprovedParentDashboard({
   const [error, setError] = useState('');
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [showQuickObservation, setShowQuickObservation] = useState(false);
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('weekly');
+  const [recentObservations, setRecentObservations] = useState<any[]>([]);
+  const [recentSkills, setRecentSkills] = useState<any[]>([]);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [planGenerationMessage, setPlanGenerationMessage] = useState('');
   
   useEffect(() => {
     async function fetchChildren() {
@@ -95,6 +102,51 @@ export default function ImprovedParentDashboard({
     fetchChildren();
   }, [currentUser]);
   
+  useEffect(() => {
+    async function fetchRecentData() {
+      if (!selectedChild) return;
+      
+      try {
+        // Fetch recent observations
+        const observationsQuery = query(
+          collection(db, 'observations'),
+          where('childId', '==', selectedChild.id),
+          orderBy('createdAt', 'desc'),
+          limit(5)
+        );
+        
+        const observationsSnapshot = await getDocs(observationsQuery);
+        const observationsData = observationsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setRecentObservations(observationsData);
+        
+        // Fetch recent skills
+        const skillsQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', '==', selectedChild.id),
+          where('status', 'in', ['emerging', 'developing', 'mastered']),
+          orderBy('updatedAt', 'desc'),
+          limit(5)
+        );
+        
+        const skillsSnapshot = await getDocs(skillsQuery);
+        const skillsData = skillsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setRecentSkills(skillsData);
+      } catch (err) {
+        console.error('Error fetching recent data:', err);
+      }
+    }
+    
+    fetchRecentData();
+  }, [selectedChild]);
+  
   const handleChildSelect = (child: Child) => {
     setSelectedChild(child);
   };
@@ -107,6 +159,28 @@ export default function ImprovedParentDashboard({
   const handleObservationSuccess = () => {
     setShowQuickObservation(false);
   };
+  
+  const handleGeneratePlan = useCallback(async () => {
+    if (!selectedChild || !currentUser) return;
+    
+    try {
+      setIsGeneratingPlan(true);
+      setPlanGenerationMessage('Generating your weekly plan...');
+      
+      const plan = await generateWeeklyPlan(selectedChild.id, currentUser.uid);
+      
+      setPlanGenerationMessage('Weekly plan generated successfully!');
+      setTimeout(() => setPlanGenerationMessage(''), 3000);
+      
+      // Optionally navigate to the plan
+      // router.push(`/dashboard/children/${selectedChild.id}/plan/${plan.id}`);
+    } catch (error) {
+      console.error('Error generating plan:', error);
+      setPlanGenerationMessage('Failed to generate plan. Please try again.');
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  }, [selectedChild, currentUser, router]);
   
   if (loading) {
     return (
@@ -238,13 +312,106 @@ export default function ImprovedParentDashboard({
           
           {/* Main Content */}
           <div className="lg:col-span-3">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">
+                {selectedChild ? `${selectedChild.name}'s Dashboard` : 'Dashboard'}
+              </h2>
+              <div className="bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('daily')}
+                  className={`px-3 py-1 text-sm rounded-md ${
+                    viewMode === 'daily' ? 'bg-white shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  Daily
+                </button>
+                <button
+                  onClick={() => setViewMode('weekly')}
+                  className={`px-3 py-1 text-sm rounded-md ${
+                    viewMode === 'weekly' ? 'bg-white shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  Weekly
+                </button>
+              </div>
+            </div>
+            
             {selectedChild ? (
-              <WeekAtAGlanceView 
-                childId={selectedChild.id} 
-                childName={selectedChild.name}
-                onSelectDay={(date) => router.push(`/dashboard/children/${selectedChild.id}/day/${date}`)}
-                onBackToDaily={() => router.push(`/dashboard/children/${selectedChild.id}`)}
-              />
+              <>
+                {viewMode === 'daily' ? (
+                  <WeekAtAGlanceView 
+                    childId={selectedChild.id} 
+                    childName={selectedChild.name}
+                    onSelectDay={(date) => router.push(`/dashboard/children/${selectedChild.id}/day/${date}`)}
+                    onBackToDaily={() => router.push(`/dashboard/children/${selectedChild.id}`)}
+                  />
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-medium text-emerald-800">Weekly Activity Plan</h3>
+                        <p className="text-sm text-emerald-700">
+                          Generate a personalized weekly plan for {selectedChild.name}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleGeneratePlan}
+                        disabled={isGeneratingPlan}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        {isGeneratingPlan ? 'Generating...' : 'Generate Plan'}
+                      </button>
+                    </div>
+                    {planGenerationMessage && (
+                      <p className="mt-2 text-sm text-emerald-700">{planGenerationMessage}</p>
+                    )}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="bg-white rounded-lg shadow-sm p-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">Recent Observations</h3>
+                    {recentObservations.length > 0 ? (
+                      <ul className="space-y-3">
+                        {recentObservations.map(obs => (
+                          <li key={obs.id} className="border-b border-gray-100 pb-2">
+                            <p className="text-sm text-gray-800">{obs.notes}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {obs.createdAt instanceof Timestamp 
+                                ? format(obs.createdAt.toDate(), 'MMM d, yyyy')
+                                : 'Recent'}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-500">No recent observations</p>
+                    )}
+                  </div>
+                  
+                  <div className="bg-white rounded-lg shadow-sm p-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">Skill Development</h3>
+                    {recentSkills.length > 0 ? (
+                      <ul className="space-y-3">
+                        {recentSkills.map(skill => (
+                          <li key={skill.id} className="flex items-center">
+                            <div className={`w-3 h-3 rounded-full mr-2 ${
+                              skill.status === 'mastered' ? 'bg-emerald-500' :
+                              skill.status === 'developing' ? 'bg-yellow-500' : 'bg-blue-500'
+                            }`} />
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{skill.skillName}</p>
+                              <p className="text-xs text-gray-500 capitalize">{skill.status}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-500">No skills tracked yet</p>
+                    )}
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="bg-white rounded-lg shadow-sm p-6 text-center">
                 <h2 className="text-xl font-medium text-gray-700 mb-2">Welcome to Your Dashboard</h2>
