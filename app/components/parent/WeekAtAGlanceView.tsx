@@ -18,9 +18,10 @@ import {
   EyeOff,
   Camera,
   Info,
-  Plus
+  Plus,
+  PlusCircle
 } from 'lucide-react';
-import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns';
+import { format, startOfWeek, addDays, addWeeks, isSameDay, isToday } from 'date-fns';
 import { collection, query, where, getDocs, getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
@@ -41,6 +42,7 @@ interface Activity {
   timeSlot?: string;
   order?: number;
   description?: string;
+  lastObservedDate?: Date | string;
 }
 
 // Day info interface
@@ -117,7 +119,9 @@ export default function WeekAtAGlanceView({
   // Extract fetchWeeklyPlan from useEffect to make it accessible
   const fetchWeeklyPlan = async () => {
     try {
+      console.log('Fetching weekly plan for week starting:', format(weekStart, 'yyyy-MM-dd'));
       setLoading(true);
+      setError(null);
       
       // Format date for query
       const weekStartDate = format(weekStart, 'yyyy-MM-dd');
@@ -171,21 +175,123 @@ export default function WeekAtAGlanceView({
         const planDoc = plansSnapshot.docs[0];
         planData = planDoc.data();
         foundPlanId = planDoc.id;
+        setWeekPlanId(foundPlanId);
       }
       
       // Create a structure to hold activities by day
-      const weekActivitiesData: WeekActivities = {};
+      const weekActivitiesData: WeekActivities = {
+        Monday: [],
+        Tuesday: [],
+        Wednesday: [],
+        Thursday: [],
+        Friday: [],
+        Saturday: [],
+        Sunday: []
+      };
       
       // Process each day's activities
-      for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
-        const dayKey = day.toLowerCase();
-        const dayActivities = planData[dayKey] || [];
-        weekActivitiesData[day] = dayActivities;
-      }
+      const activitiesPromises: Promise<void>[] = [];
       
+      Object.keys(planData).forEach(dayKey => {
+        if (dayKey !== 'childId' && dayKey !== 'weekStarting' && Array.isArray(planData[dayKey])) {
+          const dayActivities = planData[dayKey];
+          const formattedDayName = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+          
+          if (dayActivities.length > 0) {
+            const dayPromise = Promise.all(
+              dayActivities.map(async (activity: any) => {
+                try {
+                  // Check if there are observations for this activity
+                  let lastObservedDate = null;
+                  if (activity.observationIds && activity.observationIds.length > 0) {
+                    lastObservedDate = activity.lastObservedDate || null;
+                  } else {
+                    try {
+                      const observationsQuery = query(
+                        collection(db, 'progressRecords'),
+                        where('childId', '==', childId),
+                        where('activityId', '==', activity.activityId)
+                      );
+                      
+                      const observationsSnapshot = await getDocs(observationsQuery);
+                      if (!observationsSnapshot.empty) {
+                        // Sort observations by date (most recent first)
+                        const sortedObservations = observationsSnapshot.docs
+                          .map(doc => doc.data())
+                          .sort((a, b) => {
+                            const dateA = a.date?.seconds ? new Date(a.date.seconds * 1000) : new Date(a.date);
+                            const dateB = b.date?.seconds ? new Date(b.date.seconds * 1000) : new Date(b.date);
+                            return dateB.getTime() - dateA.getTime();
+                          });
+                        
+                        if (sortedObservations.length > 0) {
+                          lastObservedDate = sortedObservations[0].date;
+                        }
+                      }
+                    } catch (observationError) {
+                      console.error('Error fetching observations:', observationError);
+                    }
+                  }
+                  
+                  // Get activity details
+                  const activityDocRef = doc(db, 'activities', activity.activityId);
+                  const activityDoc = await getDoc(activityDocRef);
+                  
+                  if (activityDoc.exists()) {
+                    const activityData = activityDoc.data();
+                    return {
+                      id: `${foundPlanId}_${formattedDayName}_${activity.activityId}`,
+                      activityId: activity.activityId,
+                      title: activityData.title,
+                      description: activityData.description,
+                      area: activityData.area,
+                      duration: activityData.duration || 15,
+                      isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                             !!activityData.classroomExtension,
+                      status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
+                      timeSlot: activity.timeSlot,
+                      order: activity.order,
+                      lastObservedDate
+                    };
+                  }
+                  
+                  // If activity not found, still return the basic info
+                  return {
+                    id: `${foundPlanId}_${formattedDayName}_${activity.activityId}`,
+                    activityId: activity.activityId,
+                    title: 'Unknown Activity',
+                    status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
+                    timeSlot: activity.timeSlot,
+                    order: activity.order,
+                    lastObservedDate
+                  };
+                } catch (error) {
+                  console.error(`Error fetching activity ${activity.activityId}:`, error);
+                  return {
+                    id: `${foundPlanId}_${formattedDayName}_${activity.activityId}`,
+                    activityId: activity.activityId,
+                    title: 'Error Loading Activity',
+                    status: activity.status || 'suggested'
+                  };
+                }
+              })
+            );
+            
+            activitiesPromises.push(
+              dayPromise.then(activitiesWithDetails => {
+                weekActivitiesData[formattedDayName] = activitiesWithDetails.sort((a, b) => 
+                  (a.order || 0) - (b.order || 0)
+                );
+              })
+            );
+          }
+        }
+      });
+      
+      await Promise.all(activitiesPromises);
       setWeekActivities(weekActivitiesData);
-      setWeekPlanId(foundPlanId);
       setLoading(false);
+      
     } catch (err) {
       console.error('Error fetching weekly plan:', err);
       setError('Failed to load weekly plan');
@@ -200,12 +306,18 @@ export default function WeekAtAGlanceView({
   
   // Navigate to previous week
   const handlePrevWeek = () => {
-    setCurrentWeek(prev => addDays(prev, -7));
+    setLoading(true);
+    setError(null);
+    setWeekActivities({});
+    setCurrentWeek(prev => addWeeks(prev, -1));
   };
   
   // Navigate to next week
   const handleNextWeek = () => {
-    setCurrentWeek(prev => addDays(prev, 7));
+    setLoading(true);
+    setError(null);
+    setWeekActivities({});
+    setCurrentWeek(prev => addWeeks(prev, 1));
   };
   
   // Handle activity selection for details
@@ -230,98 +342,7 @@ export default function WeekAtAGlanceView({
       
       // Refresh the weekly plan data
       setLoading(true);
-      
-      // Get the updated plan
-      const planDocRef = doc(db, 'weeklyPlans', weekPlanId);
-      const planDocSnap = await getDoc(planDocRef);
-      
-      if (!planDocSnap.exists()) {
-        console.error('Weekly plan not found after observation');
-        setLoading(false);
-        return;
-      }
-      
-      const planData = planDocSnap.data();
-      
-      // Process the updated plan data
-      const weekActivitiesData: WeekActivities = {
-        Monday: [],
-        Tuesday: [],
-        Wednesday: [],
-        Thursday: [],
-        Friday: [],
-        Saturday: [],
-        Sunday: []
-      };
-      
-      // Process each day's activities
-      const activitiesPromises: Promise<void>[] = [];
-      
-      Object.keys(planData).forEach(dayKey => {
-        if (dayKey !== 'childId' && dayKey !== 'weekStarting' && Array.isArray(planData[dayKey])) {
-          const dayActivities = planData[dayKey];
-          const formattedDayName = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
-          
-          if (dayActivities.length > 0) {
-            const dayPromise = Promise.all(
-              dayActivities.map(async (activity) => {
-                try {
-                  // Get activity details
-                  const activityDocRef = doc(db, 'activities', activity.activityId);
-                  const activityDoc = await getDoc(activityDocRef);
-                  
-                  if (activityDoc.exists()) {
-                    const activityData = activityDoc.data();
-                    return {
-                      id: `${weekPlanId}_${formattedDayName}_${activity.activityId}`,
-                      activityId: activity.activityId,
-                      title: activityData.title,
-                      description: activityData.description,
-                      area: activityData.area,
-                      duration: activityData.duration || 15,
-                      isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                             !!activityData.classroomExtension,
-                      status: activity.status,
-                      timeSlot: activity.timeSlot,
-                      order: activity.order
-                    };
-                  }
-                  
-                  // If activity not found, still return the basic info
-                  return {
-                    id: `${weekPlanId}_${formattedDayName}_${activity.activityId}`,
-                    activityId: activity.activityId,
-                    title: 'Unknown Activity',
-                    status: activity.status,
-                    timeSlot: activity.timeSlot,
-                    order: activity.order
-                  };
-                } catch (error) {
-                  console.error(`Error fetching activity ${activity.activityId}:`, error);
-                  return {
-                    id: `${weekPlanId}_${formattedDayName}_${activity.activityId}`,
-                    activityId: activity.activityId,
-                    title: 'Error Loading Activity',
-                    status: activity.status
-                  };
-                }
-              })
-            );
-            
-            activitiesPromises.push(
-              dayPromise.then(activitiesWithDetails => {
-                weekActivitiesData[formattedDayName] = activitiesWithDetails.sort((a, b) => 
-                  (a.order || 0) - (b.order || 0)
-                );
-              })
-            );
-          }
-        }
-      });
-      
-      await Promise.all(activitiesPromises);
-      setWeekActivities(weekActivitiesData);
-      setLoading(false);
+      await fetchWeeklyPlan();
       
     } catch (error) {
       console.error('Error refreshing activities after observation:', error);
@@ -400,7 +421,9 @@ export default function WeekAtAGlanceView({
       'sensorial': 'bg-purple-100 text-purple-800',
       'language': 'bg-blue-100 text-blue-800',
       'mathematics': 'bg-green-100 text-green-800',
-      'cultural': 'bg-yellow-100 text-yellow-800'
+      'cultural': 'bg-yellow-100 text-yellow-800',
+      'science': 'bg-teal-100 text-teal-800',
+      'art': 'bg-indigo-100 text-indigo-800'
     };
     return area && areaColors[area] ? areaColors[area] : 'bg-gray-100 text-gray-800';
   };
@@ -453,6 +476,37 @@ export default function WeekAtAGlanceView({
     // Refresh the weekly plan data
     fetchWeeklyPlan();
   };
+  
+  // Format observed date for display
+  const formatObservedDate = (date: Date | string | any) => {
+    if (!date) return '';
+    
+    let dateObj: Date;
+    
+    // If it's a Firestore timestamp
+    if (date && typeof date === 'object' && 'seconds' in date) {
+      dateObj = new Date(date.seconds * 1000);
+    } else if (typeof date === 'string') {
+      dateObj = new Date(date);
+    } else {
+      dateObj = date as Date;
+    }
+    
+    if (isToday(dateObj)) {
+      return 'Today';
+    }
+    
+    return format(dateObj, 'MMM d');
+  };
+
+  // When user selects a day from weekly view
+  const handleDaySelect = (day: DayInfo) => {
+    if (onSelectDay) {
+      onSelectDay(day.date);
+    } else {
+      setSelectedDay(day.dayName);
+    }
+  };
 
   if (loading) {
     return (
@@ -474,20 +528,51 @@ export default function WeekAtAGlanceView({
           <h2 className="text-lg font-medium">Weekly Plan</h2>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
+          <button
+            onClick={handlePrevWeek}
+            className="p-1 rounded-full hover:bg-gray-100"
+            aria-label="Previous week"
+            type="button"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          
+          <div className="w-48 text-center mx-1 font-medium">
+            {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+          </div>
+          
+          <button
+            onClick={handleNextWeek}
+            className="p-1 rounded-full hover:bg-gray-100"
+            aria-label="Next week"
+            type="button"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+      
+      {/* Controls */}
+      <div className="px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+        <div className="flex items-center">
           {onBackToDaily && (
             <button
               onClick={onBackToDaily}
               className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+              type="button"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Daily View
             </button>
           )}
-          
+        </div>
+        
+        <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowAddActivityModal(true)}
             className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+            type="button"
           >
             <Plus className="-ml-1 mr-1 h-4 w-4" />
             Add Activity
@@ -506,18 +591,18 @@ export default function WeekAtAGlanceView({
         {/* Weekly Summary */}
         <div className="mb-6 bg-gray-50 p-4 rounded-lg">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-medium">Weekly Overview</h3>
+            <h3 className="font-medium">Weekly Overview for {childName}</h3>
             <span className="text-sm text-gray-500">
               Week of {format(weekStart, 'MMM d, yyyy')}
             </span>
           </div>
           
           {/* Progress stats */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="border border-gray-200 bg-white rounded-lg p-3">
               <div className="text-sm text-gray-500 mb-1">Total Activities</div>
               <div className="text-xl font-medium">
-                {Object.values(weekActivities).reduce((sum, day) => sum + day.length, 0)}
+                {weekStats.totalActivities}
               </div>
             </div>
             
@@ -525,16 +610,10 @@ export default function WeekAtAGlanceView({
               <div className="text-sm text-gray-500 mb-1">Completed</div>
               <div className="flex items-baseline">
                 <span className="text-xl font-medium text-green-600">
-                  {Object.values(weekActivities).reduce(
-                    (sum, day) => sum + day.filter(a => a.status === 'completed').length, 0
-                  )}
+                  {weekStats.completedActivities}
                 </span>
                 <span className="text-sm text-gray-500 ml-2">
-                  ({Object.values(weekActivities).reduce((sum, day) => sum + day.length, 0) > 0 
-                    ? Math.round((Object.values(weekActivities).reduce(
-                        (sum, day) => sum + day.filter(a => a.status === 'completed').length, 0
-                      ) / Object.values(weekActivities).reduce((sum, day) => sum + day.length, 0)) * 100) 
-                    : 0}%)
+                  ({weekStats.percentComplete}%)
                 </span>
               </div>
             </div>
@@ -549,20 +628,22 @@ export default function WeekAtAGlanceView({
               className={`border rounded-lg overflow-hidden ${
                 day.isToday ? 'border-emerald-300' : 'border-gray-200'
               } ${selectedDay === day.dayName ? 'ring-2 ring-emerald-500' : ''}`}
-              onClick={() => setSelectedDay(day.dayName)}
             >
               {/* Day header */}
-              <div className={`px-4 py-2 flex justify-between items-center ${
-                day.isToday ? 'bg-emerald-50' : 'bg-gray-50'
-              }`}>
+              <div 
+                className={`px-4 py-3 flex justify-between items-center cursor-pointer ${
+                  day.isToday ? 'bg-emerald-50' : 'bg-gray-50'
+                }`}
+                onClick={() => handleDaySelect(day)}
+              >
                 <div className="flex items-center">
-                  <span className={`text-lg font-medium ${
+                  <span className={`font-medium ${
                     day.isToday ? 'text-emerald-700' : 'text-gray-700'
                   }`}>
                     {day.dayName}
                   </span>
                   <span className="ml-2 text-sm text-gray-500">
-                    {day.dayNumber}
+                    {format(day.date, 'MMM d')}
                   </span>
                   {day.isToday && (
                     <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded-full">
@@ -583,94 +664,95 @@ export default function WeekAtAGlanceView({
                   weekActivities[day.dayName].map(activity => (
                     <div 
                       key={activity.id} 
-                      className={`p-4 hover:bg-gray-50 transition-colors ${
+                      className={`p-4 ${
                         activity.status === 'completed' ? 'bg-green-50' : ''
                       }`}
                     >
-                      <div className="flex flex-col space-y-3">
-                        {/* Activity header */}
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                          {activity.status === 'completed' ? (
-                            <span className="flex items-center text-green-600 bg-green-100 px-2 py-0.5 rounded-full text-xs">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              <span>Completed</span>
-                            </span>
-                          ) : null}
-                        </div>
-                        
-                        {/* Activity tags */}
-                        <div className="flex flex-wrap gap-2">
-                          {activity.area && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                              {activity.area.replace('_', ' ')}
-                            </span>
-                          )}
-                          
-                          {activity.duration && (
-                            <span className="flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {activity.duration} min
-                            </span>
-                          )}
-                          
-                          {activity.timeSlot && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              activity.timeSlot === 'morning' 
-                                ? 'bg-amber-100 text-amber-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {activity.timeSlot === 'morning' ? 'Morning' : 'Afternoon'}
-                            </span>
-                          )}
-                          
-                          {activity.isHomeSchoolConnection && (
-                            <span className="flex items-center text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
-                              <Star className="h-3 w-3 mr-1" />
-                              School Connection
-                            </span>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="font-medium">{activity.title}</h3>
+                          {activity.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2">{activity.description}</p>
                           )}
                         </div>
                         
-                        {/* Activity description - truncated */}
-                        {activity.description && (
-                          <div className="text-sm text-gray-600">
-                            <p className="line-clamp-2">
-                              {activity.description}
-                            </p>
-                          </div>
+                        {activity.status === 'completed' && (
+                          <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            {activity.lastObservedDate ? (
+                              <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
+                            ) : (
+                              <>Observed</>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center text-xs text-gray-500 space-x-3 mt-2">
+                        {activity.area && (
+                          <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                            {activity.area.replace('_', ' ')}
+                          </span>
                         )}
                         
-                        {/* Action buttons - updated to match daily view */}
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleHowTo(activity);
-                            }}
-                            className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-md flex items-center"
-                          >
-                            <Info className="h-3 w-3 mr-1" />
-                            How To
-                          </button>
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddObservation(activity);
-                            }}
-                            className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-md flex items-center"
-                          >
-                            <Camera className="h-3 w-3 mr-1" />
-                            {activity.status === 'completed' ? 'Add Another Observation' : 'Record Observation'}
-                          </button>
-                        </div>
+                        {activity.duration && (
+                          <span className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {activity.duration} min
+                          </span>
+                        )}
+                        
+                        {activity.isHomeSchoolConnection && (
+                          <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                            <Star className="h-3 w-3 mr-1" />
+                            School Connection
+                          </span>
+                        )}
+                        
+                        {activity.timeSlot && (
+                          <span className="capitalize">
+                            {activity.timeSlot}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="bg-gray-50 px-3 py-2 mt-3 flex space-x-4 rounded-md">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleHowTo(activity);
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                          type="button"
+                        >
+                          <Info className="h-3 w-3 mr-1" />
+                          How To
+                        </button>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddObservation(activity);
+                          }}
+                          className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
+                          type="button"
+                        >
+                          <PlusCircle className="h-3 w-3 mr-1" />
+                          {activity.status === 'completed' ? 'Add Another Observation' : 'Add Observation'}
+                        </button>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="p-6 text-center text-gray-500">
                     <p>No activities planned for {day.dayName}.</p>
+                    <button
+                      onClick={() => setShowAddActivityModal(true)}
+                      className="mt-2 text-sm text-emerald-600 hover:text-emerald-700"
+                      type="button"
+                    >
+                      Add an activity
+                    </button>
                   </div>
                 )}
               </div>
@@ -679,25 +761,16 @@ export default function WeekAtAGlanceView({
         </div>
       </div>
       
-      {/* Activity Detail Modal */}
-      {showActivityDetail && selectedActivityId && (
-        <ActivityDetailModal
-          activityId={selectedActivityId}
-          childId={childId}
-          isOpen={showActivityDetail}
-          onClose={() => setShowActivityDetail(false)}
-          onObservationRecorded={handleObservationSuccess}
-          weeklyPlanId={weekPlanId || undefined}
-          dayOfWeek={selectedDay || undefined}
-        />
-      )}
-      
       {/* Activity Details Popup */}
       {showDetailsPopup && detailsActivityId && (
-        <ActivityDetailsPopup 
-          activityId={detailsActivityId} 
-          onClose={() => setShowDetailsPopup(false)}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <ActivityDetailsPopup 
+              activityId={detailsActivityId} 
+              onClose={() => setShowDetailsPopup(false)}
+            />
+          </div>
+        </div>
       )}
       
       {/* Quick Observation Form */}
@@ -719,12 +792,16 @@ export default function WeekAtAGlanceView({
       
       {/* Add Activity Modal */}
       {showAddActivityModal && weekPlanId && (
-        <AddActivityToWeeklyPlan
-          weeklyPlanId={weekPlanId}
-          childId={childId}
-          onSuccess={handleAddActivitySuccess}
-          onClose={() => setShowAddActivityModal(false)}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <AddActivityToWeeklyPlan
+              weeklyPlanId={weekPlanId}
+              childId={childId}
+              onSuccess={handleAddActivitySuccess}
+              onClose={() => setShowAddActivityModal(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
