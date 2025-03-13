@@ -82,10 +82,25 @@ export default function AllChildrenDailyActivities({
   
   // Update currentDate when selectedDate prop changes
   useEffect(() => {
-    if (selectedDate && !isSameDay(selectedDate, currentDate)) {
-      setCurrentDate(selectedDate);
+    if (selectedDate) {
+      // Simple equality check might be misleading with Date objects
+      // Use date-fns format to compare the dates as strings
+      const currentFormatted = format(currentDate, 'yyyy-MM-dd');
+      const selectedFormatted = format(selectedDate, 'yyyy-MM-dd');
+      
+      if (currentFormatted !== selectedFormatted) {
+        console.log(`Updating date from prop: ${currentFormatted} -> ${selectedFormatted}`);
+        
+        // Force a reset to trigger a full refresh
+        setLoading(true);
+        setError(null);
+        setChildActivities([]);
+        
+        // Update the date state
+        setCurrentDate(selectedDate);
+      }
     }
-  }, [selectedDate, currentDate]);
+  }, [selectedDate]);
 
   // Update filter when selectedChildId changes
   useEffect(() => {
@@ -135,12 +150,16 @@ export default function AllChildrenDailyActivities({
     
     async function fetchActivities() {
       try {
+        console.log(`Fetching activities for date: ${format(currentDate, 'yyyy-MM-dd')} (${format(currentDate, 'EEEE')})`);
         setLoading(true);
         setError(null);
         
+        // Force date object to be consistent
+        const dateForQuery = new Date(currentDate);
+        
         // Format date for querying
-        const dateString = format(currentDate, 'yyyy-MM-dd');
-        const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
+        const dateString = format(dateForQuery, 'yyyy-MM-dd');
+        const dayOfWeek = format(dateForQuery, 'EEEE').toLowerCase();
         
         // Create an array to hold results
         const results: ChildActivities[] = [];
@@ -290,6 +309,14 @@ export default function AllChildrenDailyActivities({
   // Fix the handleDateChange function
   const handleDateChange = (days: number) => {
     const newDate = addDays(currentDate, days);
+    console.log(`Changing date from ${format(currentDate, 'yyyy-MM-dd')} to ${format(newDate, 'yyyy-MM-dd')}`);
+    
+    // Force a complete reset of state to trigger a full refresh
+    setLoading(true);
+    setError(null);
+    setChildActivities([]);
+    
+    // Then update the date state
     setCurrentDate(newDate);
   };
 
@@ -327,10 +354,15 @@ export default function AllChildrenDailyActivities({
   
   // Format date for display
   const formatDateDisplay = (date: Date) => {
-    if (isToday(date)) {
-      return 'Today';
+    try {
+      if (isToday(date)) {
+        return 'Today';
+      }
+      return format(date, 'EEEE, MMMM d');
+    } catch (error) {
+      console.error('Error formatting date:', error, date);
+      return 'Invalid date';
     }
-    return format(date, 'EEEE, MMMM d');
   };
   
   // Format observed date for display
@@ -339,16 +371,13 @@ export default function AllChildrenDailyActivities({
     
     let dateObj: Date;
     
-    // Handle different date formats
-    if (typeof date === 'string') {
-      dateObj = new Date(date);
-    } else if (date instanceof Date) {
-      dateObj = date;
-    } else if (typeof date === 'object' && 'seconds' in date) {
-      // Firestore timestamp
+    // If it's a Firestore timestamp
+    if (date && typeof date === 'object' && 'seconds' in date) {
       dateObj = new Date(date.seconds * 1000);
+    } else if (typeof date === 'string') {
+      dateObj = new Date(date);
     } else {
-      dateObj = new Date();
+      dateObj = date as Date;
     }
     
     if (isToday(dateObj)) {
@@ -631,10 +660,14 @@ export default function AllChildrenDailyActivities({
         
         {/* Render the activity details popup */}
         {showDetailsPopup && detailsActivityId && (
-          <ActivityDetailsPopup 
-            activityId={detailsActivityId || ''} 
-            onClose={() => setShowDetailsPopup(false)}
-          />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
+              <ActivityDetailsPopup 
+                activityId={detailsActivityId || ''} 
+                onClose={() => setShowDetailsPopup(false)}
+              />
+            </div>
+          </div>
         )}
         
         {/* Observation Form Modal */}
@@ -645,33 +678,38 @@ export default function AllChildrenDailyActivities({
                 activityId={selectedActivityForObservation.activityId}
                 childId={selectedActivityForObservation.childId}
                 activityTitle={selectedActivityForObservation.title}
-                onSuccess={() => {
+                                  onSuccess={() => {
                   setShowObservationForm(false);
                   
                   // Update the local state to mark the activity as completed
-                  setChildActivities(prevChildActivities => 
-                    prevChildActivities.map(childActivity => {
+                  setChildActivities(prevChildActivities => {
+                    return prevChildActivities.map(childActivity => {
                       if (childActivity.child.id !== selectedActivityForObservation?.childId) {
                         return childActivity;
                       }
                       
+                      const updatedActivities = childActivity.activities.map(activity => {
+                        if (activity.id !== selectedActivityForObservation?.id) {
+                          return activity;
+                        }
+                        
+                        // Mark as completed and set the observation date
+                        // Make a new activity object with the correct types
+                        const updatedActivity: Activity = {
+                          ...activity,
+                          status: 'completed' as 'suggested' | 'confirmed' | 'completed',
+                          lastObservedDate: new Date()
+                        };
+                        
+                        return updatedActivity;
+                      });
+                      
                       return {
                         ...childActivity,
-                        activities: childActivity.activities.map(activity => {
-                          if (activity.id !== selectedActivityForObservation?.id) {
-                            return activity;
-                          }
-                          
-                          // Mark as completed and set the observation date
-                          return {
-                            ...activity,
-                            status: 'completed' as const,
-                            lastObservedDate: new Date()
-                          };
-                        })
+                        activities: updatedActivities
                       };
-                    })
-                  );
+                    });
+                  });
                 }}
                 onClose={() => setShowObservationForm(false)}
               />
