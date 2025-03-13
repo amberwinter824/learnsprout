@@ -97,6 +97,8 @@ export default function AllChildrenDailyActivities({
         setLoading(true);
         setError(null);
         
+        console.log('Fetching activities for date:', format(currentDate, 'yyyy-MM-dd'));
+        
         // First, fetch all children for the current user
         const childrenQuery = query(
           collection(db, 'children'),
@@ -104,9 +106,12 @@ export default function AllChildrenDailyActivities({
           orderBy('name')
         );
         
+        console.log('Fetching children for parent ID:', currentUser?.uid);
+        
         const childrenSnapshot = await getDocs(childrenQuery);
         
         if (childrenSnapshot.empty) {
+          console.log('No children found for this parent');
           setChildActivities([]);
           setAllChildren([]);
           setLoading(false);
@@ -120,6 +125,7 @@ export default function AllChildrenDailyActivities({
           ageGroup: doc.data().ageGroup
         }));
         
+        console.log(`Found ${children.length} children`);
         setAllChildren(children);
         
         // For each child, fetch their activities for the current date
@@ -129,12 +135,16 @@ export default function AllChildrenDailyActivities({
         weekStart.setDate(weekStart.getDate() - (weekStart.getDay() === 0 ? 6 : weekStart.getDay() - 1));
         const weekStartString = format(weekStart, 'yyyy-MM-dd');
         
+        console.log('Week starting:', weekStartString, 'Day of week:', dayOfWeek);
+        
         // Process each child
         for (const child of children) {
           // If filtering by a specific child, skip others
           if (filterChild !== 'all' && filterChild !== child.id) {
             continue;
           }
+          
+          console.log(`Fetching activities for child: ${child.name} (${child.id})`);
           
           // Find weekly plan for this child
           const plansQuery = query(
@@ -146,6 +156,7 @@ export default function AllChildrenDailyActivities({
           const plansSnapshot = await getDocs(plansQuery);
           
           if (plansSnapshot.empty) {
+            console.log(`No weekly plan found for child ${child.name} for week starting ${weekStartString}`);
             // No plan for this child, add an empty activities array
             childrenActivities.push({
               child,
@@ -159,8 +170,12 @@ export default function AllChildrenDailyActivities({
           const planData = planDoc.data();
           const planId = planDoc.id;
           
+          console.log(`Found plan ${planId} for child ${child.name}`);
+          
           // Get activities for today
           const dayActivities = planData[dayOfWeek] || [];
+          
+          console.log(`Found ${dayActivities.length} activities for ${dayOfWeek}`);
           
           if (dayActivities.length === 0) {
             // No activities for this day, add empty array
@@ -175,6 +190,7 @@ export default function AllChildrenDailyActivities({
           const activitiesWithDetails = await Promise.all(
             dayActivities.map(async (activity: any) => {
               try {
+                console.log(`Fetching details for activity ID: ${activity.activityId}`);
                 const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
                 
                 if (activityDoc.exists()) {
@@ -196,6 +212,7 @@ export default function AllChildrenDailyActivities({
                   };
                 }
                 
+                console.log(`Activity ${activity.activityId} not found in database`);
                 // If activity not found, return with basic info
                 return {
                   id: `${planId}_${dayOfWeek}_${activity.activityId}`,
@@ -226,6 +243,8 @@ export default function AllChildrenDailyActivities({
             (a.order || 0) - (b.order || 0)
           );
           
+          console.log(`Processed ${sortedActivities.length} activities for ${child.name}`);
+          
           // Add to childrenActivities array
           childrenActivities.push({
             child,
@@ -233,11 +252,12 @@ export default function AllChildrenDailyActivities({
           });
         }
         
+        console.log(`Setting state with ${childrenActivities.length} children's activities`);
         setChildActivities(childrenActivities);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching activities:', error);
-        setError('Failed to load daily activities');
+        setError(`Failed to load daily activities: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setLoading(false);
       }
     }
