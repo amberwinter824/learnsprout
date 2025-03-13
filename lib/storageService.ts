@@ -284,14 +284,14 @@ import offlineStorage from './offlineStorage';
         // Type guard for 'a' and 'b'
         const timeA = typeof a === 'object' && a !== null && 'createdAt' in a 
           ? (typeof a.createdAt === 'object' && a.createdAt !== null && 'toMillis' in a.createdAt 
-              ? a.createdAt.toMillis() 
-              : a.createdAt) 
+              ? (a.createdAt as { toMillis: () => number }).toMillis() 
+              : (a.createdAt as number)) 
           : 0;
         
         const timeB = typeof b === 'object' && b !== null && 'createdAt' in b
           ? (typeof b.createdAt === 'object' && b.createdAt !== null && 'toMillis' in b.createdAt 
-              ? b.createdAt.toMillis() 
-              : b.createdAt)
+              ? (b.createdAt as { toMillis: () => number }).toMillis() 
+              : (b.createdAt as number))
           : 0;
         
         return timeB - timeA;

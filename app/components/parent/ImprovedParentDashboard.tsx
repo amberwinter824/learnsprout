@@ -55,6 +55,8 @@ export default function ImprovedParentDashboard({
   const [recentSkills, setRecentSkills] = useState<any[]>([]);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [planGenerationMessage, setPlanGenerationMessage] = useState('');
+  const [filterByChild, setFilterByChild] = useState<string | null>(null);
+  const [allActivities, setAllActivities] = useState<any[]>([]);
   
   useEffect(() => {
     async function fetchChildren() {
@@ -147,6 +149,60 @@ export default function ImprovedParentDashboard({
     fetchRecentData();
   }, [selectedChild]);
   
+  useEffect(() => {
+    async function fetchAllActivities() {
+      if (!currentUser || children.length === 0) return;
+      
+      try {
+        // Get today's date
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Create an array of child IDs
+        const childIds = children.map(child => child.id);
+        
+        // Query for activities for all children
+        const activitiesQuery = query(
+          collection(db, 'weeklyPlans'),
+          where('childId', 'in', childIds),
+          // Add any other filters you need
+        );
+        
+        const activitiesSnapshot = await getDocs(activitiesQuery);
+        const activitiesData: any[] = [];
+        
+        activitiesSnapshot.forEach(doc => {
+          const planData = doc.data();
+          const childId = planData.childId;
+          const child = children.find(c => c.id === childId);
+          
+          // Get activities for each day
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          
+          days.forEach(day => {
+            if (planData[day] && Array.isArray(planData[day])) {
+              planData[day].forEach((activity: any) => {
+                activitiesData.push({
+                  ...activity,
+                  day,
+                  childId,
+                  childName: child?.name || 'Unknown Child',
+                  planId: doc.id
+                });
+              });
+            }
+          });
+        });
+        
+        setAllActivities(activitiesData);
+      } catch (err) {
+        console.error('Error fetching activities:', err);
+      }
+    }
+    
+    fetchAllActivities();
+  }, [children, currentUser]);
+  
   const handleChildSelect = (child: Child) => {
     setSelectedChild(child);
   };
@@ -181,6 +237,16 @@ export default function ImprovedParentDashboard({
       setIsGeneratingPlan(false);
     }
   }, [selectedChild, currentUser, router]);
+  
+  const handleFilterChange = (childId: string | null) => {
+    setFilterByChild(childId);
+    if (childId) {
+      const child = children.find(c => c.id === childId);
+      if (child) setSelectedChild(child);
+    } else {
+      setSelectedChild(null);
+    }
+  };
   
   if (loading) {
     return (
@@ -274,7 +340,7 @@ export default function ImprovedParentDashboard({
                 </Link>
                 
                 <Link
-                  href="/dashboard/calendar"
+                  href="/dashboard/weekly-plan"
                   className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
                 >
                   <Calendar className="h-5 w-5 mr-3 text-emerald-500" />
@@ -314,57 +380,150 @@ export default function ImprovedParentDashboard({
           <div className="lg:col-span-3">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-800">
-                {selectedChild ? `${selectedChild.name}'s Dashboard` : 'Dashboard'}
+                {selectedChild ? `${selectedChild.name}'s Dashboard` : 'Family Dashboard'}
               </h2>
-              <div className="bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('daily')}
-                  className={`px-3 py-1 text-sm rounded-md ${
-                    viewMode === 'daily' ? 'bg-white shadow-sm' : 'text-gray-600'
-                  }`}
+              <div className="flex items-center space-x-4">
+                <select 
+                  className="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm"
+                  value={filterByChild || ''}
+                  onChange={(e) => handleFilterChange(e.target.value || null)}
                 >
-                  Daily
-                </button>
-                <button
-                  onClick={() => setViewMode('weekly')}
-                  className={`px-3 py-1 text-sm rounded-md ${
-                    viewMode === 'weekly' ? 'bg-white shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  Weekly
-                </button>
+                  <option value="">All Children</option>
+                  {children.map(child => (
+                    <option key={child.id} value={child.id}>{child.name}</option>
+                  ))}
+                </select>
+                <div className="bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('daily')}
+                    className={`px-3 py-1 text-sm rounded-md ${
+                      viewMode === 'daily' ? 'bg-white shadow-sm' : 'text-gray-600'
+                    }`}
+                  >
+                    Daily
+                  </button>
+                  <button
+                    onClick={() => setViewMode('weekly')}
+                    className={`px-3 py-1 text-sm rounded-md ${
+                      viewMode === 'weekly' ? 'bg-white shadow-sm' : 'text-gray-600'
+                    }`}
+                  >
+                    Weekly
+                  </button>
+                </div>
               </div>
             </div>
             
+            {viewMode === 'daily' && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Today's Activities {filterByChild ? `for ${selectedChild?.name}` : 'for All Children'}
+                </h3>
+                
+                <div className="space-y-4">
+                  {allActivities.length > 0 ? (
+                    <div className="divide-y divide-gray-100">
+                      {allActivities
+                        .filter(activity => filterByChild ? activity.childId === filterByChild : true)
+                        .map((activity, index) => (
+                          <div key={index} className="py-3">
+                            <div className="flex justify-between">
+                              <div>
+                                <h4 className="font-medium text-gray-800">{activity.activityTitle || 'Unnamed Activity'}</h4>
+                                <p className="text-sm text-gray-600">{activity.timeSlot} • {activity.day}</p>
+                              </div>
+                              {!filterByChild && (
+                                <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full">
+                                  {activity.childName}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">{activity.notes || 'No notes'}</p>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  ) : (
+                    <p className="text-gray-600">No activities scheduled. Generate a weekly plan to get started.</p>
+                  )}
+                  
+                  <div className="flex space-x-3 mt-4">
+                    <button
+                      onClick={handleGeneratePlan}
+                      disabled={isGeneratingPlan || !selectedChild}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {isGeneratingPlan ? 'Generating...' : 'Generate Plan'}
+                    </button>
+                    {selectedChild && (
+                      <button
+                        onClick={() => setShowQuickObservation(true)}
+                        className="px-4 py-2 border border-emerald-600 text-emerald-600 rounded-md hover:bg-emerald-50"
+                      >
+                        Add Observation
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {selectedChild ? (
               <>
-                {viewMode === 'daily' ? (
-                  <WeekAtAGlanceView 
-                    childId={selectedChild.id} 
-                    childName={selectedChild.name}
-                    onSelectDay={(date) => router.push(`/dashboard/children/${selectedChild.id}/day/${date}`)}
-                    onBackToDaily={() => router.push(`/dashboard/children/${selectedChild.id}`)}
-                  />
-                ) : (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium text-emerald-800">Weekly Activity Plan</h3>
-                        <p className="text-sm text-emerald-700">
-                          Generate a personalized weekly plan for {selectedChild.name}
-                        </p>
+                {viewMode === 'weekly' ? (
+                  <>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-medium text-emerald-800">Weekly Activity Plan</h3>
+                          <p className="text-sm text-emerald-700">
+                            Generate a personalized weekly plan for {selectedChild.name}
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleGeneratePlan}
+                          disabled={isGeneratingPlan}
+                          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {isGeneratingPlan ? 'Generating...' : 'Generate Plan'}
+                        </button>
                       </div>
-                      <button
-                        onClick={handleGeneratePlan}
-                        disabled={isGeneratingPlan}
-                        className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        {isGeneratingPlan ? 'Generating...' : 'Generate Plan'}
-                      </button>
+                      {planGenerationMessage && (
+                        <p className="mt-2 text-sm text-emerald-700">{planGenerationMessage}</p>
+                      )}
                     </div>
-                    {planGenerationMessage && (
-                      <p className="mt-2 text-sm text-emerald-700">{planGenerationMessage}</p>
-                    )}
+                    
+                    <WeekAtAGlanceView 
+                      childId={selectedChild.id} 
+                      childName={selectedChild.name}
+                      onSelectDay={(date) => router.push(`/dashboard/children/${selectedChild.id}/day/${date}`)}
+                      onBackToDaily={() => router.push(`/dashboard/children/${selectedChild.id}`)}
+                    />
+                  </>
+                ) : (
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Today's Activities</h3>
+                    
+                    <div className="space-y-4">
+                      <p className="text-gray-600">
+                        Here you can see activities scheduled for today. You can also add quick activities or observations.
+                      </p>
+                      
+                      <div className="flex space-x-3 mt-4">
+                        <button
+                          onClick={() => router.push(`/dashboard/children/${selectedChild.id}/activities`)}
+                          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+                        >
+                          View All Activities
+                        </button>
+                        <button
+                          onClick={() => setShowQuickObservation(true)}
+                          className="px-4 py-2 border border-emerald-600 text-emerald-600 rounded-md hover:bg-emerald-50"
+                        >
+                          Add Observation
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
                 

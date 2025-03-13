@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Download, AlertCircle, CheckCircle } from 'lucide-react';
+import { getVapidKey } from '@/lib/webPush';
 
 // Add this at the top of the file, after the imports
 declare global {
@@ -147,6 +148,44 @@ export default function InstallPWA() {
     setShowBanner(true);
   };
 
+  // Register service worker and handle push subscription
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready
+        .then(registration => {
+          // Check if we already have a subscription
+          return registration.pushManager.getSubscription()
+            .then(subscription => {
+              if (subscription) {
+                return subscription;
+              }
+              
+              // Get the VAPID key
+              const vapidKey = getVapidKey();
+              if (!vapidKey) {
+                throw new Error('VAPID key is not available');
+              }
+              
+              // Create a new subscription
+              return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: vapidKey
+              });
+            });
+        })
+        .then(subscription => {
+          // Send the subscription to your server
+          if (subscription) {
+            console.log('Push subscription successful:', subscription);
+            // TODO: Send to your backend
+          }
+        })
+        .catch(error => {
+          console.error('Push subscription failed:', error);
+        });
+    }
+  }, []);
+
   // Show nothing if conditions aren't met
   if (!showBanner || isStandalone) {
     return null;
@@ -164,7 +203,7 @@ export default function InstallPWA() {
               <p className="mt-1 text-sm text-blue-700">
                 To install this app on your iOS device:
                 <ol className="ml-5 mt-1 list-decimal text-xs">
-                  <li>Tap the Share button <span className="inline-block w-5 h-5 leading-5 text-center bg-gray-300 rounded">⤴</span> in Safari</li>
+                  <li>Tap the Share button <span className="inline-block w-5 h-5 leading-5 text-center bg-gray-300 rounded">⤴</span></li>
                   <li>Scroll down and tap "Add to Home Screen"</li>
                   <li>Tap "Add" in the top right corner</li>
                 </ol>
