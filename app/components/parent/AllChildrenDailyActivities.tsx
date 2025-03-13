@@ -258,13 +258,78 @@ export default function AllChildrenDailyActivities({
     fetchActivities();
   }, [currentUser, currentDate, filterChild, allChildren]);
 
-  // Go to next/previous day
+  // Fix the handleDateChange function
   const handleDateChange = (days: number) => {
-    console.log(`Changing date by ${days} days from`, format(currentDate, 'yyyy-MM-dd'));
     const newDate = addDays(currentDate, days);
-    console.log(`New date:`, format(newDate, 'yyyy-MM-dd'));
     setCurrentDate(newDate);
+    
+    // Re-fetch activities for the new date
+    fetchActivitiesForDate(newDate);
   };
+
+  // Add a separate fetchActivitiesForDate function
+  const fetchActivitiesForDate = async (date: Date) => {
+    if (!currentUser) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Format the date for querying
+      const dayOfWeek = format(date, 'EEEE').toLowerCase();
+      
+      // Get all children if not already loaded
+      if (allChildren.length === 0) {
+        await fetchChildren();
+      }
+      
+      // For each child, find their activities for this date
+      const activitiesByChild: ChildActivities[] = [];
+      
+      for (const child of allChildren) {
+        if (filterChild !== 'all' && filterChild !== child.id) continue;
+        
+        const weekPlansQuery = query(
+          collection(db, 'weeklyPlans'),
+          where('childId', '==', child.id),
+          where('userId', '==', currentUser.uid)
+        );
+        
+        const weekPlansSnapshot = await getDocs(weekPlansQuery);
+        let childActivities: Activity[] = [];
+        
+        for (const doc of weekPlansSnapshot.docs) {
+          const planData = doc.data();
+          
+          if (planData[dayOfWeek] && Array.isArray(planData[dayOfWeek])) {
+            childActivities = planData[dayOfWeek].map((act: any) => ({
+              ...act,
+              childId: child.id,
+              childName: child.name
+            }));
+            break;
+          }
+        }
+        
+        activitiesByChild.push({
+          child,
+          activities: childActivities
+        });
+      }
+      
+      setChildActivities(activitiesByChild);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching activities:', err);
+      setError('Failed to load activities');
+      setLoading(false);
+    }
+  };
+
+  // Update the useEffect to use the fetchActivitiesForDate function
+  useEffect(() => {
+    fetchActivitiesForDate(currentDate);
+  }, [allChildren, filterChild]); // Remove currentDate from dependencies
 
   // Handle request to view weekly view
   const handleWeeklyViewRequest = (childId?: string) => {
@@ -329,6 +394,35 @@ export default function AllChildrenDailyActivities({
     (sum, child) => sum + child.activities.filter(a => a.status === 'completed').length, 
     0
   );
+
+  // Add this function definition
+  const fetchChildren = async () => {
+    try {
+      const childrenQuery = query(
+        collection(db, 'children'),
+        where('parentId', '==', currentUser?.uid || ''),
+        orderBy('name')
+      );
+      
+      const childrenSnapshot = await getDocs(childrenQuery);
+      
+      if (childrenSnapshot.empty) {
+        setAllChildren([]);
+        return;
+      }
+      
+      const children: Child[] = childrenSnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+        ageGroup: doc.data().ageGroup
+      }));
+      
+      setAllChildren(children);
+    } catch (error) {
+      console.error('Error fetching children:', error);
+      setError('Failed to load children');
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm">

@@ -393,8 +393,8 @@ export default function ProgressTrackingPage({ params }) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200">
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('overview')}
@@ -424,17 +424,7 @@ export default function ProgressTrackingPage({ params }) {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
           >
-            Records
-          </button>
-          <button
-            onClick={() => setActiveTab('guidance')}
-            className={`${
-              activeTab === 'guidance'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Parent Guidance
+            Activity Records
           </button>
         </nav>
       </div>
@@ -443,119 +433,106 @@ export default function ProgressTrackingPage({ params }) {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white shadow rounded-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Completed Activities Card */}
+            <div className="bg-white shadow rounded-lg p-5">
               <div className="flex items-center">
-                <div className="p-3 rounded-full bg-emerald-100 text-emerald-600">
-                  <CheckCircle className="h-6 w-6" />
+                <div className="flex-shrink-0 bg-emerald-100 rounded-md p-3">
+                  <CheckCircle className="h-6 w-6 text-emerald-600" />
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-sm font-medium text-gray-500">Completed Activities</h3>
-                  <p className="text-3xl font-semibold text-gray-900">{getCompletedActivitiesCount()}</p>
+                <div className="ml-5">
+                  <p className="text-sm font-medium text-gray-500">Completed Activities</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{getCompletedActivitiesCount()}</h3>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white shadow rounded-lg p-6">
+            {/* Skills In Progress Card */}
+            <div className="bg-white shadow rounded-lg p-5">
               <div className="flex items-center">
-                <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                  <TrendingUp className="h-6 w-6" />
+                <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                  <TrendingUp className="h-6 w-6 text-blue-600" />
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-sm font-medium text-gray-500">Skills in Progress</h3>
-                  <p className="text-3xl font-semibold text-gray-900">{getSkillsInProgressCount()}</p>
+                <div className="ml-5">
+                  <p className="text-sm font-medium text-gray-500">Skills In Progress</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{getSkillsInProgressCount()}</h3>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white shadow rounded-lg p-6">
+            {/* Skills To Start Card - New */}
+            <div className="bg-white shadow rounded-lg p-5">
               <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100 text-green-600">
-                  <Award className="h-6 w-6" />
+                <div className="flex-shrink-0 bg-gray-100 rounded-md p-3">
+                  <Lightbulb className="h-6 w-6 text-gray-600" />
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-sm font-medium text-gray-500">Mastered Skills</h3>
-                  <p className="text-3xl font-semibold text-gray-900">{getMasteredSkillsCount()}</p>
+                <div className="ml-5">
+                  <p className="text-sm font-medium text-gray-500">Skills To Start</p>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {developmentalSkills.filter(s => s.status === 'not_started').length}
+                  </h3>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white shadow rounded-lg p-6">
+            {/* Recent Progress Card */}
+            <div className="bg-white shadow rounded-lg p-5">
               <div className="flex items-center">
-                <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-                  <Calendar className="h-6 w-6" />
+                <div className="flex-shrink-0 bg-purple-100 rounded-md p-3">
+                  <Calendar className="h-6 w-6 text-purple-600" />
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-sm font-medium text-gray-500">Recent Progress</h3>
-                  <p className="text-3xl font-semibold text-gray-900">{getRecentProgress()}</p>
-                  <p className="text-xs text-gray-500">Last 30 days</p>
+                <div className="ml-5">
+                  <p className="text-sm font-medium text-gray-500">Recent Progress</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{getRecentProgress()} records</h3>
                 </div>
               </div>
             </div>
           </div>
           
-          {/* Recent Activities */}
+          {/* Parent Guidance Section - Moved from separate tab */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Recent Activities</h3>
+            <div className="px-6 py-5 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Parent Guidance</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Age-appropriate expectations and milestones for {child.name}
+              </p>
             </div>
-            <div className="bg-gray-50 px-4 py-5 sm:p-6">
-              {progressRecords.length > 0 ? (
-                <div className="space-y-4">
-                  {progressRecords.slice(0, 5).map(record => {
-                    const activity = activities.find(a => a.id === record.activityId);
-                    return (
-                      <div key={record.id} className="bg-white p-4 rounded-md shadow-sm">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-sm text-gray-500">{formatDate(record.date)}</p>
-                            <h4 className="text-lg font-medium text-gray-900 mt-1">
-                              {activity?.title || 'Unknown Activity'}
-                            </h4>
-                          </div>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            record.completionStatus === 'completed' ? 'bg-green-100 text-green-800' : 
-                            record.completionStatus === 'in_progress' ? 'bg-yellow-100 text-yellow-800' : 
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            {getCompletionStatusLabel(record.completionStatus)}
-                          </span>
-                        </div>
-                        
-                        {record.notes && (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-600 line-clamp-2">{record.notes}</p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+            
+            <div className="p-6">
+              {child.ageGroup ? (
+                <div>
+                  <div className="mb-6">
+                    <h3 className="text-md font-medium text-gray-900 mb-2">What to Expect</h3>
+                    <p className="text-gray-600">
+                      {getAgeAppropriateGuidance(child.ageGroup).expectations}
+                    </p>
+                  </div>
                   
-                  {progressRecords.length > 5 && (
-                    <div className="text-center">
-                      <button
-                        onClick={() => setActiveTab('records')}
-                        className="text-sm text-emerald-600 hover:text-emerald-700"
-                      >
-                        View all records
-                      </button>
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="text-md font-medium text-gray-900 mb-2">Common Milestones</h3>
+                    <ul className="space-y-2 text-gray-600">
+                      {getAgeAppropriateGuidance(child.ageGroup).milestones.map((milestone, index) => (
+                        <li key={index} className="flex items-start">
+                          <CheckCircle className="h-5 w-5 text-emerald-500 mr-2 flex-shrink-0 mt-0.5" />
+                          <span>{milestone}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <BarChart2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Progress Records Yet</h3>
+                <div className="text-center py-6">
+                  <Info className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Age Group Not Set</h3>
                   <p className="text-gray-500 mb-4">
-                    Start tracking {child.name}'s progress by adding your first record.
+                    Add {child.name}'s age group to see personalized guidance.
                   </p>
-                  <button
-                    onClick={() => setShowAddRecord(true)}
+                  <Link
+                    href={`/dashboard/children/${childId}/edit`}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
                   >
-                    <Plus className="-ml-1 mr-2 h-5 w-5" />
-                    Add First Record
-                  </button>
+                    Update Profile
+                  </Link>
                 </div>
               )}
             </div>
@@ -673,156 +650,6 @@ export default function ProgressTrackingPage({ params }) {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Guidance Tab */}
-      {activeTab === 'guidance' && (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Parent Guidance</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Understanding your child's development and how to support it
-            </p>
-          </div>
-          <div className="bg-gray-50 px-4 py-5 sm:p-6">
-            <div className="space-y-8">
-              {/* Age-appropriate expectations */}
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <Brain className="h-6 w-6 text-purple-500" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-medium text-gray-900">
-                      Age-Appropriate Development: {child?.ageGroup || 'Your Child'}
-                    </h4>
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-700">What to expect at this age:</h5>
-                        <p className="mt-2 text-sm text-gray-600">
-                          {getAgeAppropriateGuidance(child?.ageGroup).expectations}
-                        </p>
-                      </div>
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-700">Key developmental milestones:</h5>
-                        <ul className="mt-2 space-y-2">
-                          {getAgeAppropriateGuidance(child?.ageGroup).milestones.map((milestone, index) => (
-                            <li key={index} className="flex items-start">
-                              <CheckCircle className="h-5 w-5 text-emerald-500 mr-2 flex-shrink-0 mt-0.5" />
-                              <span className="text-sm text-gray-600">{milestone}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* How to observe */}
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <Eye className="h-6 w-6 text-blue-500" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-medium text-gray-900">
-                      How to Observe Your Child
-                    </h4>
-                    <div className="mt-4 space-y-4">
-                      <p className="text-sm text-gray-600">
-                        Effective observation helps you understand your child's development, interests, and needs. Here's how to make the most of your observations:
-                      </p>
-                      <ul className="space-y-3">
-                        <li className="flex items-start">
-                          <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mr-2 mt-0.5">1</div>
-                          <div>
-                            <h6 className="text-sm font-medium text-gray-700">Watch without interrupting</h6>
-                            <p className="text-sm text-gray-600">Allow your child to engage with activities naturally. Observe their concentration, problem-solving, and emotional responses.</p>
-                          </div>
-                        </li>
-                        <li className="flex items-start">
-                          <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mr-2 mt-0.5">2</div>
-                          <div>
-                            <h6 className="text-sm font-medium text-gray-700">Note specific behaviors</h6>
-                            <p className="text-sm text-gray-600">Record what your child actually does rather than general impressions. For example, "built a tower with 6 blocks" rather than "played well."</p>
-                          </div>
-                        </li>
-                        <li className="flex items-start">
-                          <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mr-2 mt-0.5">3</div>
-                          <div>
-                            <h6 className="text-sm font-medium text-gray-700">Look for patterns</h6>
-                            <p className="text-sm text-gray-600">Notice recurring interests, challenges, or behaviors across different activities and days.</p>
-                          </div>
-                        </li>
-                        <li className="flex items-start">
-                          <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mr-2 mt-0.5">4</div>
-                          <div>
-                            <h6 className="text-sm font-medium text-gray-700">Document progress</h6>
-                            <p className="text-sm text-gray-600">Record observations regularly to track development over time. Photos and notes help capture meaningful moments.</p>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* How activities support development */}
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <Lightbulb className="h-6 w-6 text-amber-500" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-medium text-gray-900">
-                      How Activities Support Development
-                    </h4>
-                    <div className="mt-4 space-y-4">
-                      <p className="text-sm text-gray-600">
-                        The activities in your child's plan are carefully designed to support holistic development across multiple areas:
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div className="border rounded-lg p-4 bg-blue-50">
-                          <h5 className="font-medium text-blue-700">Practical Life</h5>
-                          <p className="text-sm text-gray-600 mt-2">
-                            Activities that develop independence, coordination, concentration, and order. These build confidence and prepare for more complex learning.
-                          </p>
-                        </div>
-                        
-                        <div className="border rounded-lg p-4 bg-purple-50">
-                          <h5 className="font-medium text-purple-700">Sensorial</h5>
-                          <p className="text-sm text-gray-600 mt-2">
-                            Activities that refine the senses and help children categorize and make sense of their environment, building cognitive foundations.
-                          </p>
-                        </div>
-                        
-                        <div className="border rounded-lg p-4 bg-green-50">
-                          <h5 className="font-medium text-green-700">Language</h5>
-                          <p className="text-sm text-gray-600 mt-2">
-                            Activities that develop vocabulary, communication skills, and eventually reading and writing abilities.
-                          </p>
-                        </div>
-                        
-                        <div className="border rounded-lg p-4 bg-red-50">
-                          <h5 className="font-medium text-red-700">Mathematics</h5>
-                          <p className="text-sm text-gray-600 mt-2">
-                            Activities that develop numerical understanding, pattern recognition, and logical thinking through concrete experiences.
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-gray-600 mt-4">
-                        By engaging in these activities regularly, your child builds essential skills that form the foundation for lifelong learning and development.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
