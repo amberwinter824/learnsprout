@@ -8,6 +8,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  addDoc,
+  updateDoc,
   limit,
   serverTimestamp,
   Timestamp,
@@ -39,6 +41,8 @@ interface Activity {
   ageRanges?: string[];
   status?: string;
   duration?: number;
+  tags?: string[];
+  keywords?: string[];
   [key: string]: any;
 }
 
@@ -61,7 +65,7 @@ interface WeeklyPlan {
   id?: string;
   childId: string;
   userId: string;
-  weekStarting: Date | Timestamp;
+  weekStarting: Date | Timestamp | string;
   createdBy: string;
   createdAt?: any;
   updatedAt?: any;
@@ -81,6 +85,61 @@ interface Recommendation {
   activity: DocumentData;
   priority: number;
   reason: string;
+}
+
+interface ActivityPreferences {
+  daysPerWeek?: string[];
+  activitiesPerDay?: number;
+  useCustomSchedule?: boolean;
+  scheduleByDay?: {[key: string]: number};
+}
+
+/**
+ * Get user preferences for activity schedule
+ */
+async function getUserActivityPreferences(userId: string): Promise<ActivityPreferences> {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    
+    if (!userDoc.exists()) {
+      throw new Error("User not found");
+    }
+    
+    const userData = userDoc.data();
+    const activityPreferences = userData?.preferences?.activityPreferences;
+    
+    if (!activityPreferences) {
+      // Return default preferences if none exist
+      return {
+        daysPerWeek: ['monday', 'wednesday', 'friday'],
+        activitiesPerDay: 2,
+        useCustomSchedule: false
+      };
+    }
+    
+    // Check if using custom schedule by day
+    if (activityPreferences.scheduleByDay) {
+      return {
+        scheduleByDay: activityPreferences.scheduleByDay,
+        useCustomSchedule: true
+      };
+    }
+    
+    // Using simple schedule
+    return {
+      daysPerWeek: activityPreferences.daysPerWeek || ['monday', 'wednesday', 'friday'],
+      activitiesPerDay: activityPreferences.activitiesPerDay || 2,
+      useCustomSchedule: false
+    };
+  } catch (error) {
+    console.error("Error getting user preferences:", error);
+    // Return default preferences if error
+    return {
+      daysPerWeek: ['monday', 'wednesday', 'friday'],
+      activitiesPerDay: 2,
+      useCustomSchedule: false
+    };
+  }
 }
 
 /**
@@ -103,6 +162,9 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
     const interests = childData.interests || [];
     
     console.log(`Child age group: ${ageGroup}, interests: ${interests.join(', ')}`);
+    
+    // Get user activity preferences
+    const preferences = await getUserActivityPreferences(userId);
     
     // Get current skill levels
     const skillsQuery = query(
@@ -157,7 +219,7 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
     );
     
     const activitiesSnapshot = await getDocs(activitiesQuery);
-    const activities: Activity[] = [];
+    let activities: Activity[] = [];
     
     activitiesSnapshot.forEach(doc => {
       const data = doc.data();
@@ -169,6 +231,23 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
     });
     
     console.log(`Got ${activities.length} potential activities for age group ${ageGroup}`);
+    
+    // Prioritize activities matching interests
+    activities = activities.sort((a, b) => {
+      const aMatchesInterests = interests.some((interest: string) => 
+        a.tags?.includes(interest) || a.keywords?.includes(interest) || 
+        (a.area && a.area.toLowerCase().includes(interest.toLowerCase()))
+      );
+      
+      const bMatchesInterests = interests.some((interest: string) => 
+        b.tags?.includes(interest) || b.keywords?.includes(interest) ||
+        (b.area && b.area.toLowerCase().includes(interest.toLowerCase()))
+      );
+      
+      if (aMatchesInterests && !bMatchesInterests) return -1;
+      if (!aMatchesInterests && bMatchesInterests) return 1;
+      return 0;
+    });
     
     // Score and rank activities based on child's needs
     const scoredActivities: ScoredActivity[] = activities.map(activity => {
@@ -201,6 +280,11 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
         if (activity.area && activity.area.toLowerCase().includes(interest.toLowerCase())) {
           score += 2;
           reasons.push(`Matches child's interest in ${interest}`);
+        }
+        
+        if (activity.tags?.includes(interest) || activity.keywords?.includes(interest)) {
+          score += 2;
+          reasons.push(`Tagged with child's interest: ${interest}`);
         }
       }
       
@@ -249,8 +333,7 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
     const weekStartDate = startOfWeek(today, { weekStartsOn: 1 }); // Monday as start of week
     
     // Build plan with different activities for each day
-    // with higher-scored activities appearing earlier in the week
-    const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const weeklyPlan: WeeklyPlan = {
       childId,
       userId,
@@ -267,24 +350,41 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
       sunday: []
     };
     
-    // Assign activities to days
-    // Add 1-2 activities per day (more on weekends)
+    // Determine number of activities for each day based on preferences
+    const activityCountByDay: {[key: string]: number} = {};
+    
+    if (preferences.useCustomSchedule && preferences.scheduleByDay) {
+      // Use custom schedule
+      days.forEach(day => {
+        activityCountByDay[day] = preferences.scheduleByDay?.[day] || 0;
+      });
+    } else {
+      // Use simple schedule
+      days.forEach(day => {
+        activityCountByDay[day] = preferences.daysPerWeek?.includes(day) 
+          ? preferences.activitiesPerDay || 2
+          : 0;
+      });
+    }
+    
+    // Assign activities to each day
     let activityIndex = 0;
     
-    for (let dayIndex = 0; dayIndex < daysOfWeek.length; dayIndex++) {
-      const day = daysOfWeek[dayIndex];
-      const isWeekend = day === 'saturday' || day === 'sunday';
-      const activitiesForDay = isWeekend ? 2 : 1;
+    for (const day of days) {
+      const activityCount = activityCountByDay[day];
       
-      for (let i = 0; i < activitiesForDay; i++) {
+      for (let i = 0; i < activityCount; i++) {
         if (activityIndex < scoredActivities.length) {
           const activity = scoredActivities[activityIndex];
           
+          // Assign morning/afternoon based on position
+          const timeSlot = i < Math.ceil(activityCount / 2) ? 'morning' : 'afternoon';
+          
           weeklyPlan[day as keyof WeeklyPlan].push({
             activityId: activity.id,
-            timeSlot: i === 0 ? 'morning' : 'afternoon',
+            timeSlot,
             status: 'suggested',
-            order: i + 1,
+            order: i,
             notes: activity.reasons.join('. ')
           });
           
@@ -298,12 +398,30 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
     const planRef = doc(db, 'weeklyPlans', planId);
     await setDoc(planRef, weeklyPlan);
     
+    // Update child profile with last plan generation timestamp
+    await updateLastGeneratedTimestamp(childId);
+    
     console.log(`Created weekly plan with ID: ${planId}`);
     
     return { id: planId, ...weeklyPlan };
   } catch (error) {
     console.error('Error generating weekly plan:', error);
     throw error;
+  }
+}
+
+/**
+ * Update the last generated timestamp on the child profile
+ */
+export async function updateLastGeneratedTimestamp(childId: string) {
+  try {
+    const childRef = doc(db, 'children', childId);
+    await updateDoc(childRef, {
+      lastPlanGenerated: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Error updating last generated timestamp:", error);
+    // Continue even if this fails
   }
 }
 

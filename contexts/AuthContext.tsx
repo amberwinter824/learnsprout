@@ -8,7 +8,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut, 
-  sendPasswordResetEmail 
+  sendPasswordResetEmail,
+  updateProfile
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -30,6 +31,11 @@ export interface UserData {
     emailNotifications?: boolean;
     weeklyDigest?: boolean;
     theme?: string;
+    activityPreferences?: {
+      daysPerWeek?: string[];
+      activitiesPerDay?: number;
+      scheduleByDay?: {[key: string]: number};
+    };
   };
 }
 
@@ -52,6 +58,7 @@ export interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   getUserData: (uid: string) => Promise<UserData | null>;
   updateUserRole: (role: string) => Promise<void>;
+  updateUserPreferences: (preferences: UserData['preferences']) => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
   hasRole: (requiredRole: string) => boolean;
   loading: boolean;
@@ -59,6 +66,7 @@ export interface AuthContextType {
   availableRoles: string[]; // All roles available to the user
   activeRole: string; // Currently active role
   switchRole: (role: string) => Promise<void>; // Function to switch active role
+  updateUserProfile: (profileData: { displayName?: string }) => Promise<void>;
 }
 
 // Create a default context value with no-op functions
@@ -70,13 +78,15 @@ const defaultContext: AuthContextType = {
   resetPassword: async () => { throw new Error('AuthProvider not initialized'); },
   getUserData: async () => null,
   updateUserRole: async () => { throw new Error('AuthProvider not initialized'); },
+  updateUserPreferences: async () => { throw new Error('AuthProvider not initialized'); },
   hasPermission: () => false,
   hasRole: () => false,
   loading: true,
   initialized: false,
   availableRoles: [],
   activeRole: '',
-  switchRole: async () => { throw new Error('AuthProvider not initialized'); }
+  switchRole: async () => { throw new Error('AuthProvider not initialized'); },
+  updateUserProfile: async () => { throw new Error('AuthProvider not initialized'); }
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContext);
@@ -473,6 +483,68 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const updateUserPreferences = async (preferences: UserData['preferences']): Promise<void> => {
+    if (!currentUser) {
+      throw new Error("No user is logged in");
+    }
+    
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      
+      // Update Firestore with the new preferences
+      await updateDoc(userRef, {
+        'preferences': preferences,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state
+      setCurrentUser(prev => {
+        if (!prev) return null;
+        return { 
+          ...prev, 
+          preferences
+        } as (User & UserData);
+      });
+      
+      console.log(`User preferences updated successfully`);
+    } catch (error) {
+      console.error("Error updating user preferences:", error);
+      throw error;
+    }
+  };
+
+  const updateUserProfile = async (profileData: { displayName?: string }): Promise<void> => {
+    if (!currentUser) {
+      throw new Error("No user is logged in");
+    }
+    
+    try {
+      // Update Firebase Auth profile
+      await updateProfile(currentUser, profileData);
+      
+      // Update Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        name: profileData.displayName,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state
+      setCurrentUser(prev => {
+        if (!prev) return null;
+        return { 
+          ...prev, 
+          displayName: profileData.displayName || prev.displayName
+        } as (User & UserData);
+      });
+      
+      console.log('User profile updated successfully');
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     console.log("AuthProvider useEffect running");
     
@@ -540,13 +612,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     resetPassword,
     getUserData,
     updateUserRole,
+    updateUserPreferences,
     hasPermission,
     hasRole,
     loading,
     initialized,
     availableRoles,
     activeRole,
-    switchRole
+    switchRole,
+    updateUserProfile
   };
 
   console.log("AuthProvider rendering with loading:", loading, "activeRole:", activeRole);

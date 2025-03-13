@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, DocumentData } from 'firebase/firestore';
-import { Sprout, Home, Users, BookOpen, BarChart2, LogOut, Menu, X } from 'lucide-react';
+import { Sprout, Home, Users, BookOpen, BarChart2, LogOut, Menu, X, Settings } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Cookies from 'js-cookie';
 
@@ -64,6 +64,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Activities', href: '/dashboard/activities', icon: BookOpen },
     // You can uncomment this if you implement a dedicated progress page
     // { name: 'Progress', href: '/dashboard/progress', icon: BarChart2 },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
 
   const handleLogout = async (): Promise<void> => {
