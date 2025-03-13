@@ -23,6 +23,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { format, parseISO, isAfter, subMonths, addDays, startOfWeek, isToday } from 'date-fns';
+import VisualSkillProgress from '@/components/VisualSkillProgress';
+import SimplifiedSkillsDashboard from '@/components/SimplifiedSkillsDashboard';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -34,6 +36,8 @@ export default function ProgressTrackingPage({ params }) {
   const [activities, setActivities] = useState([]);
   const [developmentalSkills, setDevelopmentalSkills] = useState([]);
   const [showAddRecord, setShowAddRecord] = useState(false);
+  const [skillView, setSkillView] = useState('visual');
+  const [selectedSkillArea, setSelectedSkillArea] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
@@ -563,84 +567,57 @@ export default function ProgressTrackingPage({ params }) {
       {/* Skills Tab */}
       {activeTab === 'skills' && (
         <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-5 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Developmental Skills Progress</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Track {child.name}'s progress across key developmental areas
-            </p>
+          <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-medium text-gray-900">Developmental Skills Progress</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Track {child.name}'s progress across key developmental areas
+              </p>
+            </div>
+            
+            {/* Toggle between visual and detailed view */}
+            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setSkillView('visual')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                  skillView === 'visual' 
+                    ? 'bg-white text-emerald-600 shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Visual Overview
+              </button>
+              <button
+                onClick={() => setSkillView('detailed')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                  skillView === 'detailed' 
+                    ? 'bg-white text-emerald-600 shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Detailed View
+              </button>
+            </div>
           </div>
           
-          <div className="p-6">
-            {Object.keys(skillsByArea).length > 0 ? (
-              <div className="space-y-8">
-                {Object.entries(skillsByArea).map(([area, skills]) => (
-                  <div key={area} className="space-y-4">
-                    <h3 className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getAreaColor(area)}`}>
-                      {getAreaLabel(area)}
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {skills.map(skill => (
-                        <div key={skill.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium text-gray-900">{skill.name}</h4>
-                              <p className="text-sm text-gray-500 mt-1">{skill.description}</p>
-                            </div>
-                            
-                            <div className={`flex items-center ${getStatusColor(skill.status)}`}>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                                {getStatusIcon(skill.status)}
-                                {getStatusLabel(skill.status)}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {skill.status !== 'not_started' && skill.lastAssessed && (
-                            <div className="mt-3 text-xs text-gray-500">
-                              Last assessed: {formatDate(skill.lastAssessed)}
-                            </div>
-                          )}
-                          
-                          <div className="mt-3">
-                            <h5 className="text-xs font-medium text-gray-700">What to look for:</h5>
-                            <p className="text-xs text-gray-600 mt-1">
-                              {skill.indicators || "Observe how your child engages with activities that develop this skill. Look for signs of interest, concentration, and growing competence."}
-                            </p>
-                          </div>
-                          
-                          <div className="mt-3">
-                            <h5 className="text-xs font-medium text-gray-700">Supporting activities:</h5>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {activities
-                                .filter(a => a.skillsAddressed?.includes(skill.id))
-                                .slice(0, 3)
-                                .map(activity => (
-                                  <span key={activity.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
-                                    {activity.title}
-                                  </span>
-                                ))}
-                              {activities.filter(a => a.skillsAddressed?.includes(skill.id)).length > 3 && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-500">
-                                  +{activities.filter(a => a.skillsAddressed?.includes(skill.id)).length - 3} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="p-4">
+            {/* Visual skills overview */}
+            {skillView === 'visual' ? (
+              <VisualSkillProgress 
+                childId={childId} 
+                ageGroup={child.ageGroup} 
+                onSkillAreaClick={(area) => {
+                  setSelectedSkillArea(area);
+                  setSkillView('detailed');
+                }}
+              />
             ) : (
-              <div className="text-center py-12">
-                <Brain className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Skills Data Available</h3>
-                <p className="text-gray-500 mb-4">
-                  Complete activities to start tracking skill development.
-                </p>
-              </div>
+              /* Detailed skills view */
+              <SimplifiedSkillsDashboard 
+                childId={childId} 
+                ageGroup={child.ageGroup} 
+                initialExpandedArea={selectedSkillArea}
+              />
             )}
           </div>
         </div>
