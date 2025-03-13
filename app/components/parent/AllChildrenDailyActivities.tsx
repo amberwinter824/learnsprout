@@ -14,13 +14,16 @@ import {
   User,
   Filter,
   X,
-  ChevronDown
+  ChevronDown,
+  Info as InfoIcon,
+  PlusCircle
 } from 'lucide-react';
 import { format, isToday, addDays, isSameDay } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, getDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, orderBy, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
+import QuickObservationForm from './QuickObservationForm';
 
 // Define types
 interface Activity {
@@ -73,6 +76,8 @@ export default function AllChildrenDailyActivities({
   const [showDetailsPopup, setShowDetailsPopup] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterChild, setFilterChild] = useState<string>(selectedChildId || 'all');
+  const [selectedActivityForObservation, setSelectedActivityForObservation] = useState<Activity | null>(null);
+  const [showObservationForm, setShowObservationForm] = useState(false);
   
   // Update currentDate when selectedDate prop changes
   useEffect(() => {
@@ -132,110 +137,106 @@ export default function AllChildrenDailyActivities({
         setLoading(true);
         setError(null);
         
+        // Format date for querying
         const dateString = format(currentDate, 'yyyy-MM-dd');
         const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
         
-        // Calculate week start date (Monday of the current week)
-        const weekStart = new Date(currentDate);
-        weekStart.setDate(weekStart.getDate() - (weekStart.getDay() === 0 ? 6 : weekStart.getDay() - 1));
-        const weekStartString = format(weekStart, 'yyyy-MM-dd');
-        
-        console.log(`Fetching activities for ${dateString} (${dayOfWeek}), week starting ${weekStartString}`);
-        
-        const childrenToProcess = filterChild !== 'all' 
-          ? allChildren.filter(child => child.id === filterChild)
-          : allChildren;
-        
+        // Create an array to hold results
         const results: ChildActivities[] = [];
         
-        for (const child of childrenToProcess) {
-          console.log(`Processing child: ${child.name} (${child.id})`);
+        // For each child, find their activities for this date
+        for (const child of allChildren) {
+          // Skip if filtering by child and this isn't the selected child
+          if (filterChild !== 'all' && filterChild !== child.id) continue;
           
-          // Find the weekly plan for this child and week
-          const plansQuery = query(
+          // Find the weekly plan that contains this date
+          const weekPlansQuery = query(
             collection(db, 'weeklyPlans'),
             where('childId', '==', child.id),
-            where('weekStarting', '==', weekStartString)
+            where('userId', '==', currentUser?.uid || '')
           );
           
-          const plansSnapshot = await getDocs(plansQuery);
+          const weekPlansSnapshot = await getDocs(weekPlansQuery);
+          let childActivities: Activity[] = [];
           
-          if (plansSnapshot.empty) {
-            console.log(`No weekly plan found for ${child.name} for week starting ${weekStartString}`);
-            results.push({ child, activities: [] });
-            continue;
+          // Look through all weekly plans to find activities for this date
+          for (const planDoc of weekPlansSnapshot.docs) {
+            const planData = planDoc.data();
+            
+            // Check if this plan contains our target date
+            if (planData[dayOfWeek] && Array.isArray(planData[dayOfWeek])) {
+              // Get activities for this day
+              const dayActivities = planData[dayOfWeek];
+              
+              // Fetch activity details for each activity
+              const activitiesWithDetails = await Promise.all(
+                dayActivities.map(async (activity: any) => {
+                  try {
+                    const activityDocRef = doc(db, 'activities', activity.activityId);
+                    const activityDocSnap = await getDoc(activityDocRef);
+                    
+                    if (activityDocSnap.exists()) {
+                      const activityData = activityDocSnap.data() as {
+                        title?: string;
+                        description?: string;
+                        area?: string;
+                        duration?: number;
+                        environmentType?: string;
+                        classroomExtension?: boolean;
+                      };
+                      
+                      return {
+                        id: activity.id || `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
+                        activityId: activity.activityId,
+                        childId: child.id,
+                        childName: child.name,
+                        title: activityData.title || 'Untitled Activity',
+                        description: activityData.description || '',
+                        area: activityData.area || '',
+                        duration: activityData.duration || null,
+                        status: activity.status || 'suggested',
+                        timeSlot: activity.timeSlot || '',
+                        order: activity.order || 0,
+                        isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                               !!activityData.classroomExtension
+                      };
+                    }
+                    
+                    // Return fallback if document doesn't exist
+                    return {
+                      id: activity.id || `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
+                      activityId: activity.activityId,
+                      childId: child.id,
+                      childName: child.name,
+                      title: 'Unknown Activity',
+                      status: activity.status || 'suggested',
+                      order: activity.order || 0
+                    };
+                  } catch (error) {
+                    console.error(`Error fetching activity ${activity.activityId}:`, error);
+                    return {
+                      id: activity.id || `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
+                      activityId: activity.activityId,
+                      childId: child.id,
+                      childName: child.name,
+                      title: 'Error Loading Activity',
+                      status: activity.status || 'suggested',
+                      order: activity.order || 0
+                    };
+                  }
+                })
+              );
+              
+              // Convert null duration to undefined to fix type error
+              childActivities = activitiesWithDetails.map(activity => ({
+                ...activity,
+                duration: activity.duration === null ? undefined : activity.duration
+              }));
+              break;
+            }
           }
-          
-          // Get the first plan (should only be one per week)
-          const planDoc = plansSnapshot.docs[0];
-          const planData = planDoc.data();
-          const planId = planDoc.id;
-          
-          console.log(`Found plan ${planId} for ${child.name}`);
-          
-          // Get activities for the current day of the week
-          const dayActivities = planData[dayOfWeek] || [];
-          
-          if (!dayActivities || dayActivities.length === 0) {
-            console.log(`No activities found for ${child.name} on ${dayOfWeek}`);
-            results.push({ child, activities: [] });
-            continue;
-          }
-          
-          console.log(`Found ${dayActivities.length} activities for ${child.name} on ${dayOfWeek}`);
-          
-          // Get full activity details
-          const activitiesWithDetails = await Promise.all(
-            dayActivities.map(async (activity: any) => {
-              try {
-                const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
-                
-                if (activityDoc.exists()) {
-                  const activityData = activityDoc.data();
-                  return {
-                    id: `${planId}_${dayOfWeek}_${activity.activityId}`,
-                    activityId: activity.activityId,
-                    childId: child.id,
-                    childName: child.name,
-                    title: activityData.title || 'Untitled Activity',
-                    description: activityData.description || '',
-                    area: activityData.area || '',
-                    duration: activityData.duration || 15,
-                    isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                          !!activityData.classroomExtension,
-                    status: activity.status || 'suggested',
-                    timeSlot: activity.timeSlot,
-                    order: activity.order
-                  };
-                }
-                
-                // If activity not found, return with basic info
-                return {
-                  id: `${planId}_${dayOfWeek}_${activity.activityId}`,
-                  activityId: activity.activityId,
-                  childId: child.id,
-                  childName: child.name,
-                  title: 'Unknown Activity',
-                  status: activity.status || 'suggested',
-                  timeSlot: activity.timeSlot,
-                  order: activity.order
-                };
-              } catch (error) {
-                console.error(`Error fetching activity ${activity.activityId}:`, error);
-                return {
-                  id: `${planId}_${dayOfWeek}_${activity.activityId}`,
-                  activityId: activity.activityId,
-                  childId: child.id,
-                  childName: child.name,
-                  title: 'Error Loading Activity',
-                  status: activity.status || 'suggested'
-                };
-              }
-            })
-          );
-          
           // Sort activities by order
-          const sortedActivities = activitiesWithDetails.sort((a, b) => 
+          const sortedActivities = childActivities.sort((a, b) => 
             (a.order || 0) - (b.order || 0)
           );
           
@@ -245,7 +246,6 @@ export default function AllChildrenDailyActivities({
           });
         }
         
-        console.log(`Setting state with ${results.length} children's activities`);
         setChildActivities(results);
         setLoading(false);
       } catch (error) {
@@ -262,74 +262,7 @@ export default function AllChildrenDailyActivities({
   const handleDateChange = (days: number) => {
     const newDate = addDays(currentDate, days);
     setCurrentDate(newDate);
-    
-    // Re-fetch activities for the new date
-    fetchActivitiesForDate(newDate);
   };
-
-  // Add a separate fetchActivitiesForDate function
-  const fetchActivitiesForDate = async (date: Date) => {
-    if (!currentUser) return;
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Format the date for querying
-      const dayOfWeek = format(date, 'EEEE').toLowerCase();
-      
-      // Get all children if not already loaded
-      if (allChildren.length === 0) {
-        await fetchChildren();
-      }
-      
-      // For each child, find their activities for this date
-      const activitiesByChild: ChildActivities[] = [];
-      
-      for (const child of allChildren) {
-        if (filterChild !== 'all' && filterChild !== child.id) continue;
-        
-        const weekPlansQuery = query(
-          collection(db, 'weeklyPlans'),
-          where('childId', '==', child.id),
-          where('userId', '==', currentUser.uid)
-        );
-        
-        const weekPlansSnapshot = await getDocs(weekPlansQuery);
-        let childActivities: Activity[] = [];
-        
-        for (const doc of weekPlansSnapshot.docs) {
-          const planData = doc.data();
-          
-          if (planData[dayOfWeek] && Array.isArray(planData[dayOfWeek])) {
-            childActivities = planData[dayOfWeek].map((act: any) => ({
-              ...act,
-              childId: child.id,
-              childName: child.name
-            }));
-            break;
-          }
-        }
-        
-        activitiesByChild.push({
-          child,
-          activities: childActivities
-        });
-      }
-      
-      setChildActivities(activitiesByChild);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching activities:', err);
-      setError('Failed to load activities');
-      setLoading(false);
-    }
-  };
-
-  // Update the useEffect to use the fetchActivitiesForDate function
-  useEffect(() => {
-    fetchActivitiesForDate(currentDate);
-  }, [allChildren, filterChild]); // Remove currentDate from dependencies
 
   // Handle request to view weekly view
   const handleWeeklyViewRequest = (childId?: string) => {
@@ -371,6 +304,17 @@ export default function AllChildrenDailyActivities({
     return format(date, 'EEEE, MMMM d');
   };
 
+  // Button functions to open popups
+  const openActivityDetails = (activityId: string) => {
+    setDetailsActivityId(activityId);
+    setShowDetailsPopup(true);
+  };
+
+  const openObservationForm = (activity: Activity) => {
+    setSelectedActivityForObservation(activity);
+    setShowObservationForm(true);
+  };
+
   // Render loading state
   if (loading) {
     return (
@@ -394,35 +338,6 @@ export default function AllChildrenDailyActivities({
     (sum, child) => sum + child.activities.filter(a => a.status === 'completed').length, 
     0
   );
-
-  // Add this function definition
-  const fetchChildren = async () => {
-    try {
-      const childrenQuery = query(
-        collection(db, 'children'),
-        where('parentId', '==', currentUser?.uid || ''),
-        orderBy('name')
-      );
-      
-      const childrenSnapshot = await getDocs(childrenQuery);
-      
-      if (childrenSnapshot.empty) {
-        setAllChildren([]);
-        return;
-      }
-      
-      const children: Child[] = childrenSnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name,
-        ageGroup: doc.data().ageGroup
-      }));
-      
-      setAllChildren(children);
-    } catch (error) {
-      console.error('Error fetching children:', error);
-      setError('Failed to load children');
-    }
-  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
@@ -623,6 +538,26 @@ export default function AllChildrenDailyActivities({
                               )}
                             </div>
                           </div>
+                          <div className="bg-gray-50 px-3 py-2 flex space-x-4">
+                            <button
+                              onClick={() => openActivityDetails(activity.activityId)}
+                              className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                              type="button"
+                            >
+                              <InfoIcon className="h-3 w-3 mr-1" />
+                              How to
+                            </button>
+                            {activity.status !== 'completed' && (
+                              <button
+                                onClick={() => openObservationForm(activity)}
+                                className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
+                                type="button"
+                              >
+                                <PlusCircle className="h-3 w-3 mr-1" />
+                                Add Observation
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -651,6 +586,26 @@ export default function AllChildrenDailyActivities({
             activityId={detailsActivityId || ''} 
             onClose={() => setShowDetailsPopup(false)}
           />
+        )}
+        
+        {/* Observation Form Modal */}
+        {showObservationForm && selectedActivityForObservation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <QuickObservationForm
+                activityId={selectedActivityForObservation.activityId}
+                childId={selectedActivityForObservation.childId}
+                activityTitle={selectedActivityForObservation.title}
+                onSuccess={() => {
+                  setShowObservationForm(false);
+                  // Refresh activities
+                  const newDate = new Date(currentDate);
+                  setCurrentDate(newDate);
+                }}
+                onClose={() => setShowObservationForm(false)}
+              />
+            </div>
+          </div>
         )}
         
         {/* Navigation to weekly view */}

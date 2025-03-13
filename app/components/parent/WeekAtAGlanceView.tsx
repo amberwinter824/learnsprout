@@ -17,7 +17,8 @@ import {
   Eye,
   EyeOff,
   Camera,
-  Info
+  Info,
+  Plus
 } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns';
 import { collection, query, where, getDocs, getDoc, doc, updateDoc } from 'firebase/firestore';
@@ -26,6 +27,7 @@ import Link from 'next/link';
 import ActivityDetailModal from '@/app/components/ActivityDetailModal';
 import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
+import AddActivityToWeeklyPlan from '../AddActivityToWeeklyPlan';
 
 // Activity interface
 interface Activity {
@@ -89,6 +91,9 @@ export default function WeekAtAGlanceView({
   // Activity details popup state
   const [showDetailsPopup, setShowDetailsPopup] = useState(false);
   const [detailsActivityId, setDetailsActivityId] = useState<string | null>(null);
+  
+  // Add activity modal state
+  const [showAddActivityModal, setShowAddActivityModal] = useState<boolean>(false);
   
   // Calculate week days for display
   const weekDays = useMemo(() => {
@@ -509,6 +514,14 @@ export default function WeekAtAGlanceView({
     setShowDetailsPopup(true);
   };
 
+  // Handle adding activity success
+  const handleAddActivitySuccess = () => {
+    setShowAddActivityModal(false);
+    
+    // Refresh the weekly plan data
+    fetchWeeklyPlan();
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6 flex items-center justify-center h-96">
@@ -526,26 +539,26 @@ export default function WeekAtAGlanceView({
       <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
         <div className="flex items-center">
           <Calendar className="h-5 w-5 text-emerald-500 mr-2" />
-          <h2 className="text-lg font-medium">Weekly View</h2>
+          <h2 className="text-lg font-medium">Weekly Plan</h2>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
+          {onBackToDaily && (
+            <button
+              onClick={onBackToDaily}
+              className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Daily View
+            </button>
+          )}
+          
           <button
-            onClick={handlePrevWeek}
-            className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center"
+            onClick={() => setShowAddActivityModal(true)}
+            className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
           >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          
-          <span className="mx-2 text-sm font-medium">
-            {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
-          </span>
-          
-          <button 
-            onClick={handleNextWeek}
-            className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center"
-          >
-            <ChevronRight className="h-5 w-5" />
+            <Plus className="-ml-1 mr-1 h-4 w-4" />
+            Add Activity
           </button>
         </div>
       </div>
@@ -770,6 +783,16 @@ export default function WeekAtAGlanceView({
             />
           </div>
         </div>
+      )}
+      
+      {/* Add Activity Modal */}
+      {showAddActivityModal && weekPlanId && (
+        <AddActivityToWeeklyPlan
+          weeklyPlanId={weekPlanId}
+          childId={childId}
+          onSuccess={handleAddActivitySuccess}
+          onClose={() => setShowAddActivityModal(false)}
+        />
       )}
     </div>
   );
