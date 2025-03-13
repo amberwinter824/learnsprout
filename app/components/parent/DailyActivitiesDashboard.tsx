@@ -349,7 +349,10 @@ export default function DailyActivitiesDashboard({
   
   // Go to next/previous day
   const handleDateChange = (days: number) => {
-    setCurrentDate(prev => addDays(prev, days));
+    console.log(`Changing date by ${days} days from`, format(currentDate, 'yyyy-MM-dd'));
+    const newDate = addDays(currentDate, days);
+    console.log(`New date:`, format(newDate, 'yyyy-MM-dd'));
+    setCurrentDate(newDate);
   };
   
   // Handle request to view weekly view
@@ -544,32 +547,39 @@ export default function DailyActivitiesDashboard({
           <h2 className="text-lg font-medium">Daily Activities</h2>
         </div>
         
-        <div className="flex items-center">
-          <button
-            onClick={() => handleDateChange(-1)}
-            className="p-1 rounded-full hover:bg-gray-100"
-            aria-label="Previous day"
-            type="button"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+        {/* Date navigation */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            {childName}'s Activities
+          </h3>
           
-          <div className="w-36 text-center mx-1 font-medium">
-            {formatDateDisplay(currentDate)}
+          <div className="flex items-center">
+            <button
+              onClick={() => handleDateChange(-1)}
+              className="p-1 rounded-full hover:bg-gray-100"
+              aria-label="Previous day"
+              type="button"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            
+            <div className="w-36 text-center mx-1 font-medium">
+              {isToday(currentDate) ? 'Today' : format(currentDate, 'EEEE, MMMM d')}
+            </div>
+            
+            <button
+              onClick={() => handleDateChange(1)}
+              className="p-1 rounded-full hover:bg-gray-100"
+              aria-label="Next day"
+              type="button"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
           </div>
-          
-          <button
-            onClick={() => handleDateChange(1)}
-            className="p-1 rounded-full hover:bg-gray-100"
-            aria-label="Next day"
-            type="button"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
         </div>
       </div>
       

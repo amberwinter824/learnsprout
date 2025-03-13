@@ -23,8 +23,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { format, parseISO, isAfter, subMonths, addDays, startOfWeek, isToday } from 'date-fns';
-import VisualSkillProgress from '@/components/VisualSkillProgress';
-import SimplifiedSkillsDashboard from '@/components/SimplifiedSkillsDashboard';
+import ProgressiveSkillPath from '@/components/ProgressiveSkillPath';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 

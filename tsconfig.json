@@ -51,6 +51,8 @@
   "exclude": [
     "node_modules",
     "app/components/parent/ImprovedParentDashboard.tsx",
-    "app/components/parent/MultiChildDailyDashboard.tsx"
+    "app/components/parent/MultiChildDailyDashboard.tsx",
+    "app/components/VisualSkillProgress.tsx",
+    "app/components/SimplifiedSkillsDashboard.tsx"
   ]
 }

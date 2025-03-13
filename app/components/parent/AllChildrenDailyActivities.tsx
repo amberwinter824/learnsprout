@@ -88,65 +88,70 @@ export default function AllChildrenDailyActivities({
     }
   }, [selectedChildId]);
 
-  // Fetch children and their activities
+  // Fetch children first
   useEffect(() => {
     if (!currentUser) return;
     
-    async function fetchChildrenAndActivities() {
+    async function fetchChildren() {
       try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('Fetching activities for date:', format(currentDate, 'yyyy-MM-dd'));
-        
-        // First, fetch all children for the current user
         const childrenQuery = query(
           collection(db, 'children'),
           where('parentId', '==', currentUser?.uid || ''),
           orderBy('name')
         );
         
-        console.log('Fetching children for parent ID:', currentUser?.uid);
-        
         const childrenSnapshot = await getDocs(childrenQuery);
         
         if (childrenSnapshot.empty) {
-          console.log('No children found for this parent');
-          setChildActivities([]);
           setAllChildren([]);
-          setLoading(false);
           return;
         }
         
-        // Store all children
         const children: Child[] = childrenSnapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name,
           ageGroup: doc.data().ageGroup
         }));
         
-        console.log(`Found ${children.length} children`);
         setAllChildren(children);
+      } catch (error) {
+        console.error('Error fetching children:', error);
+        setError('Failed to load children');
+      }
+    }
+    
+    fetchChildren();
+  }, [currentUser]);
+
+  // Fetch activities for each child
+  useEffect(() => {
+    if (!currentUser || !allChildren.length) return;
+    
+    async function fetchActivities() {
+      try {
+        setLoading(true);
+        setError(null);
         
-        // For each child, fetch their activities for the current date
-        const childrenActivities: ChildActivities[] = [];
+        const dateString = format(currentDate, 'yyyy-MM-dd');
         const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
+        
+        // Calculate week start date (Monday of the current week)
         const weekStart = new Date(currentDate);
         weekStart.setDate(weekStart.getDate() - (weekStart.getDay() === 0 ? 6 : weekStart.getDay() - 1));
         const weekStartString = format(weekStart, 'yyyy-MM-dd');
         
-        console.log('Week starting:', weekStartString, 'Day of week:', dayOfWeek);
+        console.log(`Fetching activities for ${dateString} (${dayOfWeek}), week starting ${weekStartString}`);
         
-        // Process each child
-        for (const child of children) {
-          // If filtering by a specific child, skip others
-          if (filterChild !== 'all' && filterChild !== child.id) {
-            continue;
-          }
+        const childrenToProcess = filterChild !== 'all' 
+          ? allChildren.filter(child => child.id === filterChild)
+          : allChildren;
+        
+        const results: ChildActivities[] = [];
+        
+        for (const child of childrenToProcess) {
+          console.log(`Processing child: ${child.name} (${child.id})`);
           
-          console.log(`Fetching activities for child: ${child.name} (${child.id})`);
-          
-          // Find weekly plan for this child
+          // Find the weekly plan for this child and week
           const plansQuery = query(
             collection(db, 'weeklyPlans'),
             where('childId', '==', child.id),
@@ -156,41 +161,33 @@ export default function AllChildrenDailyActivities({
           const plansSnapshot = await getDocs(plansQuery);
           
           if (plansSnapshot.empty) {
-            console.log(`No weekly plan found for child ${child.name} for week starting ${weekStartString}`);
-            // No plan for this child, add an empty activities array
-            childrenActivities.push({
-              child,
-              activities: []
-            });
+            console.log(`No weekly plan found for ${child.name} for week starting ${weekStartString}`);
+            results.push({ child, activities: [] });
             continue;
           }
           
-          // Use the first plan (should only be one per week)
+          // Get the first plan (should only be one per week)
           const planDoc = plansSnapshot.docs[0];
           const planData = planDoc.data();
           const planId = planDoc.id;
           
-          console.log(`Found plan ${planId} for child ${child.name}`);
+          console.log(`Found plan ${planId} for ${child.name}`);
           
-          // Get activities for today
+          // Get activities for the current day of the week
           const dayActivities = planData[dayOfWeek] || [];
           
-          console.log(`Found ${dayActivities.length} activities for ${dayOfWeek}`);
-          
-          if (dayActivities.length === 0) {
-            // No activities for this day, add empty array
-            childrenActivities.push({
-              child,
-              activities: []
-            });
+          if (!dayActivities || dayActivities.length === 0) {
+            console.log(`No activities found for ${child.name} on ${dayOfWeek}`);
+            results.push({ child, activities: [] });
             continue;
           }
+          
+          console.log(`Found ${dayActivities.length} activities for ${child.name} on ${dayOfWeek}`);
           
           // Get full activity details
           const activitiesWithDetails = await Promise.all(
             dayActivities.map(async (activity: any) => {
               try {
-                console.log(`Fetching details for activity ID: ${activity.activityId}`);
                 const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
                 
                 if (activityDoc.exists()) {
@@ -212,7 +209,6 @@ export default function AllChildrenDailyActivities({
                   };
                 }
                 
-                console.log(`Activity ${activity.activityId} not found in database`);
                 // If activity not found, return with basic info
                 return {
                   id: `${planId}_${dayOfWeek}_${activity.activityId}`,
@@ -243,39 +239,31 @@ export default function AllChildrenDailyActivities({
             (a.order || 0) - (b.order || 0)
           );
           
-          console.log(`Processed ${sortedActivities.length} activities for ${child.name}`);
-          
-          // Add to childrenActivities array
-          childrenActivities.push({
+          results.push({
             child,
             activities: sortedActivities
           });
         }
         
-        console.log(`Setting state with ${childrenActivities.length} children's activities`);
-        setChildActivities(childrenActivities);
+        console.log(`Setting state with ${results.length} children's activities`);
+        setChildActivities(results);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching activities:', error);
-        setError(`Failed to load daily activities: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setError(`Failed to load activities: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setLoading(false);
       }
     }
     
-    fetchChildrenAndActivities();
-  }, [currentUser, currentDate, filterChild, selectedChildId]);
+    fetchActivities();
+  }, [currentUser, currentDate, filterChild, allChildren]);
 
   // Go to next/previous day
   const handleDateChange = (days: number) => {
+    console.log(`Changing date by ${days} days from`, format(currentDate, 'yyyy-MM-dd'));
     const newDate = addDays(currentDate, days);
+    console.log(`New date:`, format(newDate, 'yyyy-MM-dd'));
     setCurrentDate(newDate);
-    
-    // If there's a parent component that needs to know about the date change
-    if (selectedDate && onWeeklyViewRequest) {
-      // This is a bit of a hack - we're using the onWeeklyViewRequest callback
-      // to notify the parent component about date changes
-      // A better approach would be to add a dedicated onDateChange callback prop
-    }
   };
 
   // Handle request to view weekly view
