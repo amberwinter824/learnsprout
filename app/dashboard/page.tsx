@@ -4,8 +4,7 @@
 import { Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
-import ImprovedParentDashboard from '@/app/components/parent/ImprovedParentDashboard';
-import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
+import UpdatedParentDashboard from '@/app/components/parent/UpdatedParentDashboard';
 
 // Loading component for suspense fallback
 function DashboardLoading() {
@@ -30,12 +29,8 @@ export default function DashboardPage() {
   
   // Render the dashboard with suspense for any other loading states
   return (
-    <>
-      <Suspense fallback={<DashboardLoading />}>
-        <ImprovedParentDashboard hideAddChild={true} hideMontessoriResources={true} />
-      </Suspense>
-      
-      <PWAInstallPrompt />
-    </>
+    <Suspense fallback={<DashboardLoading />}>
+      <UpdatedParentDashboard />
+    </Suspense>
   );
 }

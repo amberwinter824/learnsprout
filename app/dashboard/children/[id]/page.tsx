@@ -302,16 +302,6 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
                 selectedDate={selectedDate}
                 onWeeklyViewRequest={handleViewWeekly}
               />
-              
-              <div className="mt-4 text-center">
-                <Link
-                  href={`/dashboard/children/${childId}/weekly-plan`}
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-100 rounded-md hover:bg-emerald-200"
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  View Weekly Calendar
-                </Link>
-              </div>
             </div>
           ) : (
             <WeekAtAGlanceView

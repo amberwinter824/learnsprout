@@ -15,14 +15,9 @@ export default function UserSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   // Activity preferences state
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [scheduleByDay, setScheduleByDay] = useState<{[key: string]: number}>({});
-  const [activitiesPerDay, setActivitiesPerDay] = useState<number>(2);
-  const [useCustomSchedule, setUseCustomSchedule] = useState<boolean>(false);
 
   const weekdays = [
     { id: 'monday', label: 'Mon' },
@@ -42,35 +37,20 @@ export default function UserSettingsPage() {
       
       // Load preferences from localStorage
       const storedNotifications = localStorage.getItem('notifications-enabled');
-      const storedDarkMode = localStorage.getItem('dark-mode-enabled');
-      const storedBiometric = localStorage.getItem('biometric-enabled');
       
       setNotificationsEnabled(storedNotifications !== 'false');
-      setDarkModeEnabled(storedDarkMode === 'true');
-      setBiometricEnabled(storedBiometric === 'true');
       
       // Load activity preferences from user data
       if (currentUser?.preferences?.activityPreferences) {
         const actPrefs = currentUser.preferences.activityPreferences;
         
-        if (actPrefs.daysPerWeek) {
-          setSelectedDays(actPrefs.daysPerWeek);
-        }
-        
-        if (actPrefs.activitiesPerDay) {
-          setActivitiesPerDay(actPrefs.activitiesPerDay);
-        }
-        
         if (actPrefs.scheduleByDay) {
           setScheduleByDay(actPrefs.scheduleByDay);
-          setUseCustomSchedule(true);
         } else {
-          setUseCustomSchedule(false);
+          initializeScheduleByDay();
         }
       } else {
         // Default values if no preferences exist
-        setSelectedDays(['monday', 'wednesday', 'friday']);
-        setActivitiesPerDay(2);
         initializeScheduleByDay();
       }
     }
@@ -83,15 +63,6 @@ export default function UserSettingsPage() {
       defaultSchedule[day.id] = ['monday', 'wednesday', 'friday'].includes(day.id) ? 2 : 0;
     });
     setScheduleByDay(defaultSchedule);
-  };
-
-  // Toggle day selection
-  const toggleDay = (dayId: string) => {
-    setSelectedDays(prev => 
-      prev.includes(dayId) 
-        ? prev.filter(day => day !== dayId)
-        : [...prev, dayId]
-    );
   };
 
   // Adjust activity count for a specific day
@@ -133,19 +104,12 @@ export default function UserSettingsPage() {
         email,
         photoURL,
         notificationsEnabled,
-        darkModeEnabled,
-        biometricEnabled,
-        useCustomSchedule,
-        scheduleByDay: useCustomSchedule ? scheduleByDay : {},
-        selectedDays: !useCustomSchedule ? selectedDays : [],
-        activitiesPerDay: !useCustomSchedule ? activitiesPerDay : 0,
+        scheduleByDay,
         updatedAt: serverTimestamp()
       });
       
       // Update local storage preferences
       localStorage.setItem('notifications-enabled', notificationsEnabled.toString());
-      localStorage.setItem('dark-mode-enabled', darkModeEnabled.toString());
-      localStorage.setItem('biometric-enabled', biometricEnabled.toString());
       
       setSaveMessage('Settings saved successfully!');
       
@@ -219,127 +183,41 @@ export default function UserSettingsPage() {
           <div className="pt-4 border-t border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 flex items-center mb-4">
               <Calendar className="h-5 w-5 mr-2 text-emerald-500" />
-              Activity Preferences
+              Preferred Schedule
             </h3>
             
-            <div className="mb-4">
+            <div className="space-y-3">
               <p className="text-sm font-medium text-gray-700 mb-2">
-                Weekly Schedule Type
+                Activities Per Day
               </p>
-              <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    checked={!useCustomSchedule}
-                    onChange={() => setUseCustomSchedule(false)}
-                    className="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Simple Schedule</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    checked={useCustomSchedule}
-                    onChange={() => setUseCustomSchedule(true)}
-                    className="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Custom Schedule</span>
-                </label>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Choose how you want to schedule your weekly activities
-              </p>
-            </div>
-            
-            {!useCustomSchedule ? (
-              <>
-                {/* Simple Schedule UI */}
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Days of the Week
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {weekdays.map(day => (
-                      <button
-                        key={day.id}
-                        type="button"
-                        onClick={() => toggleDay(day.id)}
-                        className={`px-3 py-2 rounded-lg text-sm ${
-                          selectedDays.includes(day.id)
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200 border'
-                            : 'bg-gray-100 text-gray-700 border-gray-200 border'
-                        }`}
-                      >
-                        {day.label}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Select the days you want to do activities
-                  </p>
-                </div>
-                
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Activities Per Day
-                  </p>
+              {weekdays.map(day => (
+                <div key={day.id} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700 w-24">{day.id.charAt(0).toUpperCase() + day.id.slice(1)}</span>
                   <div className="flex items-center space-x-3">
                     <button
                       type="button"
-                      onClick={() => setActivitiesPerDay(prev => Math.max(1, prev - 1))}
+                      onClick={() => adjustDayActivities(day.id, -1)}
                       className="p-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-                    <span className="text-lg font-medium text-gray-700">{activitiesPerDay}</span>
+                    <span className="text-lg font-medium text-gray-700 w-6 text-center">
+                      {scheduleByDay[day.id] || 0}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setActivitiesPerDay(prev => Math.min(5, prev + 1))}
+                      onClick={() => adjustDayActivities(day.id, 1)}
                       className="p-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    How many activities would you like to do on each selected day
-                  </p>
                 </div>
-              </>
-            ) : (
-              /* Custom Schedule UI */
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Activities Per Day
-                </p>
-                {weekdays.map(day => (
-                  <div key={day.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700 w-24">{day.id.charAt(0).toUpperCase() + day.id.slice(1)}</span>
-                    <div className="flex items-center space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => adjustDayActivities(day.id, -1)}
-                        className="p-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <span className="text-lg font-medium text-gray-700 w-6 text-center">
-                        {scheduleByDay[day.id] || 0}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => adjustDayActivities(day.id, 1)}
-                        className="p-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <p className="text-xs text-gray-500 mt-1">
-                  Customize how many activities you want to do each day
-                </p>
-              </div>
-            )}
+              ))}
+              <p className="text-xs text-gray-500 mt-1">
+                Customize how many activities you want to do each day
+              </p>
+            </div>
           </div>
           
           <div className="pt-4 border-t border-gray-200">
@@ -367,48 +245,9 @@ export default function UserSettingsPage() {
           
           <div className="pt-4 border-t border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 flex items-center mb-4">
-              <Moon className="h-5 w-5 mr-2 text-emerald-500" />
-              Appearance
-            </h3>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Dark mode</p>
-                <p className="text-xs text-gray-500">Use dark theme for the application</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={darkModeEnabled}
-                  onChange={() => setDarkModeEnabled(!darkModeEnabled)}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-              </label>
-            </div>
-          </div>
-          
-          <div className="pt-4 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center mb-4">
               <Shield className="h-5 w-5 mr-2 text-emerald-500" />
               Security
             </h3>
-            
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Biometric login</p>
-                <p className="text-xs text-gray-500">Use fingerprint or face recognition to log in</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={biometricEnabled}
-                  onChange={() => setBiometricEnabled(!biometricEnabled)}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-              </label>
-            </div>
             
             <div>
               <Link 
