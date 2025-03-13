@@ -49,14 +49,14 @@ interface ProgressRecord {
 }
 
 interface RecentProgressDashboardProps {
-  children: Child[];
+  childrenData: Child[];
   selectedChildId?: string | null;
   limit?: number;
   onViewDetails?: (progressId: string, childId: string) => void;
 }
 
 export default function RecentProgressDashboard({
-  children,
+  childrenData = [],
   selectedChildId = null,
   limit = 5,
   onViewDetails
@@ -68,7 +68,8 @@ export default function RecentProgressDashboard({
   
   // Fetch recent progress records
   useEffect(() => {
-    if (children.length === 0) {
+    // Ensure childrenData is an array and has items
+    if (!Array.isArray(childrenData) || childrenData.length === 0) {
       setLoading(false);
       return;
     }
@@ -79,14 +80,28 @@ export default function RecentProgressDashboard({
         
         // Create a map of child IDs to names for easy lookup
         const childIdToName: Record<string, string> = {};
-        children.forEach(child => {
-          childIdToName[child.id] = child.name;
+        childrenData.forEach(child => {
+          if (child && child.id && child.name) {
+            childIdToName[child.id] = child.name;
+          }
         });
         
         // Create a filter for the children
-        const childIds = selectedChildId 
+        // Make sure we have valid child IDs
+        const validChildIds = childrenData
+          .filter(child => child && child.id)
+          .map(child => child.id);
+        
+        // If no valid child IDs, return early
+        if (validChildIds.length === 0) {
+          setLoading(false);
+          return;
+        }
+        
+        // Use selectedChildId if it's valid, otherwise use all valid child IDs
+        const childIds = selectedChildId && validChildIds.includes(selectedChildId)
           ? [selectedChildId] 
-          : children.map(child => child.id);
+          : validChildIds;
         
         // Progress records query (completed activities and observations)
         const progressQuery = query(
@@ -102,11 +117,13 @@ export default function RecentProgressDashboard({
         
         progressSnapshot.forEach(doc => {
           const data = doc.data() as Omit<ProgressRecord, 'id'>;
-          progressData.push({
-            id: doc.id,
-            ...data,
-            childName: childIdToName[data.childId]
-          } as ProgressRecord);
+          if (data && data.childId) {
+            progressData.push({
+              id: doc.id,
+              ...data,
+              childName: childIdToName[data.childId] || 'Unknown Child'
+            } as ProgressRecord);
+          }
         });
         
         // Get activity titles for each progress record
@@ -149,11 +166,15 @@ export default function RecentProgressDashboard({
         );
         
         const skillsSnapshot = await getDocs(skillsQuery);
-        const skillsData = skillsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          childName: childIdToName[(doc.data() as any).childId]
-        }));
+        const skillsData = skillsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            childName: data.childId && childIdToName[data.childId] ? 
+              childIdToName[data.childId] : 'Unknown Child'
+          };
+        });
         
         setRecentSkills(skillsData);
         setLoading(false);
@@ -165,19 +186,24 @@ export default function RecentProgressDashboard({
     }
     
     fetchRecentProgress();
-  }, [children, selectedChildId, limit]);
+  }, [childrenData, selectedChildId, limit]);
   
   // Format date for display
   const formatDate = (date: Timestamp | Date | undefined): string => {
     if (!date) return '';
     
-    const dateObj = date instanceof Date 
-      ? date 
-      : date instanceof Timestamp 
-        ? date.toDate() 
-        : new Date();
-        
-    return format(dateObj, 'MMM d');
+    try {
+      const dateObj = date instanceof Date 
+        ? date 
+        : date instanceof Timestamp 
+          ? date.toDate() 
+          : new Date();
+          
+      return format(dateObj, 'MMM d');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
   };
   
   // Get color for engagement level
@@ -222,6 +248,25 @@ export default function RecentProgressDashboard({
     );
   }
   
+  // If no children data, show a message
+  if (!Array.isArray(childrenData) || childrenData.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <div className="flex items-center">
+            <Award className="h-5 w-5 text-emerald-500 mr-2" />
+            <h2 className="text-lg font-medium">Recent Progress</h2>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="bg-gray-50 rounded-lg p-4 text-center">
+            <p className="text-gray-500">No children added yet. Add a child to track progress.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
@@ -254,7 +299,7 @@ export default function RecentProgressDashboard({
                       <h4 className="font-medium text-gray-900">{record.activityTitle || 'Activity'}</h4>
                       <div className="flex items-center mt-1">
                         <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                          {record.childName}
+                          {record.childName || 'Unknown Child'}
                         </span>
                         <span className="text-xs text-gray-500 ml-2 flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
@@ -298,7 +343,7 @@ export default function RecentProgressDashboard({
         ) : (
           <div className="bg-gray-50 rounded-lg p-4 text-center">
             <p className="text-gray-500">No recent activity progress recorded.</p>
-            {!selectedChildId && children.length > 1 && (
+            {!selectedChildId && childrenData.length > 1 && (
               <p className="text-sm text-gray-500 mt-2">Try selecting a specific child to see their progress.</p>
             )}
           </div>
@@ -315,7 +360,7 @@ export default function RecentProgressDashboard({
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-gray-900">{skill.skillName || skill.name || 'Skill'}</h4>
                       <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                        {skill.childName}
+                        {skill.childName || 'Unknown Child'}
                       </span>
                     </div>
                     <div className="flex items-center mt-1">

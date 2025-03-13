@@ -14,7 +14,8 @@ import {
   Settings, 
   Loader2,
   User,
-  Book
+  Book,
+  Award
 } from 'lucide-react';
 import Link from 'next/link';
 import ChildCard from './ChildCard';
@@ -23,6 +24,7 @@ import QuickObservationForm from '../QuickObservationForm';
 import AllChildrenDailyActivities from './AllChildrenDailyActivities';
 import RecentProgressDashboard from './RecentProgressDashboard';
 import { format } from 'date-fns';
+import { ErrorBoundary } from 'react-error-boundary';
 
 interface Child {
   id: string;
@@ -111,15 +113,17 @@ export default function UpdatedParentDashboard({
     fetchChildren();
   }, [currentUser]);
   
-  const handleChildSelect = (child: Child) => {
+  const handleChildSelect = (child: Child | null) => {
+    if (!child) return;
     setSelectedChild(child);
   };
   
   const handleActivitySelect = (childId: string, activityId: string, activityTitle: string) => {
+    if (!childId || !activityId) return;
     setSelectedActivity({
       childId,
       activityId,
-      activityTitle
+      activityTitle: activityTitle || 'Activity'
     });
     setShowQuickObservation(true);
   };
@@ -200,6 +204,24 @@ export default function UpdatedParentDashboard({
           >
             Try Again
           </button>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!Array.isArray(children) || children.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <div className="flex items-center">
+            <Award className="h-5 w-5 text-emerald-500 mr-2" />
+            <h2 className="text-lg font-medium">Recent Progress</h2>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="bg-gray-50 rounded-lg p-4 text-center">
+            <p className="text-gray-500">No children added yet. Add a child to track progress.</p>
+          </div>
         </div>
       </div>
     );
@@ -405,12 +427,16 @@ export default function UpdatedParentDashboard({
             )}
             
             {/* Recent Progress */}
-            <RecentProgressDashboard
-              childrenData={children}
-              selectedChildId={selectedChild?.id || null}
-              limit={5}
-              onViewDetails={handleViewProgressDetails}
-            />
+            <ErrorBoundary fallback={<div className="p-4 bg-white rounded-lg shadow-sm">
+              <p className="text-gray-500">Unable to load progress dashboard</p>
+            </div>}>
+              <RecentProgressDashboard
+                childrenData={children || []}
+                selectedChildId={selectedChild?.id || null}
+                limit={5}
+                onViewDetails={handleViewProgressDetails}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
