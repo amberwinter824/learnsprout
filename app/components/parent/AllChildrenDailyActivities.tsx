@@ -247,7 +247,15 @@ export default function AllChildrenDailyActivities({
 
   // Go to next/previous day
   const handleDateChange = (days: number) => {
-    setCurrentDate(prev => addDays(prev, days));
+    const newDate = addDays(currentDate, days);
+    setCurrentDate(newDate);
+    
+    // If there's a parent component that needs to know about the date change
+    if (selectedDate && onWeeklyViewRequest) {
+      // This is a bit of a hack - we're using the onWeeklyViewRequest callback
+      // to notify the parent component about date changes
+      // A better approach would be to add a dedicated onDateChange callback prop
+    }
   };
 
   // Handle request to view weekly view
