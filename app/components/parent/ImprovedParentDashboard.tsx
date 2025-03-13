@@ -2,63 +2,112 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import DailyActivitiesDashboard from '@/app/components/parent/DailyActivitiesDashboard';
-import { getUserChildren } from '@/lib/dataService';
+import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { 
-  Loader2, 
-  PlusCircle, 
-  User, 
+  Plus, 
   Calendar, 
-  BarChart, 
   BookOpen, 
-  ChevronRight, 
-  Lightbulb 
+  BarChart2, 
+  Settings, 
+  Loader2,
+  User,
+  Bell,
+  MessageSquare,
+  Book
 } from 'lucide-react';
+import Link from 'next/link';
+import ChildCard from './ChildCard';
+import WeekAtAGlanceView from './WeekAtAGlanceView';
+import QuickObservationForm from '../QuickObservationForm';
 
-export default function ImprovedParentDashboard() {
+interface Child {
+  id: string;
+  name: string;
+  ageGroup?: string;
+  birthdate?: string;
+  parentId?: string;
+  [key: string]: any;
+}
+
+interface ImprovedParentDashboardProps {
+  hideAddChild?: boolean;
+  hideMontessoriResources?: boolean;
+}
+
+export default function ImprovedParentDashboard({ 
+  hideAddChild = false,
+  hideMontessoriResources = false
+}: ImprovedParentDashboardProps) {
   const { currentUser } = useAuth();
   const router = useRouter();
-  
-  // State
-  const [children, setChildren] = useState<any[]>([]);
-  const [activeChild, setActiveChild] = useState<any>(null);
+  const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const [showQuickObservation, setShowQuickObservation] = useState(false);
   
-  // Fetch children on load
   useEffect(() => {
-    const fetchChildren = async () => {
+    async function fetchChildren() {
       if (!currentUser) return;
       
       try {
         setLoading(true);
-        const userChildren = await getUserChildren(currentUser.uid);
+        const childrenQuery = query(
+          collection(db, 'children'),
+          where('parentId', '==', currentUser.uid),
+          orderBy('name')
+        );
         
-        setChildren(userChildren);
+        const querySnapshot = await getDocs(childrenQuery);
+        const childrenData: Child[] = [];
         
-        // Set first child as active if there is one
-        if (userChildren.length > 0) {
-          setActiveChild(userChildren[0]);
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data && data.name) {  // Check if name exists
+            childrenData.push({
+              id: doc.id,
+              name: data.name,
+              ...data as Omit<Child, 'id' | 'name'>
+            });
+          } else {
+            console.warn(`Child document ${doc.id} is missing required name field`);
+          }
+        });
+        
+        setChildren(childrenData);
+        
+        // Auto-select the first child if there's only one
+        if (childrenData.length === 1) {
+          setSelectedChild(childrenData[0]);
         }
         
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching children:', error);
+      } catch (err) {
+        console.error('Error fetching children:', err);
+        setError('Failed to load your children. Please try again later.');
         setLoading(false);
       }
-    };
+    }
     
     fetchChildren();
   }, [currentUser]);
   
-  // Change active child
-  const changeActiveChild = (child: any) => {
-    setActiveChild(child);
+  const handleChildSelect = (child: Child) => {
+    setSelectedChild(child);
   };
   
-  // Loading state
+  const handleQuickObservation = (child: Child) => {
+    setSelectedChild(child);
+    setShowQuickObservation(true);
+  };
+  
+  const handleObservationSuccess = () => {
+    setShowQuickObservation(false);
+  };
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -70,185 +119,169 @@ export default function ImprovedParentDashboard() {
       </div>
     );
   }
-
+  
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-medium text-red-600 mb-2">Something went wrong</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start gap-8">
-        {/* Sidebar */}
-        <div className="w-full md:w-64 space-y-6">
-          {/* Children selection */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="text-lg font-medium text-gray-900 mb-3">Your Children</h2>
-            {children.length > 0 ? (
-              <div className="space-y-2">
-                {children.map(child => (
-                  <button
-                    key={child.id}
-                    onClick={() => changeActiveChild(child)}
-                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center ${
-                      activeChild?.id === child.id 
-                        ? 'bg-emerald-100 text-emerald-800' 
-                        : 'hover:bg-gray-100'
-                    }`}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Your Children</h2>
+              
+              <div className="space-y-3">
+                {children.length > 0 ? (
+                  children.map((child) => (
+                    <ChildCard
+                      key={child.id}
+                      child={child}
+                      isSelected={selectedChild?.id === child.id}
+                      onSelect={() => handleChildSelect(child)}
+                      onObserve={() => handleQuickObservation(child)}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500 mb-3">No children added yet</p>
+                    {!hideAddChild && (
+                      <Link
+                        href="/dashboard/children/add"
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                      >
+                        <Plus className="-ml-1 mr-2 h-5 w-5" />
+                        Add Child
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {children.length > 0 && !hideAddChild && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <Link
+                    href="/dashboard/children/add"
+                    className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
                   >
-                    <User className="h-5 w-5 mr-2 text-gray-500" />
-                    <span>{child.name}</span>
-                  </button>
-                ))}
-                
-                <Link 
-                  href="/dashboard/add-child"
-                  className="w-full text-left px-3 py-2 rounded-lg flex items-center text-emerald-600 hover:bg-emerald-50"
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add another child
+                  </Link>
+                </div>
+              )}
+            </div>
+            
+            {/* Quick Links */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Links</h2>
+              
+              <div className="space-y-2">
+                <Link
+                  href="/dashboard/activities"
+                  className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
                 >
-                  <PlusCircle className="h-5 w-5 mr-2" />
-                  <span>Add Child</span>
+                  <BookOpen className="h-5 w-5 mr-3 text-emerald-500" />
+                  <span>Activity Library</span>
+                </Link>
+                
+                <Link
+                  href="/dashboard/calendar"
+                  className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  <Calendar className="h-5 w-5 mr-3 text-emerald-500" />
+                  <span>Weekly Planner</span>
+                </Link>
+                
+                <Link
+                  href="/dashboard/progress"
+                  className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  <BarChart2 className="h-5 w-5 mr-3 text-emerald-500" />
+                  <span>Progress Tracking</span>
+                </Link>
+                
+                {!hideMontessoriResources && (
+                  <Link
+                    href="/resources"
+                    className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
+                  >
+                    <Book className="h-5 w-5 mr-3 text-emerald-500" />
+                    <span>Montessori Resources</span>
+                  </Link>
+                )}
+                
+                <Link
+                  href="/dashboard/settings"
+                  className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  <Settings className="h-5 w-5 mr-3 text-emerald-500" />
+                  <span>Settings</span>
                 </Link>
               </div>
+            </div>
+          </div>
+          
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {selectedChild ? (
+              <WeekAtAGlanceView 
+                childId={selectedChild.id} 
+                childName={selectedChild.name}
+                onSelectDay={(date) => router.push(`/dashboard/children/${selectedChild.id}/day/${date}`)}
+                onBackToDaily={() => router.push(`/dashboard/children/${selectedChild.id}`)}
+              />
             ) : (
-              <div className="text-center py-4">
-                <p className="text-gray-500 mb-4">You haven't added any children yet.</p>
-                <Link 
-                  href="/dashboard/add-child"
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Child
-                </Link>
+              <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+                <h2 className="text-xl font-medium text-gray-700 mb-2">Welcome to Your Dashboard</h2>
+                <p className="text-gray-500 mb-4">
+                  {children.length > 0 
+                    ? 'Select a child to view their weekly plan and activities'
+                    : 'Add your first child to get started with personalized activities and tracking'}
+                </p>
+                
+                {children.length === 0 && !hideAddChild && (
+                  <Link
+                    href="/dashboard/children/add"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                  >
+                    <Plus className="-ml-1 mr-2 h-5 w-5" />
+                    Add Child
+                  </Link>
+                )}
               </div>
             )}
           </div>
-          
-          {/* Quick Links */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="text-lg font-medium text-gray-900 mb-3">Quick Links</h2>
-            <nav className="space-y-1">
-              <Link 
-                href="/dashboard/activities"
-                className="block px-3 py-2 rounded-lg hover:bg-gray-100 flex items-center"
-              >
-                <BookOpen className="h-4 w-4 mr-2 text-gray-500" />
-                Activity Library
-                <ChevronRight className="h-4 w-4 ml-auto text-gray-400" />
-              </Link>
-              <Link 
-                href="/dashboard/progress"
-                className="block px-3 py-2 rounded-lg hover:bg-gray-100 flex items-center"
-              >
-                <BarChart className="h-4 w-4 mr-2 text-gray-500" />
-                Progress Tracking
-                <ChevronRight className="h-4 w-4 ml-auto text-gray-400" />
-              </Link>
-              <Link 
-                href="/dashboard/resources"
-                className="block px-3 py-2 rounded-lg hover:bg-gray-100 flex items-center"
-              >
-                <BookOpen className="h-4 w-4 mr-2 text-gray-500" />
-                Montessori Resources
-                <ChevronRight className="h-4 w-4 ml-auto text-gray-400" />
-              </Link>
-            </nav>
-          </div>
-        </div>
-        
-        {/* Main content area */}
-        <div className="flex-1 w-full">
-          {activeChild ? (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {activeChild.name}'s Dashboard
-                </h1>
-                
-                <Link 
-                  href={`/dashboard/children/${activeChild.id}/weekly-plan`}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
-                >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  View Weekly Plan
-                </Link>
-              </div>
-              
-              {/* Daily activities view - Always shown by default */}
-              <DailyActivitiesDashboard 
-                childId={activeChild.id} 
-                childName={activeChild.name}
-                userId={currentUser?.uid || ''}
-              />
-              
-              {/* Additional dashboard widgets */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Recent observations widget */}
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h2 className="font-medium text-gray-900 mb-3 flex items-center">
-                    <span>Recent Observations</span>
-                    <Link 
-                      href={`/dashboard/children/${activeChild.id}/observations`}
-                      className="ml-auto text-sm text-emerald-600 hover:text-emerald-700"
-                    >
-                      View All
-                    </Link>
-                  </h2>
-                  <div className="text-gray-500 text-center py-8">
-                    <p>Recent observations will appear here</p>
-                    <p className="text-xs mt-2">Complete activities to see observations</p>
-                  </div>
-                </div>
-                
-                {/* Developmental progress widget */}
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h2 className="font-medium text-gray-900 mb-3 flex items-center">
-                    <span>Developmental Progress</span>
-                    <Link 
-                      href={`/dashboard/children/${activeChild.id}/progress`}
-                      className="ml-auto text-sm text-emerald-600 hover:text-emerald-700"
-                    >
-                      View Details
-                    </Link>
-                  </h2>
-                  <div className="text-gray-500 text-center py-8">
-                    <p>Skill development progress will appear here</p>
-                    <p className="text-xs mt-2">Track progress as you complete activities</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Weekly Planning Card */}
-              <div className="mt-6 bg-white rounded-lg shadow-sm p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-medium">Weekly Activity Planning</h3>
-                  <span className="text-xs text-gray-500">Optional Feature</span>
-                </div>
-                
-                <p className="text-sm text-gray-600 mb-3">
-                  Need structure for the week? Our system can auto-generate a balanced weekly plan of age-appropriate activities.
-                </p>
-                
-                <Link 
-                  href={`/dashboard/children/${activeChild.id}/weekly-plan`}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
-                >
-                  <Lightbulb className="h-4 w-4 mr-1" />
-                  View or Generate Weekly Plan
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Learn Sprout</h1>
-              <p className="text-gray-600 mb-6">
-                Let's get started by adding your child's profile to create a personalized learning experience.
-              </p>
-              <Link 
-                href="/dashboard/add-child"
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Child
-              </Link>
-            </div>
-          )}
         </div>
       </div>
+      
+      {/* Quick Observation Modal */}
+      {showQuickObservation && selectedChild && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-md w-full">
+            <QuickObservationForm
+              childId={selectedChild.id}
+              childName={selectedChild.name}
+              onSuccess={handleObservationSuccess}
+              onClose={() => setShowQuickObservation(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

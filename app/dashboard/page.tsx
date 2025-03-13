@@ -32,7 +32,7 @@ export default function DashboardPage() {
   return (
     <>
       <Suspense fallback={<DashboardLoading />}>
-        <ImprovedParentDashboard />
+        <ImprovedParentDashboard hideAddChild={true} hideMontessoriResources={true} />
       </Suspense>
       
       <PWAInstallPrompt />

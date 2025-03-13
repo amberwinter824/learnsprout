@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Save, User, Bell, Shield, Moon, Smartphone, Calendar, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function UserSettingsPage() {
   const { currentUser, loading, updateUserProfile, updateUserPreferences } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [photoURL, setPhotoURL] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -100,46 +103,60 @@ export default function UserSettingsPage() {
     });
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!updateUserProfile || !updateUserPreferences) {
-      setSaveMessage('Update function not available');
-      return;
-    }
     
     try {
       setIsSaving(true);
       setSaveMessage('');
       
-      // Update profile in Firebase
-      await updateUserProfile({ displayName: name });
+      // Check if user is authenticated
+      if (!currentUser) {
+        throw new Error('You must be logged in to update settings');
+      }
       
-      // Update activity preferences in Firebase
-      const currentPreferences = currentUser?.preferences || {};
-      const activityPreferences = useCustomSchedule
-        ? { scheduleByDay }
-        : { daysPerWeek: selectedDays, activitiesPerDay };
+      // Update user profile in Firebase Auth
+      try {
+        await updateUserProfile({
+          displayName: name,
+          photoURL: photoURL
+        });
+      } catch (authError) {
+        console.error('Error updating user profile:', authError);
+        // Continue with other updates even if auth update fails
+      }
       
-      await updateUserPreferences({
-        ...currentPreferences,
-        activityPreferences
+      // Update user data in Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        name,
+        email,
+        photoURL,
+        notificationsEnabled,
+        darkModeEnabled,
+        biometricEnabled,
+        useCustomSchedule,
+        scheduleByDay: useCustomSchedule ? scheduleByDay : {},
+        selectedDays: !useCustomSchedule ? selectedDays : [],
+        activitiesPerDay: !useCustomSchedule ? activitiesPerDay : 0,
+        updatedAt: serverTimestamp()
       });
       
-      // Save preferences to localStorage
+      // Update local storage preferences
       localStorage.setItem('notifications-enabled', notificationsEnabled.toString());
       localStorage.setItem('dark-mode-enabled', darkModeEnabled.toString());
       localStorage.setItem('biometric-enabled', biometricEnabled.toString());
       
       setSaveMessage('Settings saved successfully!');
       
-      // Clear success message after 3 seconds
+      // Clear message after 3 seconds
       setTimeout(() => {
         setSaveMessage('');
       }, 3000);
+      
     } catch (error) {
       console.error('Error updating profile:', error);
-      setSaveMessage('Failed to update settings');
+      setSaveMessage('Failed to update settings. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -168,7 +185,7 @@ export default function UserSettingsPage() {
           </h2>
         </div>
         
-        <form onSubmit={handleSaveProfile} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
               Name

@@ -66,7 +66,7 @@ export interface AuthContextType {
   availableRoles: string[]; // All roles available to the user
   activeRole: string; // Currently active role
   switchRole: (role: string) => Promise<void>; // Function to switch active role
-  updateUserProfile: (profileData: { displayName?: string }) => Promise<void>;
+  updateUserProfile: (profileData: { displayName?: string; photoURL?: string }) => Promise<boolean>;
 }
 
 // Create a default context value with no-op functions
@@ -86,7 +86,7 @@ const defaultContext: AuthContextType = {
   availableRoles: [],
   activeRole: '',
   switchRole: async () => { throw new Error('AuthProvider not initialized'); },
-  updateUserProfile: async () => { throw new Error('AuthProvider not initialized'); }
+  updateUserProfile: async () => false
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContext);
@@ -513,35 +513,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const updateUserProfile = async (profileData: { displayName?: string }): Promise<void> => {
-    if (!currentUser) {
-      throw new Error("No user is logged in");
+  const updateUserProfile = async (profileData: { displayName?: string; photoURL?: string }) => {
+    if (!auth.currentUser) {
+      console.warn('No authenticated user found when trying to update profile');
+      return false;
     }
     
     try {
-      // Update Firebase Auth profile
-      await updateProfile(currentUser, profileData);
+      await updateProfile(auth.currentUser, profileData);
       
-      // Update Firestore
-      const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        name: profileData.displayName,
-        updatedAt: serverTimestamp()
+      // Update the currentUser state to reflect changes
+      setCurrentUser(prevUser => {
+        if (!prevUser) return prevUser;
+        return {
+          ...prevUser,
+          displayName: profileData.displayName || prevUser.displayName,
+          photoURL: profileData.photoURL || prevUser.photoURL
+        };
       });
       
-      // Update local state
-      setCurrentUser(prev => {
-        if (!prev) return null;
-        return { 
-          ...prev, 
-          displayName: profileData.displayName || prev.displayName
-        } as (User & UserData);
-      });
-      
-      console.log('User profile updated successfully');
+      return true;
     } catch (error) {
-      console.error("Error updating user profile:", error);
-      throw error;
+      console.error('Error updating profile:', error);
+      return false;
     }
   };
 
