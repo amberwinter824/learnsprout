@@ -20,7 +20,7 @@ import Link from 'next/link';
 import ChildCard from './ChildCard';
 import WeekAtAGlanceView from './WeekAtAGlanceView';
 import QuickObservationForm from '../QuickObservationForm';
-import MultiChildDailyDashboard from './MultiChildDailyDashboard';
+import AllChildrenDailyActivities from './AllChildrenDailyActivities';
 import RecentProgressDashboard from './RecentProgressDashboard';
 import { format } from 'date-fns';
 
@@ -135,6 +135,16 @@ export default function UpdatedParentDashboard({
     setSelectedDate(date);
   };
   
+  const handleWeeklyViewRequest = (childId?: string) => {
+    if (childId) {
+      router.push(`/dashboard/children/${childId}/weekly-plan`);
+    } else if (selectedChild) {
+      router.push(`/dashboard/children/${selectedChild.id}/weekly-plan`);
+    } else {
+      router.push('/dashboard/weekly-plan');
+    }
+  };
+  
   const handleGeneratePlan = useCallback(async () => {
     if (!selectedChild || !currentUser) return;
     
@@ -209,7 +219,6 @@ export default function UpdatedParentDashboard({
                       child={child}
                       isSelected={selectedChild?.id === child.id}
                       onSelect={() => handleChildSelect(child)}
-                      onObserve={() => handleQuickObservation(child)}
                     />
                   ))
                 ) : (
@@ -322,13 +331,10 @@ export default function UpdatedParentDashboard({
             {/* View mode content */}
             {viewMode === 'daily' ? (
               <div className="mb-6">
-                <MultiChildDailyDashboard
-                  childrenData={children}
-                  selectedChildId={selectedChild?.id || null}
-                  onActivitySelect={handleActivitySelect}
-                  onDateChange={handleDateChange}
+                <AllChildrenDailyActivities
                   selectedDate={selectedDate}
-                  userId={currentUser?.uid || ''}
+                  onWeeklyViewRequest={handleWeeklyViewRequest}
+                  selectedChildId={selectedChild?.id}
                 />
               </div>
             ) : (

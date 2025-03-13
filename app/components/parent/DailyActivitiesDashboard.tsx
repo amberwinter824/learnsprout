@@ -545,14 +545,6 @@ export default function DailyActivitiesDashboard({
         </div>
         
         <div className="flex items-center">
-          <button 
-            onClick={handleWeeklyViewRequest}
-            className="flex items-center text-sm text-emerald-600 hover:text-emerald-700"
-          >
-            <CalendarDays className="h-4 w-4 mr-1" />
-            Weekly View
-          </button>
-          
           <button
             onClick={() => handleDateChange(-1)}
             className="p-1 rounded-full hover:bg-gray-100"

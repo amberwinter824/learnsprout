@@ -18,26 +18,18 @@ interface ChildCardProps {
   child: Child;
   isSelected: boolean;
   onSelect: () => void;
-  onObserve: () => void;
 }
 
 export default function ChildCard({
   child,
   isSelected,
   onSelect,
-  onObserve
 }: ChildCardProps) {
   const [showMenu, setShowMenu] = useState(false);
 
   const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(!showMenu);
-  };
-
-  const handleObserve = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onObserve();
-    setShowMenu(false);
   };
 
   return (
@@ -75,14 +67,6 @@ export default function ChildCard({
       
       {/* Quick actions - always visible */}
       <div className="mt-3 pt-2 border-t border-gray-100 flex justify-between text-xs">
-        <button
-          onClick={handleObserve}
-          className="text-emerald-600 hover:text-emerald-700 flex items-center"
-        >
-          <PenSquare className="h-3 w-3 mr-1" />
-          Observe
-        </button>
-        
         <Link
           href={`/dashboard/children/${child.id}`}
           className="text-gray-600 hover:text-gray-800 flex items-center"
@@ -126,15 +110,6 @@ export default function ChildCard({
               <Clock className="h-4 w-4 mr-2 text-gray-500" />
               Progress
             </Link>
-            
-            <button
-              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              role="menuitem"
-              onClick={handleObserve}
-            >
-              <PenSquare className="h-4 w-4 mr-2 text-gray-500" />
-              Add Observation
-            </button>
           </div>
         </div>
       )}
