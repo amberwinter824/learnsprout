@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, addDays, isSameDay } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, getDoc, doc, orderBy, DocumentData } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, orderBy, DocumentData, limit } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
 import QuickObservationForm from './QuickObservationForm';
@@ -39,7 +39,6 @@ interface Activity {
   isHomeSchoolConnection?: boolean;
   timeSlot?: string;
   order?: number;
-  lastObservedDate?: Date | any;
 }
 
 interface Child {
@@ -144,126 +143,191 @@ export default function AllChildrenDailyActivities({
     fetchChildren();
   }, [currentUser]);
 
-  // Fetch activities for each child
+  // Fetch activities for all children
   useEffect(() => {
-    if (!currentUser || !allChildren.length) return;
+    if (!currentUser) return;
     
     async function fetchActivities() {
       try {
-        console.log(`Fetching activities for date: ${format(currentDate, 'yyyy-MM-dd')} (${format(currentDate, 'EEEE')})`);
         setLoading(true);
         setError(null);
         
-        // Force date object to be consistent
-        const dateForQuery = new Date(currentDate);
+        console.log('Fetching activities for date:', format(currentDate, 'yyyy-MM-dd'));
         
-        // Format date for querying
-        const dateString = format(dateForQuery, 'yyyy-MM-dd');
-        const dayOfWeek = format(dateForQuery, 'EEEE').toLowerCase();
+        // First, fetch all children for the current user
+        const childrenQuery = query(
+          collection(db, 'children'),
+          where('parentId', '==', currentUser?.uid || ''),
+          orderBy('name')
+        );
         
-        // Create an array to hold results
+        console.log('Fetching children for parent ID:', currentUser?.uid);
+        
+        const childrenSnapshot = await getDocs(childrenQuery);
+        
+        if (childrenSnapshot.empty) {
+          console.log('No children found for this parent');
+          setChildActivities([]);
+          setAllChildren([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Store all children
+        const children: Child[] = childrenSnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name,
+          ageGroup: doc.data().ageGroup
+        }));
+        
+        console.log(`Found ${children.length} children`);
+        setAllChildren(children);
+        
+        // Calculate week start date (Monday of the current week)
+        const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
+        const weekStart = new Date(currentDate);
+        weekStart.setDate(weekStart.getDate() - (weekStart.getDay() === 0 ? 6 : weekStart.getDay() - 1));
+        const weekStartString = format(weekStart, 'yyyy-MM-dd');
+        
+        console.log('Week starting:', weekStartString, 'Day of week:', dayOfWeek);
+        
+        // For each child, fetch their activities for the current date
         const results: ChildActivities[] = [];
         
-        // For each child, find their activities for this date
-        for (const child of allChildren) {
-          // Skip if filtering by child and this isn't the selected child
-          if (filterChild !== 'all' && filterChild !== child.id) continue;
+        for (const child of children) {
+          // If filtering by a specific child, skip others
+          if (filterChild !== 'all' && filterChild !== child.id) {
+            continue;
+          }
           
-          // Find the weekly plan that contains this date
-          const weekPlansQuery = query(
+          console.log(`Processing child: ${child.name} (${child.id})`);
+          
+          // Find weekly plan for this child and week
+          const plansQuery = query(
             collection(db, 'weeklyPlans'),
             where('childId', '==', child.id),
-            where('userId', '==', currentUser?.uid || '')
+            where('weekStarting', '==', weekStartString)
           );
           
-          const weekPlansSnapshot = await getDocs(weekPlansQuery);
+          const plansSnapshot = await getDocs(plansQuery);
           let childActivities: Activity[] = [];
           
-          // Look through all weekly plans to find activities for this date
-          for (const planDoc of weekPlansSnapshot.docs) {
+          if (plansSnapshot.empty) {
+            console.log(`No weekly plan found for child ${child.name} for week starting ${weekStartString}`);
+            
+            // If no plan exists, suggest one activity for this day
+            // First, fetch a random activity appropriate for the child's age group
+            try {
+              const activitiesQuery = query(
+                collection(db, 'activities'),
+                where('ageGroup', 'array-contains', child.ageGroup || 'primary')
+              );
+              
+              const activitiesSnapshot = await getDocs(activitiesQuery);
+              
+              if (!activitiesSnapshot.empty) {
+                // Get a random activity from the results
+                const randomIndex = Math.floor(Math.random() * activitiesSnapshot.docs.length);
+                const activityDoc = activitiesSnapshot.docs[randomIndex];
+                const activityData = activityDoc.data();
+                
+                childActivities = [{
+                  id: `suggested_${child.id}_${dayOfWeek}_${activityDoc.id}`,
+                  activityId: activityDoc.id,
+                  childId: child.id,
+                  childName: child.name,
+                  title: activityData.title || 'Suggested Activity',
+                  description: activityData.description || '',
+                  area: activityData.area || '',
+                  duration: activityData.duration || 15,
+                  status: 'suggested',
+                  timeSlot: 'morning',
+                  order: 0,
+                  isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                        !!activityData.classroomExtension
+                }];
+                
+                console.log(`Created suggested activity for ${child.name}: ${activityData.title}`);
+              }
+            } catch (error) {
+              console.error('Error creating suggested activity:', error);
+            }
+          } else {
+            // Use the first plan (should only be one per week)
+            const planDoc = plansSnapshot.docs[0];
             const planData = planDoc.data();
             
-            // Check if this plan contains our target date
-            if (planData[dayOfWeek] && Array.isArray(planData[dayOfWeek])) {
-              // Get activities for this day
-              const dayActivities = planData[dayOfWeek];
+            console.log(`Found plan for child ${child.name}: ${planDoc.id}`);
+            
+            // Get activities for the current day of the week
+            const dayActivities = planData[dayOfWeek] || [];
+            
+            if (dayActivities.length === 0) {
+              console.log(`No activities found for ${dayOfWeek} in the plan`);
+            } else {
+              console.log(`Found ${dayActivities.length} activities for ${dayOfWeek}`);
               
-              // Fetch activity details for each activity
+              // Get full activity details
               const activitiesWithDetails = await Promise.all(
                 dayActivities.map(async (activity: any) => {
                   try {
-                    const activityDocRef = doc(db, 'activities', activity.activityId);
-                    const activityDocSnap = await getDoc(activityDocRef);
+                    const activityDoc = await getDoc(doc(db, 'activities', activity.activityId));
                     
-                    // Check if there are any observations for this activity for this child
+                    // Check if there's an observation for this activity
                     let lastObservedDate = null;
-                    if (activity.observationIds && activity.observationIds.length > 0) {
-                      // If we have observation IDs, we can just use the latest one
-                      lastObservedDate = activity.lastObservedDate || null;
-                    } else {
-                      // Otherwise, we can query for observations
-                      try {
-                        const observationsQuery = query(
-                          collection(db, 'progressRecords'),
-                          where('childId', '==', child.id),
-                          where('activityId', '==', activity.activityId),
-                          orderBy('date', 'desc'),
-                          // Limit to 1 to get the most recent
-                          // limit(1)
-                        );
-                        
-                        const observationsSnapshot = await getDocs(observationsQuery);
-                        if (!observationsSnapshot.empty) {
-                          const latestObservation = observationsSnapshot.docs[0].data();
-                          lastObservedDate = latestObservation.date || null;
-                        }
-                      } catch (observationError) {
-                        console.error('Error fetching observations:', observationError);
+                    try {
+                      const observationsQuery = query(
+                        collection(db, 'observations'),
+                        where('childId', '==', child.id),
+                        where('activityId', '==', activity.activityId),
+                        orderBy('observedAt', 'desc'),
+                        limit(1)
+                      );
+                      
+                      const observationsSnapshot = await getDocs(observationsQuery);
+                      if (!observationsSnapshot.empty) {
+                        const observationData = observationsSnapshot.docs[0].data();
+                        lastObservedDate = observationData.observedAt;
                       }
+                    } catch (obsError) {
+                      console.error('Error fetching observations:', obsError);
                     }
                     
-                    if (activityDocSnap.exists()) {
-                      const activityData = activityDocSnap.data() as {
-                        title?: string;
-                        description?: string;
-                        area?: string;
-                        duration?: number;
-                        environmentType?: string;
-                        classroomExtension?: boolean;
-                      };
-                      
+                    if (activityDoc.exists()) {
+                      const activityData = activityDoc.data();
                       return {
-                        id: activity.id || `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
+                        id: `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
                         activityId: activity.activityId,
                         childId: child.id,
                         childName: child.name,
                         title: activityData.title || 'Untitled Activity',
                         description: activityData.description || '',
                         area: activityData.area || '',
-                        duration: activityData.duration || null,
+                        duration: activityData.duration || 15,
+                        isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
+                                              !!activityData.classroomExtension,
                         status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
                         timeSlot: activity.timeSlot || '',
                         order: activity.order || 0,
-                        lastObservedDate: lastObservedDate,
-                        isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                               !!activityData.classroomExtension
+                        lastObservedDate: lastObservedDate
                       };
                     }
                     
-                    // Return fallback if document doesn't exist
+                    // If activity not found, return with basic info
                     return {
-                      id: activity.id || `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
+                      id: `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
                       activityId: activity.activityId,
                       childId: child.id,
                       childName: child.name,
                       title: 'Unknown Activity',
                       status: activity.status || 'suggested',
+                      timeSlot: activity.timeSlot || '',
                       order: activity.order || 0
                     };
                   } catch (error) {
                     console.error(`Error fetching activity ${activity.activityId}:`, error);
                     return {
-                      id: activity.id || `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
+                      id: `${planDoc.id}_${dayOfWeek}_${activity.activityId}`,
                       activityId: activity.activityId,
                       childId: child.id,
                       childName: child.name,
@@ -275,22 +339,17 @@ export default function AllChildrenDailyActivities({
                 })
               );
               
-              // Convert null duration to undefined to fix type error
-              childActivities = activitiesWithDetails.map(activity => ({
-                ...activity,
-                duration: activity.duration === null ? undefined : activity.duration
-              }));
-              break;
+              // Sort activities by order
+              childActivities = activitiesWithDetails.sort((a, b) => 
+                (a.order || 0) - (b.order || 0)
+              );
             }
           }
-          // Sort activities by order
-          const sortedActivities = childActivities.sort((a, b) => 
-            (a.order || 0) - (b.order || 0)
-          );
           
+          // Add to results
           results.push({
             child,
-            activities: sortedActivities
+            activities: childActivities
           });
         }
         
