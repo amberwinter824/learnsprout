@@ -116,7 +116,7 @@ export default function AllChildrenDailyActivities({
       try {
         const childrenQuery = query(
           collection(db, 'children'),
-          where('parentId', '==', currentUser?.uid || ''),
+          where('parentId', '==', currentUser.uid),
           orderBy('name')
         );
         
@@ -145,7 +145,7 @@ export default function AllChildrenDailyActivities({
 
   // Fetch activities for all children
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || allChildren.length === 0) return;
     
     async function fetchActivities() {
       try {
@@ -153,35 +153,6 @@ export default function AllChildrenDailyActivities({
         setError(null);
         
         console.log('Fetching activities for date:', format(currentDate, 'yyyy-MM-dd'));
-        
-        // First, fetch all children for the current user
-        const childrenQuery = query(
-          collection(db, 'children'),
-          where('parentId', '==', currentUser?.uid || ''),
-          orderBy('name')
-        );
-        
-        console.log('Fetching children for parent ID:', currentUser?.uid);
-        
-        const childrenSnapshot = await getDocs(childrenQuery);
-        
-        if (childrenSnapshot.empty) {
-          console.log('No children found for this parent');
-          setChildActivities([]);
-          setAllChildren([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Store all children
-        const children: Child[] = childrenSnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name,
-          ageGroup: doc.data().ageGroup
-        }));
-        
-        console.log(`Found ${children.length} children`);
-        setAllChildren(children);
         
         // Calculate week start date (Monday of the current week)
         const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
@@ -194,7 +165,7 @@ export default function AllChildrenDailyActivities({
         // For each child, fetch their activities for the current date
         const results: ChildActivities[] = [];
         
-        for (const child of children) {
+        for (const child of allChildren) {
           // If filtering by a specific child, skip others
           if (filterChild !== 'all' && filterChild !== child.id) {
             continue;
