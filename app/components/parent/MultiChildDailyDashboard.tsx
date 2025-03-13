@@ -49,7 +49,7 @@ interface Activity {
 }
 
 interface MultiChildDailyDashboardProps {
-  children: Child[];
+  childrenData: Child[];
   selectedChildId: string | null;
   onActivitySelect?: (childId: string, activityId: string, activityTitle: string) => void;
   onDateChange?: (date: Date) => void;
@@ -58,7 +58,7 @@ interface MultiChildDailyDashboardProps {
 }
 
 export default function MultiChildDailyDashboard({
-  children,
+  childrenData,
   selectedChildId,
   onActivitySelect,
   onDateChange,
@@ -73,7 +73,7 @@ export default function MultiChildDailyDashboard({
   
   // Fetch activities for the current date across all children
   useEffect(() => {
-    if (children.length === 0) {
+    if (childrenData.length === 0) {
       setLoading(false);
       return;
     }
@@ -99,7 +99,7 @@ export default function MultiChildDailyDashboard({
         const planIds: Record<string, string> = {};
         
         // Process each child
-        for (const child of children) {
+        for (const child of childrenData) {
           if (selectedChildId && selectedChildId !== child.id) {
             continue; // Skip if filtering by a specific child
           }
@@ -211,7 +211,7 @@ export default function MultiChildDailyDashboard({
     }
     
     fetchActivities();
-  }, [children, currentDate, selectedChildId]);
+  }, [childrenData, currentDate, selectedChildId]);
   
   // Handle date change
   const handleDateChange = (days: number) => {

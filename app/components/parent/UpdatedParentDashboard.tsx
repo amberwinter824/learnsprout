@@ -323,7 +323,7 @@ export default function UpdatedParentDashboard({
             {viewMode === 'daily' ? (
               <div className="mb-6">
                 <MultiChildDailyDashboard
-                  children={children}
+                  childrenData={children}
                   selectedChildId={selectedChild?.id || null}
                   onActivitySelect={handleActivitySelect}
                   onDateChange={handleDateChange}
@@ -395,7 +395,7 @@ export default function UpdatedParentDashboard({
             
             {/* Recent Progress */}
             <RecentProgressDashboard
-              children={children}
+              childrenData={children}
               selectedChildId={selectedChild?.id || null}
               limit={5}
               onViewDetails={handleViewProgressDetails}
@@ -415,14 +415,18 @@ export default function UpdatedParentDashboard({
                 activityTitle={selectedActivity.activityTitle}
                 onSuccess={handleObservationSuccess}
                 onClose={() => setShowQuickObservation(false)}
-              />
+              >
+                {/* Add any additional content here */}
+              </QuickObservationForm>
             ) : selectedChild ? (
               <QuickObservationForm
                 childId={selectedChild.id}
                 childName={selectedChild.name}
                 onSuccess={handleObservationSuccess}
                 onClose={() => setShowQuickObservation(false)}
-              />
+              >
+                {/* Add any additional content here */}
+              </QuickObservationForm>
             ) : null}
           </div>
         </div>
