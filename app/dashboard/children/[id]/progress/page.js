@@ -566,58 +566,19 @@ export default function ProgressTrackingPage({ params }) {
       {/* Skills Tab */}
       {activeTab === 'skills' && (
         <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-medium text-gray-900">Developmental Skills Progress</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Track {child.name}'s progress across key developmental areas
-              </p>
-            </div>
-            
-            {/* Toggle between visual and detailed view */}
-            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setSkillView('visual')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md ${
-                  skillView === 'visual' 
-                    ? 'bg-white text-emerald-600 shadow-sm' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Visual Overview
-              </button>
-              <button
-                onClick={() => setSkillView('detailed')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md ${
-                  skillView === 'detailed' 
-                    ? 'bg-white text-emerald-600 shadow-sm' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Detailed View
-              </button>
-            </div>
+          <div className="px-6 py-5 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Developmental Skills Progress</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Track {child.name}'s continuous learning journey across key developmental areas
+            </p>
           </div>
           
           <div className="p-4">
-            {/* Visual skills overview */}
-            {skillView === 'visual' ? (
-              <VisualSkillProgress 
-                childId={childId} 
-                ageGroup={child.ageGroup} 
-                onSkillAreaClick={(area) => {
-                  setSelectedSkillArea(area);
-                  setSkillView('detailed');
-                }}
-              />
-            ) : (
-              /* Detailed skills view */
-              <SimplifiedSkillsDashboard 
-                childId={childId} 
-                ageGroup={child.ageGroup} 
-                initialExpandedArea={selectedSkillArea}
-              />
-            )}
+            {/* New Skill Progression Component */}
+            <ProgressiveSkillPath 
+              childId={childId} 
+              ageGroup={child.ageGroup}
+            />
           </div>
         </div>
       )}
