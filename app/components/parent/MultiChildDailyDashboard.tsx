@@ -83,20 +83,7 @@ export default function MultiChildDailyDashboard({
         setLoading(true);
         setError(null);
         
-        // Format date for query
-        const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
-        
-        // Find the current week's plan for each child
-        const weekStartDate = new Date(currentDate);
-        const day = weekStartDate.getDay();
-        const diff = weekStartDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust to get Monday
-        weekStartDate.setDate(diff);
-        weekStartDate.setHours(0, 0, 0, 0);
-        
-        const weekStartString = format(weekStartDate, 'yyyy-MM-dd');
-        
         const allChildrenActivities: Activity[] = [];
-        const planIds: Record<string, string> = {};
         
         // Process each child
         for (const child of childrenData) {
@@ -104,7 +91,19 @@ export default function MultiChildDailyDashboard({
             continue; // Skip if filtering by a specific child
           }
           
-          // Query for this week's plan for this child
+          // 1. First try to get activities from weekly plans
+          // Format date for query
+          const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
+          
+          // Find the current week's plan for this child
+          const weekStartDate = new Date(currentDate);
+          const day = weekStartDate.getDay();
+          const diff = weekStartDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust to get Monday
+          weekStartDate.setDate(diff);
+          weekStartDate.setHours(0, 0, 0, 0);
+          
+          const weekStartString = format(weekStartDate, 'yyyy-MM-dd');
+          
           const plansQuery = query(
             collection(db, 'weeklyPlans'),
             where('childId', '==', child.id),
@@ -122,9 +121,6 @@ export default function MultiChildDailyDashboard({
           const planDoc = plansSnapshot.docs[0];
           const planData = planDoc.data();
           const planId = planDoc.id;
-          
-          // Store the plan ID
-          planIds[child.id] = planId;
           
           // Get activities for the day
           const dayActivities = planData[dayOfWeek] || [];
@@ -175,6 +171,43 @@ export default function MultiChildDailyDashboard({
             }
           }
           
+          // 2. If no activities found, try to get daily activities
+          if (activitiesWithDetails.length === 0) {
+            const dailyActivitiesQuery = query(
+              collection(db, 'childActivities'),
+              where('childId', '==', child.id),
+              where('date', '==', format(currentDate, 'yyyy-MM-dd'))
+            );
+            
+            const dailySnapshot = await getDocs(dailyActivitiesQuery);
+            
+            if (!dailySnapshot.empty) {
+              for (const activityDoc of dailySnapshot.docs) {
+                const activityData = activityDoc.data();
+                
+                // Get activity details
+                const activityDetailsDoc = await getDoc(doc(db, 'activities', activityData.activityId));
+                
+                if (activityDetailsDoc.exists()) {
+                  const details = activityDetailsDoc.data();
+                  activitiesWithDetails.push({
+                    id: activityDoc.id,
+                    activityId: activityData.activityId,
+                    title: details.title || 'Untitled Activity',
+                    description: details.description || '',
+                    area: details.area || '',
+                    duration: details.duration || 15,
+                    status: activityData.status || 'suggested',
+                    timeSlot: activityData.timeSlot || 'anytime',
+                    order: activityData.order || 0,
+                    childId: child.id,
+                    childName: child.name
+                  });
+                }
+              }
+            }
+          }
+          
           // Add this child's activities to the combined list
           allChildrenActivities.push(...activitiesWithDetails);
         }
@@ -201,7 +234,7 @@ export default function MultiChildDailyDashboard({
         });
         
         setActivities(sortedActivities);
-        setWeekPlanIds(planIds);
+        setWeekPlanIds({});
         setLoading(false);
       } catch (err) {
         console.error('Error fetching activities:', err);
