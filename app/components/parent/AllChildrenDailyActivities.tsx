@@ -100,8 +100,8 @@ export default function AllChildrenDailyActivities({
         // First, fetch all children for the current user
         const childrenQuery = query(
           collection(db, 'children'),
-          where('userId', '==', currentUser?.uid || ''),
-          where('active', '==', true)
+          where('parentId', '==', currentUser?.uid || ''),
+          orderBy('name')
         );
         
         const childrenSnapshot = await getDocs(childrenQuery);
@@ -190,7 +190,7 @@ export default function AllChildrenDailyActivities({
                     duration: activityData.duration || 15,
                     isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
                                           !!activityData.classroomExtension,
-                    status: activity.status,
+                    status: activity.status || 'suggested',
                     timeSlot: activity.timeSlot,
                     order: activity.order
                   };
@@ -203,7 +203,7 @@ export default function AllChildrenDailyActivities({
                   childId: child.id,
                   childName: child.name,
                   title: 'Unknown Activity',
-                  status: activity.status,
+                  status: activity.status || 'suggested',
                   timeSlot: activity.timeSlot,
                   order: activity.order
                 };
@@ -215,7 +215,7 @@ export default function AllChildrenDailyActivities({
                   childId: child.id,
                   childName: child.name,
                   title: 'Error Loading Activity',
-                  status: activity.status
+                  status: activity.status || 'suggested'
                 };
               }
             })

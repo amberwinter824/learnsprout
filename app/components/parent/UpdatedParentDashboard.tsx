@@ -7,22 +7,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { 
-  Plus, 
   Calendar, 
   BookOpen, 
   BarChart2, 
   Settings, 
   Loader2,
-  User,
-  Book,
-  Award
+  User
 } from 'lucide-react';
 import Link from 'next/link';
 import ChildCard from './ChildCard';
 import WeekAtAGlanceView from './WeekAtAGlanceView';
 import QuickObservationForm from '../QuickObservationForm';
 import AllChildrenDailyActivities from './AllChildrenDailyActivities';
-import RecentProgressDashboard from './RecentProgressDashboard';
 import { format } from 'date-fns';
 import { ErrorBoundary } from 'react-error-boundary';
 
@@ -35,15 +31,7 @@ interface Child {
   [key: string]: any;
 }
 
-interface UpdatedParentDashboardProps {
-  hideAddChild?: boolean;
-  hideMontessoriResources?: boolean;
-}
-
-export default function UpdatedParentDashboard({ 
-  hideAddChild = false,
-  hideMontessoriResources = false
-}: UpdatedParentDashboardProps) {
+export default function UpdatedParentDashboard() {
   const { currentUser } = useAuth();
   const router = useRouter();
   
@@ -211,17 +199,19 @@ export default function UpdatedParentDashboard({
   
   if (!Array.isArray(children) || children.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-          <div className="flex items-center">
-            <Award className="h-5 w-5 text-emerald-500 mr-2" />
-            <h2 className="text-lg font-medium">Recent Progress</h2>
-          </div>
-        </div>
-        <div className="p-4">
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <p className="text-gray-500">No children added yet. Add a child to track progress.</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-sm">
+          <User className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
+          <h2 className="text-xl font-medium text-gray-800 mb-2">No children profiles found</h2>
+          <p className="text-gray-600 mb-6">
+            To get started with Montessori at Home, add your first child profile.
+          </p>
+          <Link
+            href="/dashboard/children/add"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+          >
+            Add Your First Child
+          </Link>
         </div>
       </div>
     );
@@ -249,30 +239,9 @@ export default function UpdatedParentDashboard({
                 ) : (
                   <div className="text-center py-4">
                     <p className="text-gray-500 mb-3">No children added yet</p>
-                    {!hideAddChild && (
-                      <Link
-                        href="/dashboard/children/add"
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-                      >
-                        <Plus className="-ml-1 mr-2 h-5 w-5" />
-                        Add Child
-                      </Link>
-                    )}
                   </div>
                 )}
               </div>
-              
-              {children && children.length > 0 && !hideAddChild && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <Link
-                    href="/dashboard/children/add"
-                    className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add another child
-                  </Link>
-                </div>
-              )}
             </div>
             
             {/* Quick Links */}
@@ -303,16 +272,6 @@ export default function UpdatedParentDashboard({
                   <BarChart2 className="h-5 w-5 mr-3 text-emerald-500" />
                   <span>Progress Tracking</span>
                 </Link>
-                
-                {!hideMontessoriResources && (
-                  <Link
-                    href="/resources"
-                    className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
-                  >
-                    <Book className="h-5 w-5 mr-3 text-emerald-500" />
-                    <span>Montessori Resources</span>
-                  </Link>
-                )}
                 
                 <Link
                   href="/dashboard/settings"
@@ -425,18 +384,6 @@ export default function UpdatedParentDashboard({
                 )}
               </div>
             )}
-            
-            {/* Recent Progress */}
-            <ErrorBoundary fallback={<div className="p-4 bg-white rounded-lg shadow-sm">
-              <p className="text-gray-500">Unable to load progress dashboard</p>
-            </div>}>
-              <RecentProgressDashboard
-                childrenData={children || []}
-                selectedChildId={selectedChild?.id || null}
-                limit={5}
-                onViewDetails={handleViewProgressDetails}
-              />
-            </ErrorBoundary>
           </div>
         </div>
       </div>
