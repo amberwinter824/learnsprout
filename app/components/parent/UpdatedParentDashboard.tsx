@@ -64,7 +64,10 @@ export default function UpdatedParentDashboard({
   // Fetch all children for the current user
   useEffect(() => {
     async function fetchChildren() {
-      if (!currentUser) return;
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
@@ -212,7 +215,7 @@ export default function UpdatedParentDashboard({
               <h2 className="text-lg font-medium text-gray-900 mb-4">Your Children</h2>
               
               <div className="space-y-3">
-                {children.length > 0 ? (
+                {children && children.length > 0 ? (
                   children.map((child) => (
                     <ChildCard
                       key={child.id}
@@ -237,7 +240,7 @@ export default function UpdatedParentDashboard({
                 )}
               </div>
               
-              {children.length > 0 && !hideAddChild && (
+              {children && children.length > 0 && !hideAddChild && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <Link
                     href="/dashboard/children/add"
@@ -379,7 +382,7 @@ export default function UpdatedParentDashboard({
                       Select a child to view or generate their weekly activity plan
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-                      {children.map(child => (
+                      {children && children.length > 0 ? children.map(child => (
                         <button
                           key={child.id}
                           onClick={() => setSelectedChild(child)}
@@ -392,7 +395,9 @@ export default function UpdatedParentDashboard({
                             <span className="ml-2 font-medium">{child.name}</span>
                           </div>
                         </button>
-                      ))}
+                      )) : (
+                        <p>No children available</p>
+                      )}
                     </div>
                   </div>
                 )}
