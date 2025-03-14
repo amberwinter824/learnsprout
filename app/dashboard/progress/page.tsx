@@ -1,7 +1,6 @@
 // app/dashboard/progress/page.tsx
 "use client"
 import { useState, useEffect } from 'react';
-import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserChildren, getChildProgress, getChildSkills } from '@/lib/dataService';
@@ -14,8 +13,7 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  Plus,
-  AlertCircle
+  Plus
 } from 'lucide-react';
 
 interface ProgressRecord {
@@ -58,23 +56,6 @@ interface ChildSkill {
   lastAssessed?: any;
 }
 
-// Error fallback component
-function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
-  return (
-    <div className="bg-red-50 p-6 rounded-lg text-center">
-      <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-      <h2 className="text-lg font-semibold text-red-700 mb-2">Something went wrong</h2>
-      <p className="text-red-600 mb-4">{error.message}</p>
-      <button
-        onClick={resetErrorBoundary}
-        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-      >
-        Try again
-      </button>
-    </div>
-  );
-}
-
 export default function ProgressDashboardPage() {
   // Simple test component to check if basic rendering works
   const [loading, setLoading] = useState(true);
@@ -99,6 +80,3 @@ export default function ProgressDashboardPage() {
     <p>This is a simplified test component to check if rendering works.</p>
   </div>;
 }
-
-// Comment out or remove the ErrorBoundary usage
-// function ProgressDashboardContent() { ... }

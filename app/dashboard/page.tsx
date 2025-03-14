@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ErrorBoundary } from 'react-error-boundary';
 import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
 
 export default function Dashboard() {
@@ -138,13 +137,11 @@ export default function Dashboard() {
           {/* Main Content - Moved up for mobile view */}
           <div className="lg:col-span-3 order-1 lg:order-2">
             {/* Unified Weekly Plan with Day Focus */}
-            <ErrorBoundary fallback={<div>Error loading activities</div>}>
-              <WeeklyPlanWithDayFocus 
-                selectedDate={selectedDate}
-                selectedChildId={selectedChildId}
-                onGeneratePlan={handleGeneratePlan}
-              />
-            </ErrorBoundary>
+            <WeeklyPlanWithDayFocus 
+              selectedDate={selectedDate}
+              selectedChildId={selectedChildId}
+              onGeneratePlan={handleGeneratePlan}
+            />
           </div>
           
           {/* Sidebar - Moved down for mobile view */}
