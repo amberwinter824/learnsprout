@@ -165,7 +165,7 @@ export default function UpdatedParentDashboard() {
   }, [selectedChild, currentUser, router]);
   
   const handleViewProgressDetails = (progressId: string, childId: string) => {
-    router.push(`/dashboard/children/${childId}/progress/${progressId}`);
+    router.push(`/dashboard/children/${childId}?record=${progressId}`);
   };
   
   // Handlers for view switching

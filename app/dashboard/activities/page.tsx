@@ -310,7 +310,7 @@ export default function ActivitiesPage() {
                           onChange={(e) => {
                             if (e.target.value) {
                               const childId = e.target.value;
-                              window.location.href = `/dashboard/children/${childId}/progress?activityId=${activity.id}`;
+                              window.location.href = `/dashboard/children/${childId}?activityId=${activity.id}&tab=progress`;
                             }
                           }}
                           defaultValue=""

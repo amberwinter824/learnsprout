@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, 
   Plus, 
@@ -29,6 +29,7 @@ import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp
 
 export default function ProgressTrackingPage({ params }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { id: childId } = params;
   const [child, setChild] = useState(null);
   const [progressRecords, setProgressRecords] = useState([]);
@@ -47,6 +48,34 @@ export default function ProgressTrackingPage({ params }) {
     engagementLevel: 'high',
     date: new Date().toISOString().slice(0, 10)
   });
+
+  // Get the record ID from the query parameter
+  const recordId = searchParams.get('record');
+  
+  // State to track if we should show record details
+  const [showRecordDetails, setShowRecordDetails] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  
+  // If recordId is present, fetch and display that specific record
+  useEffect(() => {
+    if (recordId) {
+      // Fetch the specific record
+      fetchRecordDetails(recordId);
+      setShowRecordDetails(true);
+    } else {
+      setShowRecordDetails(false);
+      setSelectedRecord(null);
+    }
+  }, [recordId]);
+  
+  // Function to fetch record details
+  const fetchRecordDetails = async (id) => {
+    // Your existing code to fetch record details
+    // ...
+    
+    // Set the selected record
+    setSelectedRecord(recordData);
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -777,6 +806,21 @@ export default function ProgressTrackingPage({ params }) {
               </form>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Show record details if a record is selected */}
+      {showRecordDetails && selectedRecord ? (
+        <div>
+          {/* Record details UI */}
+          <button onClick={() => router.push(`/dashboard/children/${childId}`)}>
+            Back to All Records
+          </button>
+          {/* Record content */}
+        </div>
+      ) : (
+        <div>
+          {/* Regular child page content with all records */}
         </div>
       )}
     </div>
