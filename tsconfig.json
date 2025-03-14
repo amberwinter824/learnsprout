@@ -57,6 +57,5 @@
     "app/components/parent/SimplifiedWeeklyView.tsx",
     "app/components/QuickObservationForm.tsx",
     "app/dashboard/children/[id]/progress/page.js",
-    "app/dashboard/children/[id]/page.tsx"
   ]
 }

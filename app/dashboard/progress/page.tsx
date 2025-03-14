@@ -36,6 +36,18 @@ interface ChildData {
   userId: string;
 }
 
+interface Activity {
+  id: string;
+  title: string;
+  description?: string;
+  area?: string;
+  ageGroups?: string[];
+  duration?: number;
+  difficulty?: string;
+  materialsNeeded?: string[];
+  skillsAddressed?: string[];
+}
+
 // Error fallback component
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
@@ -67,6 +79,14 @@ function ProgressDashboardContent() {
   const [progressData, setProgressData] = useState<Record<string, ProgressRecord[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [formData, setFormData] = useState({
+    activityId: '',
+    notes: '',
+    completionStatus: 'completed',
+    engagementLevel: 'high',
+    date: new Date().toISOString().slice(0, 10)
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -135,6 +155,30 @@ function ProgressDashboardContent() {
 
     fetchData();
   }, [currentUser]);
+
+  useEffect(() => {
+    async function fetchActivities() {
+      try {
+        console.log("Fetching all activities");
+        const { getAllActivities } = await import('@/lib/dataService');
+        const activitiesData = await getAllActivities();
+        console.log(`Fetched ${activitiesData.length} activities`);
+        setActivities(activitiesData);
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+      }
+    }
+    
+    fetchActivities();
+  }, []);
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   // Helper functions
   const getProgressSummary = (childId: string) => {
