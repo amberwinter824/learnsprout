@@ -14,8 +14,9 @@ interface Skill {
 }
 
 interface QuickObservationFormProps {
-  activityId: string;
+  activityId?: string;
   childId: string;
+  childName?: string;
   activityTitle?: string;
   weeklyPlanId?: string;
   dayOfWeek?: string;
@@ -27,6 +28,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
   const { 
     activityId, 
     childId, 
+    childName, 
     activityTitle, 
     weeklyPlanId, 
     dayOfWeek, 
@@ -116,7 +118,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
       // Create observation data object
       const observationData = {
         childId,
-        activityId,
+        activityId: activityId || 'general_observation',
         date: new Date(),
         completionStatus: 'completed',
         engagementLevel: engagement,
@@ -178,8 +180,8 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
         // If we don't have weeklyPlanId and dayOfWeek from props, try to extract from activity.id
         else {
           // Extract planId from activity.id (assuming format: planId_dayOfWeek_activityId)
-          const activityIdParts = activityId.split('_');
-          if (activityIdParts.length >= 3) {
+          const activityIdParts = activityId?.split('_');
+          if (activityIdParts && activityIdParts.length >= 3) {
             const planId = activityIdParts[0];
             const dayOfWeek = activityIdParts[1];
             

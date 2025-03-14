@@ -17,7 +17,7 @@ import {
 import Link from 'next/link';
 import ChildCard from './ChildCard';
 import WeekAtAGlanceView from './WeekAtAGlanceView';
-import QuickObservationForm from '../QuickObservationForm';
+import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
 import AllChildrenDailyActivities from './AllChildrenDailyActivities';
 import { format } from 'date-fns';
 import { ErrorBoundary } from 'react-error-boundary';
