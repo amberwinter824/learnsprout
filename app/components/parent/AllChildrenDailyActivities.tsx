@@ -170,7 +170,7 @@ export default function AllChildrenDailyActivities({
         weekStart.setDate(weekStart.getDate() - (weekStart.getDay() === 0 ? 6 : weekStart.getDay() - 1));
         const weekStartString = format(weekStart, 'yyyy-MM-dd');
         
-        console.log('Week starting:', weekStartString, 'Day of week:', dayOfWeek);
+        console.log(`Looking for activities on ${dayOfWeek} in week starting ${weekStartString}`);
         
         // For each child, fetch their activities for the current date
         const results: ChildActivities[] = [];
@@ -325,11 +325,17 @@ export default function AllChildrenDailyActivities({
     fetchActivities();
   }, [currentUser, currentDate, filterChild, allChildren]);
 
-  // Fix the date navigation
+  // Update handleDateChange to ensure a complete refresh
   const handleDateChange = (days: number) => {
-    console.log(`Changing date by ${days} days from`, format(currentDate, 'yyyy-MM-dd'));
     const newDate = addDays(currentDate, days);
-    console.log(`New date:`, format(newDate, 'yyyy-MM-dd'));
+    console.log(`Changing date from ${format(currentDate, 'yyyy-MM-dd')} (${format(currentDate, 'EEEE')}) to ${format(newDate, 'yyyy-MM-dd')} (${format(newDate, 'EEEE')})`);
+    
+    // Force a complete reset of state to trigger a full refresh
+    setLoading(true);
+    setChildActivities([]);
+    setError(null);
+    
+    // Then update the date state
     setCurrentDate(newDate);
   };
 
