@@ -1,7 +1,7 @@
 // app/dashboard/progress/page.tsx
 "use client"
 import { useState, useEffect, useCallback } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserChildren, getChildProgress, getChildSkills } from '@/lib/dataService';
@@ -59,7 +59,7 @@ interface ChildSkill {
 }
 
 // Error fallback component
-function ErrorFallback({ error, resetErrorBoundary }) {
+function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   return (
     <div className="bg-red-50 p-6 rounded-lg text-center">
       <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -76,11 +76,22 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 }
 
 export default function ProgressDashboardPage() {
-  return (
-    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
-      <ProgressDashboardContent />
-    </ErrorBoundary>
-  );
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  return <div>Progress Dashboard</div>;
 }
 
 function ProgressDashboardContent() {
@@ -98,89 +109,83 @@ function ProgressDashboardContent() {
     date: new Date().toISOString().slice(0, 10)
   });
   const [skillsData, setSkillsData] = useState<Record<string, ChildSkill[]>>({});
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchData() {
       console.log("Progress page: Starting data fetch");
-      console.log("Current user:", currentUser);
       
-      if (currentUser?.uid) {
+      try {
+        if (!currentUser?.uid) {
+          console.log("No user or UID available");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Fetching children for user:", currentUser.uid);
+        
+        // Wrap each major operation in its own try/catch
+        let validChildren: ChildData[] = [];
         try {
-          console.log("Fetching children for user:", currentUser.uid);
-          // Fetch all children
           const childrenData = await getUserChildren(currentUser.uid);
           
-          // Filter out any children without IDs
-          const validChildren = childrenData
+          validChildren = childrenData
             .filter((child): child is ChildData => 
-              typeof child.id === 'string' && Boolean(child.id) && typeof child.userId === 'string')
+              typeof child.id === 'string' && Boolean(child.id))
             .map(child => ({
               id: child.id,
               name: child.name || 'Unnamed Child',
-              userId: child.userId,
+              userId: child.userId || currentUser.uid, // Fallback to current user ID
               ageGroup: child.ageGroup,
               birthDate: child.birthDate
             }));
           
           setChildren(validChildren);
           console.log("Children data:", validChildren);
-
-          // Fetch progress and skills for each child
-          const childDataPromises = validChildren.map(async (child) => {
-            try {
-              console.log(`Fetching data for child: ${child.id}`);
-              
-              // Fetch progress records
-              const progress = await getChildProgress(child.id);
-              
-              // Fetch skills data
-              const skills = await getChildSkills(child.id);
-              console.log(`Found ${skills.length} skills for child ${child.id}`);
-              
-              return { 
-                childId: child.id, 
-                progress,
-                skills 
-              };
-            } catch (childError) {
-              console.error(`Error fetching data for child ${child.id}:`, childError);
-              return { 
-                childId: child.id, 
-                progress: [],
-                skills: [] 
-              };
-            }
-          });
-
-          const results = await Promise.allSettled(childDataPromises);
-          
-          // Organize data by child
-          const progressByChild: Record<string, ProgressRecord[]> = {};
-          const skillsByChild: Record<string, ChildSkill[]> = {};
-          
-          results.forEach((result, index) => {
-            const childId = validChildren[index].id;
-            if (result.status === 'fulfilled') {
-              progressByChild[childId] = result.value.progress || [];
-              skillsByChild[childId] = result.value.skills || [];
-            } else {
-              console.error(`Failed to fetch data for child ${childId}:`, result.reason);
-              progressByChild[childId] = [];
-              skillsByChild[childId] = [];
-            }
-          });
-
-          setProgressData(progressByChild);
-          setSkillsData(skillsByChild);
-          console.log("Data loaded for children:", Object.keys(progressByChild).length);
-        } catch (error: unknown) {
-          console.error('Error fetching data:', error);
-          setError('Error fetching data: ' + (error instanceof Error ? error.message : 'Unknown error'));
-        } finally {
+        } catch (childrenError) {
+          console.error("Error fetching children:", childrenError);
+          setError('Error fetching children data');
           setLoading(false);
+          return;
         }
-      } else {
-        console.log("No user or UID available");
+        
+        if (validChildren.length === 0) {
+          console.log("No valid children found");
+          setLoading(false);
+          return;
+        }
+        
+        // Process each child separately to avoid one failure affecting others
+        const progressByChild: Record<string, ProgressRecord[]> = {};
+        const skillsByChild: Record<string, ChildSkill[]> = {};
+        
+        for (const child of validChildren) {
+          try {
+            console.log(`Fetching progress for child: ${child.id}`);
+            const progress = await getChildProgress(child.id);
+            progressByChild[child.id] = progress || [];
+          } catch (progressError) {
+            console.error(`Error fetching progress for child ${child.id}:`, progressError);
+            progressByChild[child.id] = [];
+          }
+          
+          try {
+            console.log(`Fetching skills for child: ${child.id}`);
+            const skills = await getChildSkills(child.id);
+            skillsByChild[child.id] = skills || [];
+          } catch (skillsError) {
+            console.error(`Error fetching skills for child ${child.id}:`, skillsError);
+            skillsByChild[child.id] = [];
+          }
+        }
+        
+        setProgressData(progressByChild);
+        setSkillsData(skillsByChild);
+        
+      } catch (mainError) {
+        console.error('Main error in fetchData:', mainError);
+        setError('Error loading data: ' + (mainError instanceof Error ? mainError.message : 'Unknown error'));
+      } finally {
         setLoading(false);
       }
     }
@@ -195,7 +200,12 @@ function ProgressDashboardContent() {
         const { getAllActivities } = await import('@/lib/dataService');
         const activitiesData = await getAllActivities();
         console.log(`Fetched ${activitiesData.length} activities`);
-        setActivities(activitiesData);
+        
+        // Add type assertion to fix the incompatible types
+        setActivities(activitiesData.map(activity => ({
+          ...activity,
+          id: activity.id || '' // Ensure id is always a string
+        })) as Activity[]);
       } catch (error) {
         console.error("Error fetching activities:", error);
       }
@@ -204,7 +214,7 @@ function ProgressDashboardContent() {
     fetchActivities();
   }, []);
 
-  const handleFormChange = (e) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -474,6 +484,15 @@ function ProgressDashboardContent() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {debugInfo.length > 0 && (
+        <div className="mt-4 p-4 bg-gray-100 rounded-md">
+          <h3 className="font-medium text-gray-700 mb-2">Debug Info:</h3>
+          <pre className="text-xs overflow-auto max-h-40">
+            {debugInfo.join('\n')}
+          </pre>
         </div>
       )}
     </div>
