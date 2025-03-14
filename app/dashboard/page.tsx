@@ -127,9 +127,28 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Your Dashboard</h1>
+          <p className="text-gray-600">
+            Welcome to Learn Sprout, your personalized Montessori learning companion
+          </p>
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Main Content - Moved up for mobile view */}
+          <div className="lg:col-span-3 order-1 lg:order-2">
+            {/* Unified Weekly Plan with Day Focus */}
+            <ErrorBoundary fallback={<div>Error loading activities</div>}>
+              <WeeklyPlanWithDayFocus 
+                selectedDate={selectedDate}
+                selectedChildId={selectedChildId}
+                onGeneratePlan={handleGeneratePlan}
+              />
+            </ErrorBoundary>
+          </div>
+          
+          {/* Sidebar - Moved down for mobile view */}
+          <div className="lg:col-span-1 order-2 lg:order-1">
             {/* Quick Links */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Links</h2>
@@ -188,25 +207,6 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-          </div>
-          
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Your Dashboard</h1>
-              <p className="text-gray-600">
-                Welcome to Learn Sprout, your personalized Montessori learning companion
-              </p>
-            </div>
-            
-            {/* Unified Weekly Plan with Day Focus */}
-            <ErrorBoundary fallback={<div>Error loading activities</div>}>
-              <WeeklyPlanWithDayFocus 
-                selectedDate={selectedDate}
-                selectedChildId={selectedChildId}
-                onGeneratePlan={handleGeneratePlan}
-              />
-            </ErrorBoundary>
           </div>
         </div>
       </div>
