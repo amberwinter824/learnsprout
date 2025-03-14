@@ -171,8 +171,8 @@ import {
         return {
           id: childDoc.id,
           ...childDoc.data()
-        };
-      }
+        } as ChildData;
+      } 
       
       // If not found or offline, try offline storage
       return await offlineStorage.getItem('userChildren', childId);
@@ -226,7 +226,7 @@ import {
         return {
           id: activityDoc.id,
           ...activityDoc.data()
-        };
+        } as ActivityData;
       }
       
       // If not found or offline, try offline storage

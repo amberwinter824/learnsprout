@@ -51,18 +51,21 @@ interface Child {
 interface ChildActivities {
   child: Child;
   activities: Activity[];
+  hasPlan: boolean; // Added to track if a weekly plan exists
 }
 
 interface AllChildrenDailyActivitiesProps {
   selectedDate?: Date;
   onWeeklyViewRequest?: (childId?: string) => void;
   selectedChildId?: string; // Optional filter for a specific child
+  onActivitySelect?: (activity: Activity) => void;
 }
 
 export default function AllChildrenDailyActivities({ 
   selectedDate,
   onWeeklyViewRequest,
-  selectedChildId
+  selectedChildId,
+  onActivitySelect
 }: AllChildrenDailyActivitiesProps) {
   const router = useRouter();
   const { currentUser } = useAuth();
@@ -83,8 +86,6 @@ export default function AllChildrenDailyActivities({
   // Update currentDate when selectedDate prop changes
   useEffect(() => {
     if (selectedDate) {
-      // Simple equality check might be misleading with Date objects
-      // Use date-fns format to compare the dates as strings
       const currentFormatted = format(currentDate, 'yyyy-MM-dd');
       const selectedFormatted = format(selectedDate, 'yyyy-MM-dd');
       
@@ -191,46 +192,18 @@ export default function AllChildrenDailyActivities({
           
           const plansSnapshot = await getDocs(plansQuery);
           let childActivities: Activity[] = [];
+          let hasPlan = !plansSnapshot.empty;
           
           if (plansSnapshot.empty) {
             console.log(`No weekly plan found for child ${child.name} for week starting ${weekStartString}`);
             
-            // If no plan exists, suggest one activity for this day
-            try {
-              const activitiesQuery = query(
-                collection(db, 'activities'),
-                where('ageGroup', 'array-contains', child.ageGroup || 'primary')
-              );
-              
-              const activitiesSnapshot = await getDocs(activitiesQuery);
-              
-              if (!activitiesSnapshot.empty) {
-                // Get a random activity from the results
-                const randomIndex = Math.floor(Math.random() * activitiesSnapshot.docs.length);
-                const activityDoc = activitiesSnapshot.docs[randomIndex];
-                const activityData = activityDoc.data();
-                
-                childActivities = [{
-                  id: `suggested_${child.id}_${dayOfWeek}_${activityDoc.id}`,
-                  activityId: activityDoc.id,
-                  childId: child.id,
-                  childName: child.name,
-                  title: activityData.title || 'Suggested Activity',
-                  description: activityData.description || '',
-                  area: activityData.area || '',
-                  duration: activityData.duration || 15,
-                  status: 'suggested',
-                  timeSlot: 'morning',
-                  order: 0,
-                  isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                        !!activityData.classroomExtension
-                }];
-                
-                console.log(`Created suggested activity for ${child.name}: ${activityData.title}`);
-              }
-            } catch (error) {
-              console.error('Error creating suggested activity:', error);
-            }
+            // Instead of creating a random activity, add them to results with empty activities
+            // This will trigger the proper empty state guidance
+            results.push({
+              child,
+              activities: [],
+              hasPlan: false
+            });
           } else {
             // Use the first plan (should only be one per week)
             const planDoc = plansSnapshot.docs[0];
@@ -243,6 +216,13 @@ export default function AllChildrenDailyActivities({
             
             if (dayActivities.length === 0) {
               console.log(`No activities found for ${dayOfWeek} in the plan`);
+              
+              // Add to results with empty activities but hasPlan=true
+              results.push({
+                child,
+                activities: [],
+                hasPlan: true
+              });
             } else {
               console.log(`Found ${dayActivities.length} activities for ${dayOfWeek}`);
               
@@ -322,15 +302,14 @@ export default function AllChildrenDailyActivities({
               childActivities = activitiesWithDetails.sort((a, b) => 
                 (a.order || 0) - (b.order || 0)
               );
+              
+              // Add to results
+              results.push({
+                child,
+                activities: childActivities,
+                hasPlan: true
+              });
             }
-          }
-          
-          // Add to results
-          if (childActivities.length > 0) {
-            results.push({
-              child,
-              activities: childActivities
-            });
           }
         }
         
@@ -428,10 +407,16 @@ export default function AllChildrenDailyActivities({
   };
 
   const openObservationForm = (activity: Activity) => {
-    setSelectedActivityForObservation(activity);
-    setShowObservationForm(true);
+    if (onActivitySelect) {
+      // Use the parent component's handler if provided
+      onActivitySelect(activity);
+    } else {
+      // Otherwise handle locally
+      setSelectedActivityForObservation(activity);
+      setShowObservationForm(true);
+    }
   };
-
+  
   // Render loading state
   if (loading) {
     return (
@@ -478,7 +463,7 @@ export default function AllChildrenDailyActivities({
           </button>
           
           <div className="w-36 text-center mx-1 font-medium">
-            {isToday(currentDate) ? 'Today' : format(currentDate, 'EEEE, MMMM d')}
+            {formatDateDisplay(currentDate)}
           </div>
           
           <button
@@ -563,7 +548,7 @@ export default function AllChildrenDailyActivities({
         {/* Activities by child */}
         {childActivities.length > 0 && (
           <div className="space-y-6">
-            {childActivities.map(({ child, activities }) => (
+            {childActivities.map(({ child, activities, hasPlan }) => (
               <div key={child.id} className="border rounded-lg overflow-hidden">
                 {/* Child header */}
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
@@ -675,15 +660,38 @@ export default function AllChildrenDailyActivities({
                     </div>
                   ) : (
                     <div className="text-center py-4 bg-gray-50 rounded-lg">
-                      <p className="text-gray-500">
-                        No activities planned for {child.name} {isToday(currentDate) ? 'today' : 'on this day'}.
+                      {/* UPDATED EMPTY STATE WITH BETTER GUIDANCE */}
+                      <p className="text-gray-700 font-medium mb-2">
+                        {isToday(currentDate) ? 'No activities planned for today.' : `No activities planned for ${format(currentDate, 'MMMM d')}.`}
                       </p>
-                      <Link
-                        href={`/dashboard/children/${child.id}/weekly-plan`}
-                        className="mt-2 inline-block text-sm text-emerald-600 hover:text-emerald-700"
-                      >
-                        Generate Activities
-                      </Link>
+                      
+                      {!hasPlan ? (
+                        <>
+                          <p className="text-gray-500 text-sm mb-4">
+                            Generate a weekly plan to see activities for {child.name}.
+                          </p>
+                          <Link
+                            href={`/dashboard/children/${child.id}/weekly-plan`}
+                            className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+                          >
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Create Weekly Plan
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-gray-500 text-sm mb-4">
+                            This day has no scheduled activities in the weekly plan.
+                          </p>
+                          <Link
+                            href={`/dashboard/children/${child.id}/weekly-plan`}
+                            className="inline-flex items-center px-3 py-1.5 text-sm text-emerald-600 hover:text-emerald-700"
+                          >
+                            <Calendar className="h-4 w-4 mr-1" />
+                            View Weekly Plan
+                          </Link>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -712,7 +720,7 @@ export default function AllChildrenDailyActivities({
                 activityId={selectedActivityForObservation.activityId}
                 childId={selectedActivityForObservation.childId}
                 activityTitle={selectedActivityForObservation.title}
-                                  onSuccess={() => {
+                onSuccess={() => {
                   setShowObservationForm(false);
                   
                   // Update the local state to mark the activity as completed

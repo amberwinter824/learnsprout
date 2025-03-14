@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Camera, Smile, Frown, Meh, CheckCircle, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { addDoc, collection, doc, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 
@@ -142,12 +142,10 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
       
       console.log('Observation saved with ID:', docRef.id);
       
-      // If a weekly plan ID was provided, update the activity status to completed
-      if (weeklyPlanId && dayOfWeek) {
-        try {
-          const { doc, getDoc, updateDoc } = await import('firebase/firestore');
-          
-          // Get the weekly plan document
+      // Try to update the weekly plan
+      try {
+        // First check if we have weeklyPlanId and dayOfWeek from props
+        if (weeklyPlanId && dayOfWeek) {
           const planRef = doc(db, 'weeklyPlans', weeklyPlanId);
           const planDoc = await getDoc(planRef);
           
@@ -176,10 +174,45 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
               }
             }
           }
-        } catch (planError) {
-          console.error('Error updating weekly plan:', planError);
-          // Continue even if plan update fails - the observation was saved
+        } 
+        // If we don't have weeklyPlanId and dayOfWeek from props, try to extract from activity.id
+        else {
+          // Extract planId from activity.id (assuming format: planId_dayOfWeek_activityId)
+          const activityIdParts = activityId.split('_');
+          if (activityIdParts.length >= 3) {
+            const planId = activityIdParts[0];
+            const dayOfWeek = activityIdParts[1];
+            
+            // Update the plan
+            const planRef = doc(db, 'weeklyPlans', planId);
+            const planDoc = await getDoc(planRef);
+            
+            if (planDoc.exists()) {
+              const planData = planDoc.data();
+              const dayKey = dayOfWeek.toLowerCase();
+              const dayActivities = planData[dayKey] || [];
+              
+              // Find and update the activity status
+              const updatedActivities = dayActivities.map((act: any) => {
+                if (act.activityId === activityId) {
+                  return { ...act, status: 'completed' };
+                }
+                return act;
+              });
+              
+              // Update the plan document
+              await updateDoc(planRef, {
+                [dayKey]: updatedActivities,
+                updatedAt: serverTimestamp()
+              });
+              
+              console.log(`Updated activity status in weekly plan ${planId}`);
+            }
+          }
         }
+      } catch (planError) {
+        console.error('Error updating weekly plan:', planError);
+        // Continue even if plan update fails - the observation was saved
       }
       
       // Call success callback

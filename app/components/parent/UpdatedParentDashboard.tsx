@@ -168,6 +168,35 @@ export default function UpdatedParentDashboard() {
     router.push(`/dashboard/children/${childId}/progress/${progressId}`);
   };
   
+  // Handlers for view switching
+  const handleViewModeChange = (mode: 'daily' | 'weekly') => {
+    setViewMode(mode);
+    updateUrlParams(mode, selectedDate, selectedChild?.id);
+  };
+
+  const handleDaySelected = (date: Date) => {
+    setSelectedDate(date);
+    setViewMode('daily');
+    updateUrlParams('daily', date, selectedChild?.id);
+  };
+
+  // Update URL when state changes
+  const updateUrlParams = useCallback((view: string, date?: Date, childId?: string) => {
+    const params = new URLSearchParams();
+    params.set('view', view);
+    
+    if (date) {
+      params.set('date', format(date, 'yyyy-MM-dd'));
+    }
+    
+    if (childId) {
+      params.set('childId', childId);
+    }
+    
+    // Replace current URL to maintain navigation history
+    router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+  }, [router]);
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -204,7 +233,7 @@ export default function UpdatedParentDashboard() {
           <User className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
           <h2 className="text-xl font-medium text-gray-800 mb-2">No children profiles found</h2>
           <p className="text-gray-600 mb-6">
-            To get started with Montessori at Home, add your first child profile.
+            To get started with Learn Sprout, add your first child profile.
           </p>
           <Link
             href="/dashboard/children/add"
@@ -292,22 +321,26 @@ export default function UpdatedParentDashboard() {
               </h2>
               
               {/* View mode toggle */}
-              <div className="bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
                 <button
-                  onClick={() => setViewMode('daily')}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    viewMode === 'daily' ? 'bg-white shadow-sm text-emerald-600' : 'text-gray-600'
+                  onClick={() => handleViewModeChange('daily')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                    viewMode === 'daily' 
+                      ? 'bg-white text-emerald-600 shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  Daily
+                  Daily View
                 </button>
                 <button
-                  onClick={() => setViewMode('weekly')}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    viewMode === 'weekly' ? 'bg-white shadow-sm text-emerald-600' : 'text-gray-600'
+                  onClick={() => handleViewModeChange('weekly')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                    viewMode === 'weekly' 
+                      ? 'bg-white text-emerald-600 shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  Weekly
+                  Weekly View
                 </button>
               </div>
             </div>
@@ -317,7 +350,12 @@ export default function UpdatedParentDashboard() {
               <div className="mb-6">
                 <AllChildrenDailyActivities
                   selectedDate={selectedDate}
-                  onWeeklyViewRequest={handleWeeklyViewRequest}
+                  onWeeklyViewRequest={(childId) => {
+                    if (childId) {
+                      setSelectedChild(children.find(c => c.id === childId) || null);
+                    }
+                    handleViewModeChange('weekly');
+                  }}
                   selectedChildId={selectedChild?.id}
                 />
               </div>
@@ -346,14 +384,12 @@ export default function UpdatedParentDashboard() {
                       )}
                     </div>
                     
-                    <WeekAtAGlanceView 
-                      childId={selectedChild.id} 
+                    <WeekAtAGlanceView
+                      childId={selectedChild.id}
                       childName={selectedChild.name}
-                      onSelectDay={(date) => {
-                        setViewMode('daily');
-                        setSelectedDate(date);
-                      }}
-                      onBackToDaily={() => setViewMode('daily')}
+                      selectedDate={selectedDate}
+                      onSelectDay={handleDaySelected}
+                      onBackToDaily={() => handleViewModeChange('daily')}
                     />
                   </>
                 ) : (

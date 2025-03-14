@@ -10,7 +10,6 @@ import { getDisplayBirthDate } from '@/lib/dateUtils';
 import { formatAge } from '@/lib/ageUtils';
 
 // Component imports
-import SimplifiedWeeklyView from '@/app/components/parent/SimplifiedWeeklyView';
 import DailyActivitiesDashboard from '@/app/components/parent/DailyActivitiesDashboard';
 import ObservationList from '@/app/components/ObservationList';
 import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';

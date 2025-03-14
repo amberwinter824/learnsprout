@@ -64,13 +64,15 @@ interface WeekAtAGlanceViewProps {
   childName: string;
   onSelectDay?: (date: Date) => void;
   onBackToDaily?: () => void;
+  selectedDate?: Date;
 }
 
 export default function WeekAtAGlanceView({ 
   childId, 
   childName,
   onSelectDay,
-  onBackToDaily
+  onBackToDaily,
+  selectedDate
 }: WeekAtAGlanceViewProps) {
   const router = useRouter();
   
@@ -624,18 +626,18 @@ export default function WeekAtAGlanceView({
         <div className="space-y-6">
           {weekDays.map((day) => (
             <div 
-              key={day.dayName}
+              key={day.date.toISOString()}
               className={`border rounded-lg overflow-hidden ${
                 day.isToday ? 'border-emerald-300' : 'border-gray-200'
-              } ${selectedDay === day.dayName ? 'ring-2 ring-emerald-500' : ''}`}
+              } ${selectedDay === day.dayName ? 'ring-2 ring-emerald-500' : ''}
+              ${selectedDate && isSameDay(day.date, selectedDate) ? 'bg-emerald-50 border-emerald-300' : ''}
+              ${onSelectDay ? 'cursor-pointer hover:border-emerald-300 transition-colors' : ''}`}
+              onClick={() => onSelectDay && onSelectDay(day.date)}
             >
               {/* Day header */}
-              <div 
-                className={`px-4 py-3 flex justify-between items-center cursor-pointer ${
-                  day.isToday ? 'bg-emerald-50' : 'bg-gray-50'
-                }`}
-                onClick={() => handleDaySelect(day)}
-              >
+              <div className={`px-4 py-3 flex justify-between items-center ${
+                day.isToday ? 'bg-emerald-50' : 'bg-gray-50'
+              } ${selectedDate && isSameDay(day.date, selectedDate) ? 'bg-emerald-100' : ''}`}>
                 <div className="flex items-center">
                   <span className={`font-medium ${
                     day.isToday ? 'text-emerald-700' : 'text-gray-700'
