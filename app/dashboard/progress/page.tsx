@@ -1,82 +1,716 @@
-// app/dashboard/progress/page.tsx
-"use client"
-import { useState, useEffect } from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { collection, query, where, getDocs, Timestamp, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserChildren, getChildProgress, getChildSkills } from '@/lib/dataService';
 import { 
-  BarChart2, 
   Users, 
-  Book, 
-  TrendingUp, 
   Award, 
-  CheckCircle,
-  Clock,
+  BarChart2,
+  Book,
   Loader2,
-  Plus
+  Calendar,
+  ArrowUpRight,
+  Filter,
+  ChevronRight,
+  Clock,
+  CheckCircle,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
+import { format, subMonths } from 'date-fns';
 
-interface ProgressRecord {
-  id?: string;
-  activityTitle?: string;
-  completionStatus: string;
-  date: any;
-  activityId: string;
-  engagementLevel?: string;
-  notes?: string;
-}
-
-interface ChildData {
+// Define interfaces
+interface Child {
   id: string;
   name: string;
-  ageGroup?: string;
   birthDate?: any;
-  userId: string;
+  ageGroup?: string;
+  interests?: string[];
+  active?: boolean;
 }
 
-interface Activity {
+interface ProgressRecord {
   id: string;
-  title: string;
-  description?: string;
-  area?: string;
-  ageGroups?: string[];
-  duration?: number;
-  difficulty?: string;
-  materialsNeeded?: string[];
-  skillsAddressed?: string[];
+  childId: string;
+  activityId: string;
+  activityTitle?: string;
+  completionStatus: string;
+  date: Timestamp;
+  engagementLevel?: string;
+  notes?: string;
+  skillsDemonstrated?: string[];
 }
 
 interface ChildSkill {
-  id?: string;
+  id: string;
   childId: string;
   skillId: string;
   skillName?: string;
-  category?: string;
   status: 'not_started' | 'emerging' | 'developing' | 'mastered';
-  lastAssessed?: any;
+  lastAssessed?: Timestamp;
+}
+
+interface ProgressSummary {
+  childId: string;
+  childName: string;
+  totalActivities: number;
+  completedActivities: number;
+  recentActivities: number;
+  totalSkills: number;
+  inProgressSkills: number;
+  masteredSkills: number;
+  lastActivity?: Timestamp;
+}
+
+// Error Fallback Component
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
+  return (
+    <div className="bg-red-50 p-4 rounded-lg text-red-800 max-w-3xl mx-auto">
+      <div className="flex">
+        <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+        <div>
+          <h3 className="text-lg font-medium">Error loading progress data</h3>
+          <p className="mt-1">{error.message}</p>
+          <button
+            onClick={resetErrorBoundary}
+            className="mt-4 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ProgressDashboardPage() {
-  // Simple test component to check if basic rendering works
+  const router = useRouter();
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [progressSummaries, setProgressSummaries] = useState<ProgressSummary[]>([]);
+  const [recentProgress, setRecentProgress] = useState<ProgressRecord[]>([]);
+  const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
+  const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
+  // Fetch all data
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
+    if (!currentUser) {
       setLoading(false);
-    }, 2000);
+      return;
+    }
     
-    return () => clearTimeout(timer);
-  }, []);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        // Fetch all children for the current user
+        const childrenQuery = query(
+          collection(db, 'children'),
+          where('userId', '==', currentUser?.uid || ''),
+          where('active', '==', true)
+        );
+        
+        const childrenSnapshot = await getDocs(childrenQuery);
+        const childrenData: Child[] = [];
+        childrenSnapshot.forEach(doc => {
+          childrenData.push({ id: doc.id, ...doc.data() } as Child);
+        });
+        
+        setChildren(childrenData);
+        
+        if (childrenData.length === 0) {
+          setLoading(false);
+          return;
+        }
+        
+        // Create a map for quick child name lookup
+        const childNameMap: Record<string, string> = {};
+        childrenData.forEach(child => {
+          childNameMap[child.id] = child.name;
+        });
+        
+        // Get child IDs for queries
+        const childIds = childrenData.map(child => child.id);
+        
+        // Fetch recent progress records
+        const progressQuery = query(
+          collection(db, 'progressRecords'),
+          where('childId', 'in', childIds),
+          orderBy('date', 'desc'),
+          limit(10)
+        );
+        
+        const progressSnapshot = await getDocs(progressQuery);
+        const progressData: ProgressRecord[] = [];
+        
+        progressSnapshot.forEach(doc => {
+          const data = doc.data() as Omit<ProgressRecord, 'id'>;
+          progressData.push({
+            id: doc.id,
+            ...data,
+            childId: data.childId,
+            activityId: data.activityId,
+            completionStatus: data.completionStatus,
+            date: data.date,
+          });
+        });
+        
+        setRecentProgress(progressData);
+        
+        // Fetch activity titles
+        const activityIds = Array.from(new Set(progressData.map(p => p.activityId)));
+        const activityTitles: Record<string, string> = {};
+        
+        // This approach avoids too many parallel requests
+        if (activityIds.length > 0) {
+          const activityQuery = query(
+            collection(db, 'activities'),
+            where('__name__', 'in', activityIds.slice(0, 10)) // Firestore limit
+          );
+          
+          const activitySnapshot = await getDocs(activityQuery);
+          activitySnapshot.forEach(doc => {
+            activityTitles[doc.id] = doc.data().title || 'Unknown Activity';
+          });
+        }
+        
+        // Enrich progress data with activity titles
+        const progressWithTitles = progressData.map(record => ({
+          ...record,
+          activityTitle: activityTitles[record.activityId] || 'Unknown Activity'
+        }));
+        
+        setRecentProgress(progressWithTitles);
+        
+        // Fetch recent skill updates
+        const skillsQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', 'in', childIds),
+          where('status', 'in', ['mastered', 'developing', 'emerging']),
+          orderBy('lastAssessed', 'desc'),
+          limit(10)
+        );
+        
+        const skillsSnapshot = await getDocs(skillsQuery);
+        const skillsData: ChildSkill[] = [];
+        
+        skillsSnapshot.forEach(doc => {
+          const data = doc.data();
+          skillsData.push({
+            id: doc.id,
+            childId: data.childId,
+            skillId: data.skillId,
+            status: data.status,
+            lastAssessed: data.lastAssessed
+          });
+        });
+        
+        // Fetch skill names
+        const skillIds = Array.from(new Set(skillsData.map(s => s.skillId)));
+        const skillNames: Record<string, string> = {};
+        
+        // This approach avoids too many parallel requests
+        if (skillIds.length > 0) {
+          const skillNamesQuery = query(
+            collection(db, 'developmentalSkills'),
+            where('__name__', 'in', skillIds.slice(0, 10)) // Firestore limit
+          );
+          
+          const skillNamesSnapshot = await getDocs(skillNamesQuery);
+          skillNamesSnapshot.forEach(doc => {
+            skillNames[doc.id] = doc.data().name || 'Unknown Skill';
+          });
+        }
+        
+        // Enrich skill data with names and child names
+        const skillsWithNames = skillsData.map(skill => ({
+          ...skill,
+          skillName: skillNames[skill.skillId] || 'Unknown Skill',
+          childName: childNameMap[skill.childId] || 'Unknown Child'
+        }));
+        
+        setRecentSkills(skillsWithNames);
+        
+        // Calculate progress summaries for each child
+        const summaries: ProgressSummary[] = [];
+        
+        for (const child of childrenData) {
+          // Get all progress records for this child
+          const childProgressQuery = query(
+            collection(db, 'progressRecords'),
+            where('childId', '==', child.id)
+          );
+          
+          const childProgressSnapshot = await getDocs(childProgressQuery);
+          const childProgress: ProgressRecord[] = [];
+          
+          childProgressSnapshot.forEach(doc => {
+            childProgress.push({ id: doc.id, ...doc.data() } as ProgressRecord);
+          });
+          
+          // Get all skills for this child
+          const childSkillsQuery = query(
+            collection(db, 'childSkills'),
+            where('childId', '==', child.id)
+          );
+          
+          const childSkillsSnapshot = await getDocs(childSkillsQuery);
+          const childSkills: ChildSkill[] = [];
+          
+          childSkillsSnapshot.forEach(doc => {
+            childSkills.push({ id: doc.id, ...doc.data() } as ChildSkill);
+          });
+          
+          // Calculate summary statistics
+          const totalActivities = childProgress.length;
+          const completedActivities = childProgress.filter(p => p.completionStatus === 'completed').length;
+          
+          // Recent activities (last 30 days)
+          const oneMonthAgo = subMonths(new Date(), 1);
+          const recentActivities = childProgress.filter(p => {
+            const recordDate = p.date.toDate();
+            return recordDate >= oneMonthAgo;
+          }).length;
+          
+          // Calculate skill statistics
+          const totalSkills = childSkills.length;
+          const inProgressSkills = childSkills.filter(s => s.status === 'emerging' || s.status === 'developing').length;
+          const masteredSkills = childSkills.filter(s => s.status === 'mastered').length;
+          
+          // Find last activity date
+          let lastActivity: Timestamp | undefined;
+          if (childProgress.length > 0) {
+            lastActivity = childProgress.sort((a, b) => b.date.seconds - a.date.seconds)[0].date;
+          }
+          
+          summaries.push({
+            childId: child.id,
+            childName: child.name,
+            totalActivities,
+            completedActivities,
+            recentActivities,
+            totalSkills,
+            inProgressSkills,
+            masteredSkills,
+            lastActivity
+          });
+        }
+        
+        setProgressSummaries(summaries);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching progress data:', err);
+        setError(`Error loading progress data: ${err instanceof Error ? err.message : String(err)}`);
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [currentUser, refreshing]);
+  
+  // Handle refresh
+  const handleRefresh = () => {
+    setRefreshing(true);
+    
+    // Reset after a short delay
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+  
+  // Format date for display
+  const formatDate = (timestamp?: Timestamp) => {
+    if (!timestamp) return 'Never';
+    
+    const date = timestamp.toDate();
+    return format(date, 'MMM d, yyyy');
+  };
+  
+  // Get relative time for display
+  const getRelativeTime = (timestamp?: Timestamp) => {
+    if (!timestamp) return 'Never';
+    
+    const date = timestamp.toDate();
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'Today';
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return `${Math.floor(diffInDays / 30)} months ago`;
+  };
+  
+  // Get color for completion status
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': 
+        return 'bg-green-100 text-green-800';
+      case 'in_progress': 
+        return 'bg-blue-100 text-blue-800';
+      case 'started': 
+        return 'bg-yellow-100 text-yellow-800';
+      default: 
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+  
+  // Get color for skill status
+  const getSkillStatusColor = (status: string) => {
+    switch (status) {
+      case 'mastered': 
+        return 'bg-green-100 text-green-800';
+      case 'developing': 
+        return 'bg-blue-100 text-blue-800';
+      case 'emerging': 
+        return 'bg-yellow-100 text-yellow-800';
+      default: 
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
   
   if (loading) {
-    return <div className="flex items-center justify-center h-64">
-      <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-    </div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+      </div>
+    );
   }
   
-  return <div className="p-6 bg-white rounded-lg shadow">
-    <h1 className="text-2xl font-bold mb-4">Progress Dashboard</h1>
-    <p>This is a simplified test component to check if rendering works.</p>
-  </div>;
+  if (error) {
+    return (
+      <div className="bg-red-50 p-4 rounded-lg text-red-800 max-w-3xl mx-auto">
+        <div className="flex">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <div>
+            <h3 className="text-lg font-medium">Error loading progress data</h3>
+            <p className="mt-1">{error}</p>
+            <button
+              onClick={handleRefresh}
+              className="mt-4 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (children.length === 0) {
+    return (
+      <div className="py-6 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Progress Overview</h1>
+          <p className="mt-1 text-sm text-gray-500">Track your children's development and learning journey</p>
+        </div>
+        
+        <div className="bg-white shadow rounded-lg p-8 text-center">
+          <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-lg font-medium text-gray-900">No Children Added Yet</h2>
+          <p className="text-gray-500 max-w-md mx-auto mt-2 mb-6">
+            Add a child profile to start tracking developmental progress and learning activities.
+          </p>
+          <Link
+            href="/dashboard/children/add"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
+          >
+            Add Child Profile
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="py-6 max-w-7xl mx-auto">
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Progress Overview</h1>
+          <p className="mt-1 text-sm text-gray-500">Track your children's development and learning journey</p>
+        </div>
+        
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+      
+      {/* Child Selection Filter */}
+      {children.length > 1 && (
+        <div className="mb-6 bg-white shadow-sm rounded-lg p-4">
+          <div className="flex items-center flex-wrap gap-2">
+            <span className="text-sm font-medium text-gray-700 mr-2">Filter by child:</span>
+            <button
+              className={`px-3 py-1 text-sm font-medium rounded-md ${
+                selectedChild === null
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+              }`}
+              onClick={() => setSelectedChild(null)}
+            >
+              All Children
+            </button>
+            
+            {children.map(child => (
+              <button
+                key={child.id}
+                className={`px-3 py-1 text-sm font-medium rounded-md ${
+                  selectedChild === child.id
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                }`}
+                onClick={() => setSelectedChild(child.id)}
+              >
+                {child.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Progress Summary Cards */}
+      <div className="mb-8">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Progress Summary</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {progressSummaries
+            .filter(summary => selectedChild === null || summary.childId === selectedChild)
+            .map(summary => (
+              <div key={summary.childId} className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {summary.childName}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Last activity: {summary.lastActivity ? getRelativeTime(summary.lastActivity) : 'Never'}
+                  </p>
+                </div>
+                
+                <div className="px-4 py-5 sm:p-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-emerald-50 p-3 rounded-lg">
+                      <div className="text-lg font-bold text-emerald-700">{summary.completedActivities}</div>
+                      <div className="text-xs text-gray-500">Activities Completed</div>
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <div className="text-lg font-bold text-blue-700">{summary.recentActivities}</div>
+                      <div className="text-xs text-gray-500">Recent Activities</div>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <div className="text-lg font-bold text-green-700">{summary.masteredSkills}</div>
+                      <div className="text-xs text-gray-500">Mastered Skills</div>
+                    </div>
+                    <div className="bg-amber-50 p-3 rounded-lg">
+                      <div className="text-lg font-bold text-amber-700">{summary.inProgressSkills}</div>
+                      <div className="text-xs text-gray-500">Skills in Progress</div>
+                    </div>
+                  </div>
+                  
+                  {/* Skill Progress Bar */}
+                  <div className="mt-6">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Skill Progress</span>
+                      <span>
+                        {summary.totalSkills > 0 
+                          ? Math.round(((summary.masteredSkills + summary.inProgressSkills) / summary.totalSkills) * 100) 
+                          : 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="bg-emerald-500 h-2.5 rounded-full" style={{ 
+                        width: `${summary.totalSkills > 0 
+                          ? ((summary.masteredSkills + summary.inProgressSkills) / summary.totalSkills) * 100 
+                          : 0}%` 
+                      }}></div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 text-right">
+                    <Link 
+                      href={`/dashboard/children/${summary.childId}/progress`}
+                      className="inline-flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                    >
+                      View detailed progress
+                      <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+      
+      {/* Recent Activities */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
+            <Link 
+              href="/dashboard/activities"
+              className="text-sm text-emerald-600 hover:text-emerald-700 inline-flex items-center"
+            >
+              Browse All
+              <ArrowUpRight className="ml-1 h-3 w-3" />
+            </Link>
+          </div>
+          
+          <div className="px-4 py-5 sm:p-6">
+            {recentProgress.length > 0 ? (
+              <div className="space-y-4">
+                {recentProgress
+                  .filter(record => selectedChild === null || record.childId === selectedChild)
+                  .slice(0, 5)
+                  .map(record => (
+                    <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between">
+                        <h3 className="font-medium text-gray-900">{record.activityTitle || 'Activity'}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(record.completionStatus)}`}>
+                          {record.completionStatus.charAt(0).toUpperCase() + record.completionStatus.slice(1).replace('_', ' ')}
+                        </span>
+                      </div>
+                      
+                      <div className="mt-1 flex items-center">
+                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                          {children.find(c => c.id === record.childId)?.name || 'Unknown Child'}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2 flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatDate(record.date)}
+                        </span>
+                      </div>
+                      
+                      {record.notes && (
+                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">{record.notes}</p>
+                      )}
+                      
+                      <Link 
+                        href={`/dashboard/children/${record.childId}?record=${record.id}`}
+                        className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
+                      >
+                        View details
+                      </Link>
+                    </div>
+                  ))
+                }
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Book className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No activity records found</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Recent Skill Progress */}
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Recent Skill Development</h2>
+          </div>
+          
+          <div className="px-4 py-5 sm:p-6">
+            {recentSkills.length > 0 ? (
+              <div className="space-y-4">
+                {recentSkills
+                  .filter(skill => selectedChild === null || skill.childId === selectedChild)
+                  .slice(0, 5)
+                  .map(skill => (
+                    <div key={skill.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between">
+                        <h3 className="font-medium text-gray-900">{skill.skillName || 'Skill'}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getSkillStatusColor(skill.status)}`}>
+                          {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
+                        </span>
+                      </div>
+                      
+                      <div className="mt-1 flex items-center">
+                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                          {children.find(c => c.id === skill.childId)?.name || 'Unknown Child'}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2 flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatDate(skill.lastAssessed)}
+                        </span>
+                      </div>
+                      
+                      <Link 
+                        href={`/dashboard/children/${skill.childId}/progress`}
+                        className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
+                      >
+                        View skill progress
+                      </Link>
+                    </div>
+                  ))
+                }
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Award className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No skill progress recorded yet</p>
+                <p className="text-sm text-gray-500 mt-2">Complete activities to develop new skills</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Progress Insights */}
+      <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">Progress Insights</h2>
+        </div>
+        
+        <div className="px-4 py-5 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Activity Trends */}
+            <div className="p-4 border rounded-lg bg-blue-50">
+              <h3 className="font-medium text-blue-800 mb-2">Activity Engagement</h3>
+              <p className="text-sm text-blue-700 mb-4">
+                {(() => {
+                  const filteredSummaries = progressSummaries.filter(
+                    s => selectedChild === null || s.childId === selectedChild
+                  );
+                  
+                  const totalRecent = filteredSummaries.reduce((sum, s) => sum + s.recentActivities, 0);
+                  const totalActivities = filteredSummaries.reduce((sum, s) => sum + s.totalActivities, 0);
+                  
+                  if (totalActivities === 0) {
+                    return "No activities have been completed yet";
+                  }
+                  
+                  if (totalRecent === 0) {
+                    return "No activities have been completed in the last 30 days";
+                  }
+                  
+                  const percentage = Math.round((totalRecent / totalActivities) * 100);
+                  
+                  if (percentage > 50) {
+                    return `Strong recent engagement with ${totalRecent} activities in the last 30 days`;
+                  } else if (percentage > 20) {
+                    return `Moderate engagement with ${totalRecent} activities in the last 30 days`;
+                  } else {
+                    return `Light recent activity with ${totalRecent} activities in the last 30 days`;
+                  }
+                })()}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
