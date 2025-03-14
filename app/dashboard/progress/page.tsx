@@ -1,6 +1,7 @@
 // app/dashboard/progress/page.tsx
 "use client"
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserChildren, getChildProgress } from '@/lib/dataService';
@@ -13,7 +14,8 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  Plus
+  Plus,
+  AlertCircle
 } from 'lucide-react';
 
 interface ProgressRecord {
@@ -34,8 +36,32 @@ interface ChildData {
   userId: string;
 }
 
-// Simplified version without requiring getChildSkills initially
+// Error fallback component
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div className="bg-red-50 p-6 rounded-lg text-center">
+      <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+      <h2 className="text-lg font-semibold text-red-700 mb-2">Something went wrong</h2>
+      <p className="text-red-600 mb-4">{error.message}</p>
+      <button
+        onClick={resetErrorBoundary}
+        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
 export default function ProgressDashboardPage() {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
+      <ProgressDashboardContent />
+    </ErrorBoundary>
+  );
+}
+
+function ProgressDashboardContent() {
   const { currentUser } = useAuth();
   const [children, setChildren] = useState<ChildData[]>([]);
   const [progressData, setProgressData] = useState<Record<string, ProgressRecord[]>>({});

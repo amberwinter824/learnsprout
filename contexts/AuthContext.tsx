@@ -551,48 +551,55 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user ? `User ${user.uid} logged in` : "No user");
       
-      if (user) {
-        try {
-          const userData = await getUserData(user.uid);
-          
-          // Determine active role
-          const userActiveRole = userData?.activeRole || userData?.preferences?.activeRole || userData?.role || 'parent';
-          
-          // Get all roles user has
-          const userRoles = userData?.associatedRoles || [userData?.role || 'parent'];
-          
-          setAvailableRoles(userRoles);
-          setActiveRole(userActiveRole);
-          
-          setCurrentUser({ 
-            ...user, 
-            ...userData,
-            activeRole: userActiveRole
-          } as (User & UserData));
-          
+      try {
+        if (user) {
           try {
-            const token = await user.getIdToken();
-            Cookies.set('token', token, { expires: 7 });
+            const userData = await getUserData(user.uid);
             
-            // Store active role in a cookie for middleware access
-            Cookies.set('role', userActiveRole, { expires: 7 });
-          } catch (tokenError) {
-            console.error("Error setting auth token:", tokenError);
+            // Determine active role
+            const userActiveRole = userData?.activeRole || userData?.preferences?.activeRole || userData?.role || 'parent';
+            
+            // Get all roles user has
+            const userRoles = userData?.associatedRoles || [userData?.role || 'parent'];
+            
+            setAvailableRoles(userRoles);
+            setActiveRole(userActiveRole);
+            
+            setCurrentUser({ 
+              ...user, 
+              ...userData,
+              activeRole: userActiveRole
+            } as (User & UserData));
+            
+            try {
+              const token = await user.getIdToken();
+              Cookies.set('token', token, { expires: 7 });
+              
+              // Store active role in a cookie for middleware access
+              Cookies.set('role', userActiveRole, { expires: 7 });
+            } catch (tokenError) {
+              console.error("Error setting auth token:", tokenError);
+            }
+          } catch (error) {
+            console.error("Error in auth state change handler:", error);
+            // Still set the user even if we couldn't get additional data
+            setCurrentUser(user as (User & UserData));
           }
-        } catch (error) {
-          console.error("Error in auth state change handler:", error);
-          setCurrentUser(user as (User & UserData));
+        } else {
+          setCurrentUser(null);
+          setAvailableRoles([]);
+          setActiveRole('');
+          Cookies.remove('token');
+          Cookies.remove('role');
         }
-      } else {
+      } catch (mainError) {
+        console.error("Critical error in auth state change:", mainError);
+        // Ensure we still set loading to false even if there's an error
         setCurrentUser(null);
-        setAvailableRoles([]);
-        setActiveRole('');
-        Cookies.remove('token');
-        Cookies.remove('role');
+      } finally {
+        setLoading(false);
+        setInitialized(true);
       }
-      
-      setLoading(false);
-      setInitialized(true);
     });
 
     return () => unsubscribe();
