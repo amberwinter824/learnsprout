@@ -39,6 +39,7 @@ interface Activity {
   isHomeSchoolConnection?: boolean;
   timeSlot?: string;
   order?: number;
+  lastObservedDate?: Date | any;
 }
 
 interface Child {
@@ -108,42 +109,50 @@ export default function AllChildrenDailyActivities({
     }
   }, [selectedChildId]);
 
-  // Fetch children first
+  // First hook: Fetch children
   useEffect(() => {
     if (!currentUser) return;
     
     async function fetchChildren() {
       try {
+        setLoading(true);
+        console.log('Fetching children for parent ID:', currentUser?.uid);
+        
         const childrenQuery = query(
           collection(db, 'children'),
-          where('parentId', '==', currentUser.uid),
+          where('parentId', '==', currentUser?.uid || ''),
           orderBy('name')
         );
         
         const childrenSnapshot = await getDocs(childrenQuery);
         
         if (childrenSnapshot.empty) {
+          console.log('No children found for this parent');
           setAllChildren([]);
+          setLoading(false);
           return;
         }
         
+        // Store all children
         const children: Child[] = childrenSnapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name,
           ageGroup: doc.data().ageGroup
         }));
         
+        console.log(`Found ${children.length} children`);
         setAllChildren(children);
       } catch (error) {
         console.error('Error fetching children:', error);
         setError('Failed to load children');
+        setLoading(false);
       }
     }
     
     fetchChildren();
-  }, [currentUser]);
+  }, [currentUser]); // Only depend on currentUser
 
-  // Fetch activities for all children
+  // Second hook: Fetch activities for all children
   useEffect(() => {
     if (!currentUser || allChildren.length === 0) return;
     
@@ -187,7 +196,6 @@ export default function AllChildrenDailyActivities({
             console.log(`No weekly plan found for child ${child.name} for week starting ${weekStartString}`);
             
             // If no plan exists, suggest one activity for this day
-            // First, fetch a random activity appropriate for the child's age group
             try {
               const activitiesQuery = query(
                 collection(db, 'activities'),
@@ -318,10 +326,12 @@ export default function AllChildrenDailyActivities({
           }
           
           // Add to results
-          results.push({
-            child,
-            activities: childActivities
-          });
+          if (childActivities.length > 0) {
+            results.push({
+              child,
+              activities: childActivities
+            });
+          }
         }
         
         setChildActivities(results);
@@ -336,17 +346,11 @@ export default function AllChildrenDailyActivities({
     fetchActivities();
   }, [currentUser, currentDate, filterChild, allChildren]);
 
-  // Fix the handleDateChange function
+  // Fix the date navigation
   const handleDateChange = (days: number) => {
+    console.log(`Changing date by ${days} days from`, format(currentDate, 'yyyy-MM-dd'));
     const newDate = addDays(currentDate, days);
-    console.log(`Changing date from ${format(currentDate, 'yyyy-MM-dd')} to ${format(newDate, 'yyyy-MM-dd')}`);
-    
-    // Force a complete reset of state to trigger a full refresh
-    setLoading(true);
-    setError(null);
-    setChildActivities([]);
-    
-    // Then update the date state
+    console.log(`New date:`, format(newDate, 'yyyy-MM-dd'));
     setCurrentDate(newDate);
   };
 
@@ -474,7 +478,7 @@ export default function AllChildrenDailyActivities({
           </button>
           
           <div className="w-36 text-center mx-1 font-medium">
-            {formatDateDisplay(currentDate)}
+            {isToday(currentDate) ? 'Today' : format(currentDate, 'EEEE, MMMM d')}
           </div>
           
           <button

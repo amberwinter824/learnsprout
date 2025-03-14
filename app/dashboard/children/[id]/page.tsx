@@ -15,8 +15,7 @@ import DailyActivitiesDashboard from '@/app/components/parent/DailyActivitiesDas
 import ObservationList from '@/app/components/ObservationList';
 import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
 import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
-import WeeklyPlanRecommendation from '@/app/components/WeeklyPlanRecommendation';
-import ChildSkillProgress from '@/app/components/ChildSkillProgress';
+import ProgressiveSkillPath from '@/app/components/ProgressiveSkillPath';
 
 // Icon imports
 import { 
@@ -336,20 +335,6 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
         
         {/* Sidebar - 1/3 width on large screens */}
         <div className="space-y-6">
-          {/* Weekly Plan Recommendation */}
-          <WeeklyPlanRecommendation 
-            childId={childId}
-            childName={child.name}
-            userId={currentUser?.uid}
-            childData={child}
-          />
-          
-          {/* Simplified weekly view for sidebar */}
-          <SimplifiedWeeklyView
-            childId={childId}
-            childName={child.name}
-          />
-          
           {/* School Connection */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200 flex items-center">
@@ -387,7 +372,10 @@ export default function ChildDetailPage({ params }: ChildDetailPageProps) {
       
       {/* Skills Progress - Full width */}
       <div className="mt-6">
-        <ChildSkillProgress childId={childId} />
+        <ProgressiveSkillPath 
+          childId={childId} 
+          ageGroup={child.ageGroup} 
+        />
       </div>
     </div>
   );

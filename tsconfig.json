@@ -53,6 +53,7 @@
     "app/components/parent/ImprovedParentDashboard.tsx",
     "app/components/parent/MultiChildDailyDashboard.tsx",
     "app/components/VisualSkillProgress.tsx",
-    "app/components/SimplifiedSkillsDashboard.tsx"
+    "app/components/SimplifiedSkillsDashboard.tsx",
+    "app/components/parent/SimplifiedWeeklyView.tsx"
   ]
 }
