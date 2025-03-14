@@ -96,6 +96,33 @@ import {
     [key: string]: any;
   }
   
+  // Update ChildSkill interface
+  export interface ChildSkill extends DocumentData {
+    id?: string;
+    childId: string;
+    skillId: string;
+    skillName?: string;
+    category?: string;
+    status: 'not_started' | 'emerging' | 'developing' | 'mastered';
+    lastAssessed?: any;
+    notes?: string;
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+  }
+  
+  // Add ProgressRecord interface
+  export interface ProgressRecord {
+    id?: string;
+    childId: string;
+    activityId: string;
+    activityTitle?: string;
+    completionStatus: string;
+    engagementLevel?: string;
+    date: any;
+    notes?: string;
+    createdAt?: any;
+  }
+  
   // Helper function to convert dates to strings
   function formatDateToString(date: Date | Timestamp | string | undefined): string {
     if (!date) return '';
@@ -377,4 +404,29 @@ import {
     
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeeklyPlanData))[0] || null;
+  }
+  
+  // Function to get child's skills
+  export async function getChildSkills(childId: string): Promise<ChildSkill[]> {
+    try {
+      const q = query(
+        collection(db, 'childSkills'),
+        where('childId', '==', childId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const skills: ChildSkill[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        skills.push({
+          id: doc.id,
+          ...doc.data()
+        } as ChildSkill);
+      });
+      
+      return skills;
+    } catch (error) {
+      console.error('Error fetching child skills:', error);
+      throw error;
+    }
   }
