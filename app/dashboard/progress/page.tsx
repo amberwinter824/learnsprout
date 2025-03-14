@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserChildren, getChildProgress } from '@/lib/dataService';
+import { getUserChildren, getChildProgress, getChildSkills } from '@/lib/dataService';
 import { 
   BarChart2, 
   Users, 
@@ -48,6 +48,16 @@ interface Activity {
   skillsAddressed?: string[];
 }
 
+interface ChildSkill {
+  id?: string;
+  childId: string;
+  skillId: string;
+  skillName?: string;
+  category?: string;
+  status: 'not_started' | 'emerging' | 'developing' | 'mastered';
+  lastAssessed?: any;
+}
+
 // Error fallback component
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
@@ -87,6 +97,7 @@ function ProgressDashboardContent() {
     engagementLevel: 'high',
     date: new Date().toISOString().slice(0, 10)
   });
+  const [skillsData, setSkillsData] = useState<Record<string, ChildSkill[]>>({});
 
   useEffect(() => {
     async function fetchData() {
@@ -114,33 +125,54 @@ function ProgressDashboardContent() {
           setChildren(validChildren);
           console.log("Children data:", validChildren);
 
-          // Fetch progress for each child
-          const progressPromises = validChildren.map(async (child) => {
+          // Fetch progress and skills for each child
+          const childDataPromises = validChildren.map(async (child) => {
             try {
-              console.log("Fetching progress for child:", child.id);
+              console.log(`Fetching data for child: ${child.id}`);
+              
+              // Fetch progress records
               const progress = await getChildProgress(child.id);
-              return { childId: child.id, progress };
+              
+              // Fetch skills data
+              const skills = await getChildSkills(child.id);
+              console.log(`Found ${skills.length} skills for child ${child.id}`);
+              
+              return { 
+                childId: child.id, 
+                progress,
+                skills 
+              };
             } catch (childError) {
-              console.error(`Error fetching progress for child ${child.id}:`, childError);
-              return { childId: child.id, progress: [] };
+              console.error(`Error fetching data for child ${child.id}:`, childError);
+              return { 
+                childId: child.id, 
+                progress: [],
+                skills: [] 
+              };
             }
           });
 
-          const progressResults = await Promise.allSettled(progressPromises);
-          const progressByChild: Record<string, ProgressRecord[]> = {};
+          const results = await Promise.allSettled(childDataPromises);
           
-          progressResults.forEach((result, index) => {
+          // Organize data by child
+          const progressByChild: Record<string, ProgressRecord[]> = {};
+          const skillsByChild: Record<string, ChildSkill[]> = {};
+          
+          results.forEach((result, index) => {
             const childId = validChildren[index].id;
             if (result.status === 'fulfilled') {
               progressByChild[childId] = result.value.progress || [];
+              skillsByChild[childId] = result.value.skills || [];
             } else {
-              console.error(`Failed to fetch progress for child ${childId}:`, result.reason);
+              console.error(`Failed to fetch data for child ${childId}:`, result.reason);
               progressByChild[childId] = [];
+              skillsByChild[childId] = [];
             }
           });
 
           setProgressData(progressByChild);
-          console.log("Progress data loaded:", Object.keys(progressByChild).length);
+          setSkillsData(skillsByChild);
+          console.log("Data loaded for children:", Object.keys(progressByChild).length);
         } catch (error: unknown) {
           console.error('Error fetching data:', error);
           setError('Error fetching data: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -233,6 +265,38 @@ function ProgressDashboardContent() {
     }
   };
 
+  const getSkillsSummary = (childId: string) => {
+    const skills = skillsData[childId] || [];
+    
+    const total = skills.length;
+    const mastered = skills.filter(s => s.status === 'mastered').length;
+    const developing = skills.filter(s => s.status === 'developing').length;
+    const emerging = skills.filter(s => s.status === 'emerging').length;
+    const notStarted = skills.filter(s => s.status === 'not_started').length;
+    
+    return { total, mastered, developing, emerging, notStarted };
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch(status) {
+      case 'mastered': return 'Mastered';
+      case 'developing': return 'Developing';
+      case 'emerging': return 'Emerging';
+      case 'not_started': return 'Not Started';
+      default: return status;
+    }
+  };
+
+  const getSkillStatusColor = (status: string) => {
+    switch(status) {
+      case 'mastered': return 'bg-green-100 text-green-800';
+      case 'developing': return 'bg-amber-100 text-amber-800';
+      case 'emerging': return 'bg-blue-100 text-blue-800';
+      case 'not_started': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -275,6 +339,7 @@ function ProgressDashboardContent() {
           {children.map(child => {
             const progressSummary = getProgressSummary(child.id);
             const recentRecords = getRecentRecords(child.id);
+            const skillsSummary = getSkillsSummary(child.id);
             
             return (
               <div key={child.id} className="bg-white shadow rounded-lg overflow-hidden">
@@ -308,7 +373,7 @@ function ProgressDashboardContent() {
                 </div>
                 
                 <div className="px-4 py-5 sm:p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Activities Summary */}
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
@@ -331,6 +396,32 @@ function ProgressDashboardContent() {
                         <div className="bg-blue-50 p-3 rounded">
                           <p className="text-xl font-semibold text-blue-600">{progressSummary.started}</p>
                           <p className="text-xs text-gray-500">Started</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Skills Development */}
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
+                        <TrendingUp className="h-4 w-4 mr-1 text-emerald-500" />
+                        Skills Development
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-green-50 p-3 rounded">
+                          <p className="text-xl font-semibold text-green-600">{skillsSummary.mastered}</p>
+                          <p className="text-xs text-gray-500">Mastered</p>
+                        </div>
+                        <div className="bg-amber-50 p-3 rounded">
+                          <p className="text-xl font-semibold text-amber-600">{skillsSummary.developing}</p>
+                          <p className="text-xs text-gray-500">Developing</p>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded">
+                          <p className="text-xl font-semibold text-blue-600">{skillsSummary.emerging}</p>
+                          <p className="text-xs text-gray-500">Emerging</p>
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded">
+                          <p className="text-xl font-semibold text-gray-600">{skillsSummary.notStarted}</p>
+                          <p className="text-xs text-gray-500">Not Started</p>
                         </div>
                       </div>
                     </div>

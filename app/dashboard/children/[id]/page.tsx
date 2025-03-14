@@ -23,7 +23,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { format, parseISO, isAfter, subMonths, addDays, startOfWeek, isToday } from 'date-fns';
-import ProgressiveSkillPath from '@/components/ProgressiveSkillPath';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ChildSkill, ProgressRecord } from '@/lib/dataService';
