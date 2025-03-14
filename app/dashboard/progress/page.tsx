@@ -44,6 +44,9 @@ export default function ProgressDashboardPage() {
 
   useEffect(() => {
     async function fetchData() {
+      console.log("Progress page: Starting data fetch");
+      console.log("Current user:", currentUser);
+      
       if (currentUser?.uid) {
         try {
           console.log("Fetching children for user:", currentUser.uid);

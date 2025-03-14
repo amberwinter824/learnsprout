@@ -598,6 +598,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return () => unsubscribe();
   }, [isBrowser, router]);
 
+  useEffect(() => {
+    if (currentUser) {
+      console.log("AuthContext: User is authenticated", currentUser.uid);
+    } else {
+      console.log("AuthContext: No authenticated user");
+    }
+  }, [currentUser]);
+
   const value: AuthContextType = {
     currentUser,
     signup,

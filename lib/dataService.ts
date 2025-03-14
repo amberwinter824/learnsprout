@@ -231,6 +231,9 @@ import {
         return [];
       }
       
+      // Add more detailed logging
+      console.log(`Querying 'children' collection for userId: ${userId}`);
+      
       const q = query(
         collection(db, "children"), 
         where("userId", "==", userId),
@@ -238,6 +241,43 @@ import {
       );
       
       const querySnapshot = await getDocs(q);
+      console.log(`Query returned ${querySnapshot.docs.length} documents`);
+      
+      // If no results, try with parentId instead
+      if (querySnapshot.docs.length === 0) {
+        console.log(`No children found with userId, trying parentId instead`);
+        const parentIdQuery = query(
+          collection(db, "children"),
+          where("parentId", "==", userId)
+        );
+        
+        const parentIdSnapshot = await getDocs(parentIdQuery);
+        console.log(`parentId query returned ${parentIdSnapshot.docs.length} documents`);
+        
+        if (parentIdSnapshot.docs.length > 0) {
+          const children: ChildData[] = [];
+          parentIdSnapshot.forEach(doc => {
+            const data = doc.data();
+            children.push({
+              id: doc.id,
+              name: data.name || 'Unnamed Child',
+              userId: userId,
+              ageGroup: data.ageGroup || '',
+              birthDate: data.birthDate || null,
+              birthDateString: data.birthDateString || '',
+              active: data.active !== false,
+              interests: data.interests || [],
+              notes: data.notes || '',
+              ...data
+            });
+          });
+          
+          console.log(`Found ${children.length} children using parentId`);
+          return children;
+        }
+      }
+      
+      // Continue with original logic if userId query returned results
       const children: ChildData[] = [];
       
       querySnapshot.forEach(doc => {
@@ -249,7 +289,7 @@ import {
           ageGroup: data.ageGroup || '',
           birthDate: data.birthDate || null,
           birthDateString: data.birthDateString || '',
-          active: data.active !== false, // Default to active if not specified
+          active: data.active !== false,
           interests: data.interests || [],
           notes: data.notes || '',
           ...data
@@ -260,7 +300,6 @@ import {
       return children;
     } catch (error) {
       console.error(`Error fetching children for user ${userId}:`, error);
-      // Return empty array instead of throwing error to prevent breaking the UI
       return [];
     }
   }
