@@ -223,14 +223,46 @@ import {
   }
   
   export async function getUserChildren(userId: string): Promise<ChildData[]> {
-    const q = query(
-      collection(db, "children"), 
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
-    );
-    
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChildData));
+    try {
+      console.log(`Fetching children for user ID: ${userId}`);
+      
+      if (!userId) {
+        console.warn('No userId provided to getUserChildren');
+        return [];
+      }
+      
+      const q = query(
+        collection(db, "children"), 
+        where("userId", "==", userId),
+        orderBy("name", "asc")
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const children: ChildData[] = [];
+      
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        children.push({
+          id: doc.id,
+          name: data.name || 'Unnamed Child',
+          userId: userId,
+          ageGroup: data.ageGroup || '',
+          birthDate: data.birthDate || null,
+          birthDateString: data.birthDateString || '',
+          active: data.active !== false, // Default to active if not specified
+          interests: data.interests || [],
+          notes: data.notes || '',
+          ...data
+        });
+      });
+      
+      console.log(`Found ${children.length} children for user ID: ${userId}`);
+      return children;
+    } catch (error) {
+      console.error(`Error fetching children for user ${userId}:`, error);
+      // Return empty array instead of throwing error to prevent breaking the UI
+      return [];
+    }
   }
   
   // ---------- Activity Functions ----------
@@ -331,15 +363,46 @@ import {
     await deleteDoc(doc(db, "progress", progressId));
   }
   
-  export async function getChildProgress(childId: string): Promise<ProgressData[]> {
-    const q = query(
-      collection(db, "progress"), 
-      where("childId", "==", childId),
-      orderBy("createdAt", "desc")
-    );
-    
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProgressData));
+  export async function getChildProgress(childId: string): Promise<ProgressRecord[]> {
+    try {
+      console.log(`Fetching progress for child ID: ${childId}`);
+      
+      if (!childId) {
+        console.warn('No childId provided to getChildProgress');
+        return [];
+      }
+      
+      const q = query(
+        collection(db, 'progressRecords'),
+        where('childId', '==', childId),
+        orderBy('date', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const progress: ProgressRecord[] = [];
+      
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        progress.push({
+          id: doc.id,
+          childId: childId,
+          activityId: data.activityId || '',
+          activityTitle: data.activityTitle || 'Unnamed Activity',
+          completionStatus: data.completionStatus || 'completed',
+          engagementLevel: data.engagementLevel || 'medium',
+          date: data.date,
+          notes: data.notes || '',
+          ...data
+        });
+      });
+      
+      console.log(`Found ${progress.length} progress records for child ID: ${childId}`);
+      return progress;
+    } catch (error) {
+      console.error(`Error fetching progress for child ${childId}:`, error);
+      // Return empty array instead of throwing error to prevent breaking the UI
+      return [];
+    }
   }
   
   // ---------- Weekly Plan Functions ----------
@@ -406,9 +469,16 @@ import {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeeklyPlanData))[0] || null;
   }
   
-  // Function to get child's skills
+  // Function to get child's skills with detailed information
   export async function getChildSkills(childId: string): Promise<ChildSkill[]> {
     try {
+      console.log(`Fetching skills for child ID: ${childId}`);
+      
+      if (!childId) {
+        console.warn('No childId provided to getChildSkills');
+        return [];
+      }
+      
       const q = query(
         collection(db, 'childSkills'),
         where('childId', '==', childId)
@@ -416,17 +486,56 @@ import {
       
       const querySnapshot = await getDocs(q);
       const skills: ChildSkill[] = [];
+      const skillDetailsPromises: Promise<void>[] = [];
       
-      querySnapshot.forEach((doc) => {
-        skills.push({
-          id: doc.id,
-          ...doc.data()
-        } as ChildSkill);
+      querySnapshot.forEach((docSnapshot) => {
+        const skillData = docSnapshot.data();
+        const skill: ChildSkill = {
+          id: docSnapshot.id,
+          ...skillData,
+          childId,
+          skillId: skillData.skillId,
+          status: skillData.status || 'not_started'
+        };
+        
+        skills.push(skill);
+        
+        // Fetch additional skill details if skillId exists
+        if (skillData.skillId) {
+          const skillDocRef = doc(db, 'developmentalSkills', skillData.skillId);
+          const promise = getDoc(skillDocRef)
+            .then(skillDoc => {
+              if (skillDoc.exists()) {
+                const skillDetails = skillDoc.data() as DocumentData;
+                // Enhance the skill object with details from the developmentalSkills collection
+                const skillIndex = skills.findIndex(s => s.id === skill.id);
+                if (skillIndex !== -1) {
+                  skills[skillIndex] = {
+                    ...skills[skillIndex],
+                    skillName: skillDetails.name || 'Unnamed Skill',
+                    category: skillDetails.area || skillDetails.category || 'Uncategorized',
+                    description: skillDetails.description
+                  };
+                }
+              }
+            })
+            .catch(err => {
+              console.warn(`Error fetching details for skill ${skillData.skillId}:`, err);
+              // Continue without the details rather than failing the whole operation
+            });
+          
+          skillDetailsPromises.push(promise);
+        }
       });
       
+      // Wait for all skill details to be fetched
+      await Promise.allSettled(skillDetailsPromises);
+      
+      console.log(`Found ${skills.length} skills for child ID: ${childId}`);
       return skills;
     } catch (error) {
       console.error('Error fetching child skills:', error);
-      throw error;
+      // Return empty array instead of throwing error to prevent breaking the UI
+      return [];
     }
   }

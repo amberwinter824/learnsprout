@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserChildren, getChildProgress, getChildSkills, ChildData as ImportedChildData } from '@/lib/dataService';
+import { getUserChildren, getChildProgress } from '@/lib/dataService';
 import { 
   BarChart2, 
   Users, 
@@ -26,26 +26,19 @@ interface ProgressRecord {
   notes?: string;
 }
 
-interface ChildSkill {
-  id?: string;
-  childId: string;
-  skillId: string;
-  status: 'not_started' | 'emerging' | 'developing' | 'mastered';
-  lastAssessed?: any;
-}
-
 interface ChildData {
   id: string;
   name: string;
   ageGroup?: string;
   birthDate?: any;
+  userId: string;
 }
 
+// Simplified version without requiring getChildSkills initially
 export default function ProgressDashboardPage() {
   const { currentUser } = useAuth();
   const [children, setChildren] = useState<ChildData[]>([]);
   const [progressData, setProgressData] = useState<Record<string, ProgressRecord[]>>({});
-  const [skillsData, setSkillsData] = useState<Record<string, ChildSkill[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -53,51 +46,61 @@ export default function ProgressDashboardPage() {
     async function fetchData() {
       if (currentUser?.uid) {
         try {
+          console.log("Fetching children for user:", currentUser.uid);
           // Fetch all children
           const childrenData = await getUserChildren(currentUser.uid);
           
-          // Filter out any children without IDs and convert to our local ChildData type
+          // Filter out any children without IDs
           const validChildren = childrenData
-            .filter((child): child is ImportedChildData & { id: string } => 
-              typeof child.id === 'string')
+            .filter((child): child is ChildData => 
+              typeof child.id === 'string' && Boolean(child.id) && typeof child.userId === 'string')
             .map(child => ({
               id: child.id,
               name: child.name || 'Unnamed Child',
+              userId: child.userId,
               ageGroup: child.ageGroup,
               birthDate: child.birthDate
             }));
           
           setChildren(validChildren);
+          console.log("Children data:", validChildren);
 
-          // Fetch progress and skills for each child
-          const dataPromises = validChildren.map(async (child) => {
-            const progress = await getChildProgress(child.id);
-            const skills = await getChildSkills(child.id);
-            return { 
-              childId: child.id, 
-              progress,
-              skills 
-            };
+          // Fetch progress for each child
+          const progressPromises = validChildren.map(async (child) => {
+            try {
+              console.log("Fetching progress for child:", child.id);
+              const progress = await getChildProgress(child.id);
+              return { childId: child.id, progress };
+            } catch (childError) {
+              console.error(`Error fetching progress for child ${child.id}:`, childError);
+              return { childId: child.id, progress: [] };
+            }
           });
 
-          const results = await Promise.all(dataPromises);
-          
-          // Organize data by child
+          const progressResults = await Promise.allSettled(progressPromises);
           const progressByChild: Record<string, ProgressRecord[]> = {};
-          const skillsByChild: Record<string, ChildSkill[]> = {};
           
-          results.forEach(({ childId, progress, skills }) => {
-            progressByChild[childId] = progress;
-            skillsByChild[childId] = skills;
+          progressResults.forEach((result, index) => {
+            const childId = validChildren[index].id;
+            if (result.status === 'fulfilled') {
+              progressByChild[childId] = result.value.progress || [];
+            } else {
+              console.error(`Failed to fetch progress for child ${childId}:`, result.reason);
+              progressByChild[childId] = [];
+            }
           });
 
           setProgressData(progressByChild);
-          setSkillsData(skillsByChild);
-        } catch (error: any) {
-          setError('Error fetching data: ' + error.message);
+          console.log("Progress data loaded:", Object.keys(progressByChild).length);
+        } catch (error: unknown) {
+          console.error('Error fetching data:', error);
+          setError('Error fetching data: ' + (error instanceof Error ? error.message : 'Unknown error'));
         } finally {
           setLoading(false);
         }
+      } else {
+        console.log("No user or UID available");
+        setLoading(false);
       }
     }
 
@@ -116,18 +119,6 @@ export default function ProgressDashboardPage() {
     return { total, completed, inProgress, started };
   };
 
-  const getSkillsSummary = (childId: string) => {
-    const skills = skillsData[childId] || [];
-    
-    const total = skills.length;
-    const mastered = skills.filter(s => s.status === 'mastered').length;
-    const developing = skills.filter(s => s.status === 'developing').length;
-    const emerging = skills.filter(s => s.status === 'emerging').length;
-    const notStarted = skills.filter(s => s.status === 'not_started').length;
-    
-    return { total, mastered, developing, emerging, notStarted };
-  };
-
   const getRecentRecords = (childId: string) => {
     const records = progressData[childId] || [];
     return records.slice(0, 3); // Just show 3 most recent
@@ -135,13 +126,20 @@ export default function ProgressDashboardPage() {
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return '';
-    const date = timestamp.seconds 
-      ? new Date(timestamp.seconds * 1000) 
-      : new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    });
+    
+    try {
+      const date = timestamp.seconds 
+        ? new Date(timestamp.seconds * 1000) 
+        : new Date(timestamp);
+      
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   const getCompletionStatusLabel = (status: string) => {
@@ -203,7 +201,6 @@ export default function ProgressDashboardPage() {
         <div className="space-y-8">
           {children.map(child => {
             const progressSummary = getProgressSummary(child.id);
-            const skillsSummary = getSkillsSummary(child.id);
             const recentRecords = getRecentRecords(child.id);
             
             return (
@@ -221,13 +218,13 @@ export default function ProgressDashboardPage() {
                     </div>
                     <div className="flex space-x-3">
                       <Link
-                        href={`/dashboard/children/${child.id}/progress`}
+                        href={`/dashboard/children/${child.id}`}
                         className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200"
                       >
                         View Details
                       </Link>
                       <Link
-                        href={`/dashboard/children/${child.id}/progress?showAddRecord=true`}
+                        href={`/dashboard/children/${child.id}?showAddRecord=true`}
                         className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                       >
                         <Plus className="h-4 w-4 mr-1" />
@@ -238,7 +235,7 @@ export default function ProgressDashboardPage() {
                 </div>
                 
                 <div className="px-4 py-5 sm:p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Activities Summary */}
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
@@ -261,32 +258,6 @@ export default function ProgressDashboardPage() {
                         <div className="bg-blue-50 p-3 rounded">
                           <p className="text-xl font-semibold text-blue-600">{progressSummary.started}</p>
                           <p className="text-xs text-gray-500">Started</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Skills Summary */}
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
-                        <TrendingUp className="h-4 w-4 mr-1 text-emerald-500" />
-                        Skills Development
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-green-50 p-3 rounded">
-                          <p className="text-xl font-semibold text-green-600">{skillsSummary.mastered}</p>
-                          <p className="text-xs text-gray-500">Mastered</p>
-                        </div>
-                        <div className="bg-blue-50 p-3 rounded">
-                          <p className="text-xl font-semibold text-blue-600">{skillsSummary.developing}</p>
-                          <p className="text-xs text-gray-500">Developing</p>
-                        </div>
-                        <div className="bg-amber-50 p-3 rounded">
-                          <p className="text-xl font-semibold text-amber-600">{skillsSummary.emerging}</p>
-                          <p className="text-xs text-gray-500">Emerging</p>
-                        </div>
-                        <div className="bg-gray-50 p-3 rounded">
-                          <p className="text-xl font-semibold text-gray-600">{skillsSummary.notStarted}</p>
-                          <p className="text-xs text-gray-500">Not Started</p>
                         </div>
                       </div>
                     </div>
@@ -317,50 +288,22 @@ export default function ProgressDashboardPage() {
                               </span>
                             </div>
                           ))}
+                          {progressSummary.total > 3 && (
+                            <div className="text-center mt-2">
+                              <Link 
+                                href={`/dashboard/children/${child.id}`} 
+                                className="text-sm text-emerald-600 hover:text-emerald-700"
+                              >
+                                View all {progressSummary.total} records
+                              </Link>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="text-center py-4 bg-gray-50 rounded">
                           <p className="text-sm text-gray-500">No progress records yet</p>
                         </div>
                       )}
-                    </div>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="mt-6">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-sm font-medium text-gray-700">Overall Skills Progress</h4>
-                      <p className="text-xs text-gray-500">
-                        {skillsSummary.mastered} of {skillsSummary.total} skills mastered
-                      </p>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-emerald-500 h-2.5 rounded-full" 
-                        style={{ 
-                          width: `${skillsSummary.total > 0 
-                            ? (skillsSummary.mastered / skillsSummary.total) * 100 
-                            : 0}%` 
-                        }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-emerald-500 rounded-full mr-1"></span>
-                        <span>Mastered</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-blue-500 rounded-full mr-1"></span>
-                        <span>Developing</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-amber-500 rounded-full mr-1"></span>
-                        <span>Emerging</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-gray-300 rounded-full mr-1"></span>
-                        <span>Not Started</span>
-                      </div>
                     </div>
                   </div>
                 </div>
