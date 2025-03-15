@@ -332,20 +332,12 @@ export default function UserSettingsPage() {
                   <p className="text-sm text-gray-700 mb-2">
                     You're not part of a family yet
                   </p>
-                  <div className="space-x-2">
-                    <Link 
-                      href="/dashboard/family/create" 
-                      className="inline-flex items-center px-4 py-2 border border-emerald-300 rounded-md text-emerald-700 bg-white hover:bg-emerald-50"
-                    >
-                      Create Family
-                    </Link>
-                    <Link 
-                      href="/dashboard/family/join" 
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      Join Family
-                    </Link>
-                  </div>
+                  <Link 
+                    href="/dashboard/family" 
+                    className="inline-flex items-center px-4 py-2 border border-emerald-300 rounded-md text-emerald-700 bg-white hover:bg-emerald-50"
+                  >
+                    Manage Family
+                  </Link>
                 </div>
               )}
               <p className="text-xs text-gray-500 mt-2">
