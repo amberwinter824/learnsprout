@@ -294,10 +294,12 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
       'mathematics': 'Mathematics',
       'cultural': 'Cultural',
       'social_emotional': 'Social & Emotional',
-      'physical': 'Physical'
+      'physical': 'Physical',
+      'cognitive': 'Cognitive',
+      'motor': 'Motor',
     };
     
-    return areaMap[area] || area;
+    return areaMap[area] || area.charAt(0).toUpperCase() + area.slice(1).replace(/_/g, ' ');
   };
   
   const getAreaColor = (area: string) => {
