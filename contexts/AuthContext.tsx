@@ -15,9 +15,18 @@ import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firest
 import { auth, db } from '../lib/firebase';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { 
+  createFamily as createFamilyService,
+  acceptFamilyInvitation,
+  createFamilyInvitation,
+  getFamilyMembers as getFamilyMembersService,
+  removeFromFamily,
+  hasChildAccess as checkChildAccess
+} from '../lib/familyService';
 
 // Define user data interface with role support
 export interface UserData {
+  uid?: string;
   name?: string;
   email?: string;
   createdAt?: any;
@@ -37,6 +46,12 @@ export interface UserData {
       scheduleByDay?: {[key: string]: number};
     };
   };
+  
+  // New family fields
+  familyId?: string;         // ID of the family this user belongs to (if any)
+  familyRole?: "owner" | "member"; // Role within the family
+  familyName?: string;       // Family name (only needed for owner)
+  childrenAccess?: string[]; // IDs of children this user can access
 }
 
 // Define permissions
@@ -67,6 +82,14 @@ export interface AuthContextType {
   activeRole: string; // Currently active role
   switchRole: (role: string) => Promise<void>; // Function to switch active role
   updateUserProfile: (profileData: { displayName?: string; photoURL?: string }) => Promise<boolean>;
+  
+  // New family-related methods
+  createFamily: (familyName: string) => Promise<string>;
+  joinFamily: (inviteCode: string) => Promise<boolean>;
+  inviteToFamily: (email: string) => Promise<string>;
+  getFamilyMembers: () => Promise<UserData[]>;
+  leaveFamily: () => Promise<boolean>;
+  hasChildAccess: (childId: string) => Promise<boolean>;
 }
 
 // Create a default context value with no-op functions
@@ -86,7 +109,15 @@ const defaultContext: AuthContextType = {
   availableRoles: [],
   activeRole: '',
   switchRole: async () => { throw new Error('AuthProvider not initialized'); },
-  updateUserProfile: async () => false
+  updateUserProfile: async () => false,
+  
+  // New family-related methods with default implementations
+  createFamily: async () => { throw new Error('AuthProvider not initialized'); },
+  joinFamily: async () => { throw new Error('AuthProvider not initialized'); },
+  inviteToFamily: async () => { throw new Error('AuthProvider not initialized'); },
+  getFamilyMembers: async () => { throw new Error('AuthProvider not initialized'); },
+  leaveFamily: async () => { throw new Error('AuthProvider not initialized'); },
+  hasChildAccess: async () => { throw new Error('AuthProvider not initialized'); }
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContext);
@@ -539,6 +570,141 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const createFamily = async (familyName: string): Promise<string> => {
+    if (!currentUser) {
+      throw new Error("No user is logged in");
+    }
+    
+    try {
+      const familyId = await createFamilyService(currentUser.uid, familyName);
+      
+      // Update current user in state
+      setCurrentUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          familyId,
+          familyRole: 'owner',
+          familyName
+        } as (User & UserData);
+      });
+      
+      return familyId;
+    } catch (error) {
+      console.error("Error creating family:", error);
+      throw error;
+    }
+  };
+
+  const joinFamily = async (inviteCode: string): Promise<boolean> => {
+    if (!currentUser) {
+      throw new Error("No user is logged in");
+    }
+    
+    try {
+      const success = await acceptFamilyInvitation(currentUser.uid, inviteCode);
+      
+      // If successful, update user data
+      if (success) {
+        // Refresh user data
+        const userData = await getUserData(currentUser.uid);
+        
+        setCurrentUser(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            ...userData
+          } as (User & UserData);
+        });
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("Error joining family:", error);
+      throw error;
+    }
+  };
+
+  const inviteToFamily = async (email: string): Promise<string> => {
+    if (!currentUser) {
+      throw new Error("No user is logged in");
+    }
+    
+    if (!currentUser.familyId) {
+      throw new Error("You are not part of a family");
+    }
+    
+    try {
+      const inviteCode = await createFamilyInvitation(
+        currentUser.uid,
+        currentUser.familyId,
+        email
+      );
+      
+      return inviteCode;
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      throw error;
+    }
+  };
+
+  const getFamilyMembers = async (): Promise<UserData[]> => {
+    if (!currentUser || !currentUser.familyId) {
+      return [];
+    }
+    
+    try {
+      return await getFamilyMembersService(currentUser.familyId);
+    } catch (error) {
+      console.error("Error getting family members:", error);
+      return [];
+    }
+  };
+
+  const leaveFamily = async (): Promise<boolean> => {
+    if (!currentUser || !currentUser.familyId) {
+      throw new Error("Not part of a family");
+    }
+    
+    try {
+      const isOwner = currentUser.familyRole === 'owner';
+      const success = await removeFromFamily(
+        currentUser.familyId,
+        currentUser.uid,
+        isOwner
+      );
+      
+      if (success) {
+        // Update local state
+        setCurrentUser(prev => {
+          if (!prev) return null;
+          const updated = { ...prev };
+          delete updated.familyId;
+          delete updated.familyRole;
+          delete updated.familyName;
+          return updated as (User & UserData);
+        });
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("Error leaving family:", error);
+      throw error;
+    }
+  };
+
+  // Function to check if the current user has access to a specific child
+  const hasChildAccess = async (childId: string): Promise<boolean> => {
+    if (!currentUser) return false;
+    
+    try {
+      return await checkChildAccess(currentUser.uid, childId);
+    } catch (error) {
+      console.error("Error checking child access:", error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     console.log("AuthProvider useEffect running");
     
@@ -629,7 +795,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     availableRoles,
     activeRole,
     switchRole,
-    updateUserProfile
+    updateUserProfile,
+    
+    // New family-related methods
+    createFamily,
+    joinFamily,
+    inviteToFamily,
+    getFamilyMembers,
+    leaveFamily,
+    hasChildAccess
   };
 
   console.log("AuthProvider rendering with loading:", loading, "activeRole:", activeRole);

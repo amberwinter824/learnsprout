@@ -26,6 +26,7 @@ import {
   Play
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import ChildFamilyAccess from '@/app/components/ChildFamilyAccess';
 
 // Define interfaces
 interface Child {
@@ -36,6 +37,7 @@ interface Child {
   interests?: string[];
   notes?: string;
   active?: boolean;
+  familyId: string;
 }
 
 interface ActivityRecord {
@@ -678,6 +680,16 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
             </Link>
           </div>
         </div>
+        
+        {child && (
+          <div className="mt-4">
+            <ChildFamilyAccess 
+              childId={child.id} 
+              childName={child.name} 
+              familyId={child.familyId}
+            />
+          </div>
+        )}
         
         {child.interests && child.interests.length > 0 && (
           <div className="mt-4">

@@ -14,12 +14,13 @@ export async function middleware(request: NextRequest) {
     path === '/reset-password' ||
     path === '/';
   
-  // Define protected paths - add 'view' path to protected paths
+  // Define protected paths - add family paths to protected paths
   const isProtectedPath = 
     path.startsWith('/dashboard') || 
     path.startsWith('/children') || 
     path.startsWith('/activities') ||
-    path.startsWith('/view');
+    path.startsWith('/view') ||
+    path.startsWith('/family');  // Add family paths
   
   // Define role-specific paths
   const isAdminPath = path.startsWith('/admin');
@@ -33,7 +34,11 @@ export async function middleware(request: NextRequest) {
   // For protected paths: if no token, redirect to login
   if (isProtectedPath && !token) {
     console.log(`Middleware: No token for protected path ${path}, redirecting to login`);
-    return NextResponse.redirect(new URL('/login', request.url));
+    
+    // Store the original URL to redirect back after login
+    const url = new URL('/login', request.url);
+    url.searchParams.set('redirect', request.nextUrl.pathname);
+    return NextResponse.redirect(url);
   }
   
   // For role-specific paths: check both token and role
@@ -91,6 +96,7 @@ export const config = {
     '/admin/:path*',
     '/educator/:path*',
     '/specialist/:path*',
-    '/view/:path*'  // Add the view path to the matcher
+    '/view/:path*',
+    '/family/:path*'  // Add family paths to the matcher
   ],
 };

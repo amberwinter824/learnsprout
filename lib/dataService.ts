@@ -17,6 +17,7 @@ import {
   } from 'firebase/firestore';
   import { db } from './firebase';
   import offlineStorage from './offlineStorage';
+  import { addChildToFamily } from './familyService';
   
   interface UserData extends DocumentData {
     id?: string;
@@ -32,6 +33,7 @@ import {
     birthDateString?: string; // Use string format for birth dates
     parentId?: string;
     userId: string;
+    familyId?: string;
     ageGroup?: string;
     active?: boolean;
     interests?: string[];
@@ -162,7 +164,10 @@ import {
   }
   
   // ---------- Child Functions ----------
-  export async function createChild(userId: string, childData: ChildData): Promise<string> {
+  export async function createChild(
+    userId: string, 
+    childData: Omit<ChildData, 'id' | 'userId'> & { familyId?: string }
+  ): Promise<string> {
     // Add debugging logs
     console.log("Creating child with user ID:", userId);
     console.log("Child data:", childData);
@@ -173,13 +178,32 @@ import {
     }
     
     try {
+      // Check if the user belongs to a family
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      let familyId = childData.familyId;
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // If no family ID was provided but the user belongs to a family,
+        // use the user's family ID
+        if (!familyId && userData.familyId) {
+          familyId = userData.familyId;
+        }
+      }
+      
       const childRef = await addDoc(collection(db, "children"), {
         ...childData,
-        parentId: userId, // Ensure we're using a consistent field name (parentId vs userId)
-        userId: userId,   // Keep both fields for backward compatibility
+        userId: userId,
+        parentId: userId, // Keep for backward compatibility
+        familyId: familyId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      
+      // If the child belongs to a family, add it to the family
+      if (familyId) {
+        await addChildToFamily(familyId, childRef.id);
+      }
       
       console.log("Child created with ID:", childRef.id);
       return childRef.id;
@@ -234,50 +258,25 @@ import {
       // Add more detailed logging
       console.log(`Querying 'children' collection for userId: ${userId}`);
       
-      const q = query(
+      // Get user data to check for family membership
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      let familyId = null;
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        familyId = userData.familyId;
+      }
+      
+      // Start with directly owned children
+      const directChildrenQuery = query(
         collection(db, "children"), 
         where("userId", "==", userId),
         orderBy("name", "asc")
       );
       
-      const querySnapshot = await getDocs(q);
-      console.log(`Query returned ${querySnapshot.docs.length} documents`);
+      const querySnapshot = await getDocs(directChildrenQuery);
+      console.log(`Query returned ${querySnapshot.docs.length} direct children`);
       
-      // If no results, try with parentId instead
-      if (querySnapshot.docs.length === 0) {
-        console.log(`No children found with userId, trying parentId instead`);
-        const parentIdQuery = query(
-          collection(db, "children"),
-          where("parentId", "==", userId)
-        );
-        
-        const parentIdSnapshot = await getDocs(parentIdQuery);
-        console.log(`parentId query returned ${parentIdSnapshot.docs.length} documents`);
-        
-        if (parentIdSnapshot.docs.length > 0) {
-          const children: ChildData[] = [];
-          parentIdSnapshot.forEach(doc => {
-            const data = doc.data();
-            children.push({
-              id: doc.id,
-              name: data.name || 'Unnamed Child',
-              userId: userId,
-              ageGroup: data.ageGroup || '',
-              birthDate: data.birthDate || null,
-              birthDateString: data.birthDateString || '',
-              active: data.active !== false,
-              interests: data.interests || [],
-              notes: data.notes || '',
-              ...data
-            });
-          });
-          
-          console.log(`Found ${children.length} children using parentId`);
-          return children;
-        }
-      }
-      
-      // Continue with original logic if userId query returned results
       const children: ChildData[] = [];
       
       querySnapshot.forEach(doc => {
@@ -292,11 +291,50 @@ import {
           active: data.active !== false,
           interests: data.interests || [],
           notes: data.notes || '',
+          familyId: data.familyId || null,
           ...data
         });
       });
       
-      console.log(`Found ${children.length} children for user ID: ${userId}`);
+      // If user belongs to a family, also get family children
+      if (familyId) {
+        console.log(`User belongs to family ${familyId}, fetching family children`);
+        
+        const familyChildrenQuery = query(
+          collection(db, "children"),
+          where("familyId", "==", familyId),
+          where("userId", "!=", userId),
+          orderBy("userId"), // Required for the inequality filter
+          orderBy("name", "asc")
+        );
+        
+        try {
+          const familyChildrenSnapshot = await getDocs(familyChildrenQuery);
+          console.log(`Found ${familyChildrenSnapshot.docs.length} family children`);
+          
+          familyChildrenSnapshot.forEach(doc => {
+            const data = doc.data();
+            children.push({
+              id: doc.id,
+              name: data.name || 'Unnamed Child',
+              userId: data.userId,
+              ageGroup: data.ageGroup || '',
+              birthDate: data.birthDate || null,
+              birthDateString: data.birthDateString || '',
+              active: data.active !== false,
+              interests: data.interests || [],
+              notes: data.notes || '',
+              familyId: familyId,
+              ...data
+            });
+          });
+        } catch (familyError) {
+          console.error(`Error fetching family children:`, familyError);
+          // Continue with direct children only
+        }
+      }
+      
+      console.log(`Found ${children.length} total children for user ID: ${userId}`);
       return children;
     } catch (error) {
       console.error(`Error fetching children for user ${userId}:`, error);
