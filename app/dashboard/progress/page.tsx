@@ -217,17 +217,39 @@ export default function ProgressDashboardPage() {
         const skillIds = Array.from(new Set(skillsData.map(s => s.skillId)));
         const skillNames: Record<string, string> = {};
         
-        // This approach avoids too many parallel requests
+        // Handle case where there are more than 10 skill IDs (Firestore limit)
         if (skillIds.length > 0) {
-          const skillNamesQuery = query(
-            collection(db, 'developmentalSkills'),
-            where('__name__', 'in', skillIds.slice(0, 10)) // Firestore limit
-          );
-          
-          const skillNamesSnapshot = await getDocs(skillNamesQuery);
-          skillNamesSnapshot.forEach(doc => {
-            skillNames[doc.id] = doc.data().name || 'Unknown Skill';
-          });
+          // Process skill IDs in chunks of 10 (Firestore limit for 'in' queries)
+          for (let i = 0; i < skillIds.length; i += 10) {
+            const chunk = skillIds.slice(i, i + 10);
+            const skillNamesQuery = query(
+              collection(db, 'developmentalSkills'),
+              where('__name__', 'in', chunk)
+            );
+            
+            const skillNamesSnapshot = await getDocs(skillNamesQuery);
+            skillNamesSnapshot.forEach(doc => {
+              skillNames[doc.id] = doc.data().name || `Skill ${doc.id.substring(0, 4)}`;
+            });
+          }
+        }
+        
+        // For any skill IDs that weren't found, try fetching them individually
+        for (const skillId of skillIds) {
+          if (!skillNames[skillId]) {
+            try {
+              const skillDoc = await getDoc(doc(db, 'developmentalSkills', skillId));
+              if (skillDoc.exists()) {
+                skillNames[skillId] = skillDoc.data().name || `Skill ${skillId.substring(0, 6)}`;
+              } else {
+                // If skill document doesn't exist, use a more descriptive fallback
+                skillNames[skillId] = `Skill ${skillId.substring(0, 6)}`;
+              }
+            } catch (err) {
+              console.error(`Error fetching skill ${skillId}:`, err);
+              skillNames[skillId] = `Skill ${skillId.substring(0, 6)}`;
+            }
+          }
         }
         
         // Enrich skill data with names and child names
@@ -526,16 +548,37 @@ export default function ProgressDashboardPage() {
                       <span>Skill Progress</span>
                       <span>
                         {summary.totalSkills > 0 
-                          ? Math.round(((summary.masteredSkills + summary.inProgressSkills) / summary.totalSkills) * 100) 
-                          : 0}%
+                          ? `${Math.round((summary.masteredSkills / summary.totalSkills) * 100)}% Mastered` 
+                          : '0% Mastered'}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div className="bg-emerald-500 h-2.5 rounded-full" style={{ 
-                        width: `${summary.totalSkills > 0 
-                          ? ((summary.masteredSkills + summary.inProgressSkills) / summary.totalSkills) * 100 
-                          : 0}%` 
-                      }}></div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className="bg-emerald-500 h-2.5" 
+                        style={{ 
+                          width: `${summary.totalSkills > 0 
+                            ? (summary.masteredSkills / summary.totalSkills) * 100 
+                            : 0}%` 
+                        }}
+                      ></div>
+                      <div 
+                        className="bg-amber-400 h-2.5" 
+                        style={{ 
+                          width: `${summary.totalSkills > 0 
+                            ? (summary.inProgressSkills / summary.totalSkills) * 100 
+                            : 0}%` 
+                        }}
+                      ></div>
+                    </div>
+                    <div className="flex text-xs text-gray-500 mt-1 justify-between">
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
+                        Mastered
+                      </span>
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-amber-400 rounded-full mr-1"></span>
+                        In Progress
+                      </span>
                     </div>
                   </div>
                   

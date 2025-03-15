@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Play
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Define interfaces
 interface Child {
@@ -73,6 +74,7 @@ interface SkillSummary {
 export default function ChildProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { currentUser } = useAuth();
   const childId = params.id;
   
   // Get the showAddRecord parameter from URL
@@ -96,15 +98,22 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
       try {
         setLoading(true);
         
-        // Fetch child data
-        const childDoc = await getDoc(doc(db, 'children', childId));
-        if (!childDoc.exists()) {
-          setError('Child not found');
+        // Check if user is authenticated
+        if (!currentUser) {
+          setError('You must be logged in to view this page');
           setLoading(false);
           return;
         }
         
-        setChild({ id: childDoc.id, ...childDoc.data() } as Child);
+        // Fetch child data
+        const childDoc = await getDoc(doc(db, 'children', childId));
+        console.log('Child doc exists:', childDoc.exists());
+        if (childDoc.exists()) {
+          console.log('Child data:', childDoc.data());
+          setChild({ id: childDoc.id, ...childDoc.data() } as Child);
+        } else {
+          setError('Child not found');
+        }
         
         // Fetch recent activities
         const activitiesQuery = query(
@@ -363,7 +372,18 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
         setLoading(false);
       } catch (err) {
         console.error('Error fetching child data:', err);
-        setError(`Error loading child data: ${err instanceof Error ? err.message : String(err)}`);
+        
+        // More specific error messages
+        if (err instanceof Error) {
+          if (err.message.includes('permission')) {
+            setError('Access denied: You do not have permission to view this data. Please check your account permissions.');
+          } else {
+            setError(`Error loading child data: ${err.message}`);
+          }
+        } else {
+          setError(`Error loading child data: ${String(err)}`);
+        }
+        
         setLoading(false);
       }
     }
@@ -372,6 +392,15 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
       fetchData();
     }
   }, [childId, recordId]);
+  
+  // Add this at the beginning of your component
+  useEffect(() => {
+    // Log authentication state for debugging
+    console.log('Auth state:', currentUser ? 'Logged in' : 'Not logged in');
+    if (currentUser) {
+      console.log('User ID:', currentUser.uid);
+    }
+  }, [currentUser]);
   
   // Helper functions
   const formatDate = (timestamp?: Timestamp | Date) => {
@@ -486,7 +515,7 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
     router.push(`/dashboard/children/${childId}`);
   };
   
-  if (loading) {
+  if (loading || currentUser === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
