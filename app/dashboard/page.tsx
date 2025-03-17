@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAutoPlanGeneration } from '@/hooks/useAutoPlanGeneration';
 import { 
   BookOpen, 
   BarChart2, 
@@ -19,6 +20,7 @@ export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser } = useAuth();
+  const { isGenerating: isAutoGenerating } = useAutoPlanGeneration();
   
   // Parse URL parameters
   const dateParam = searchParams.get('date');
@@ -76,7 +78,6 @@ export default function Dashboard() {
       const { generateWeeklyPlan } = await import('@/lib/planGenerator');
       await generateWeeklyPlan(childId, currentUser.uid, weekDate);
       
-      // Don't return the result
     } catch (error) {
       console.error('Error generating plan:', error);
       throw error;
@@ -132,6 +133,14 @@ export default function Dashboard() {
             Welcome to Learn Sprout, your personalized Montessori learning companion
           </p>
         </div>
+        
+        {/* Show auto-generation status */}
+        {isAutoGenerating && (
+          <div className="bg-blue-50 text-blue-700 p-2 rounded-md mb-4 flex items-center text-sm">
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Creating personalized activity plans for your child...
+          </div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content - Moved up for mobile view */}

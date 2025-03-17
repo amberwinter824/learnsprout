@@ -147,13 +147,7 @@ async function getUserActivityPreferences(userId: string): Promise<ActivityPrefe
  */
 export async function generateWeeklyPlan(childId: string, userId: string, weekStartDate?: Date): Promise<WeeklyPlan> {
   try {
-    console.log(`Generating plan for child ${childId}`);
-    
-    // Get the week start date (either provided or default to current week)
-    const today = new Date();
-    const weekStart = weekStartDate ? 
-      startOfWeek(weekStartDate, { weekStartsOn: 1 }) : // Use provided date
-      startOfWeek(today, { weekStartsOn: 1 }); // Default to current week
+    console.log(`Generating plan for child ${childId}${weekStartDate ? ' for specific week' : ''}`);
     
     // Get child data
     const childRef = doc(db, 'children', childId);
@@ -334,7 +328,16 @@ export async function generateWeeklyPlan(childId: string, userId: string, weekSt
     
     console.log(`Scored and ranked ${scoredActivities.length} activities`);
     
-    // Create the weekly plan
+    // Use the provided week start date or default to current week
+    const today = new Date();
+    const weekStart = weekStartDate ? 
+      startOfWeek(weekStartDate, { weekStartsOn: 1 }) : // Use provided date
+      startOfWeek(today, { weekStartsOn: 1 }); // Default to current week
+    
+    // Build plan with different activities for each day
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+    type DayOfWeek = typeof days[number];
+    
     const weeklyPlan: WeeklyPlan = {
       childId,
       userId,
@@ -351,9 +354,33 @@ export async function generateWeeklyPlan(childId: string, userId: string, weekSt
       sunday: []
     };
     
-    // Define days of the week array with proper typing
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-    type DayOfWeek = typeof days[number];
+    // Check if a plan already exists for this week
+    const planId = `${childId}_${format(weekStart, 'yyyy-MM-dd')}`;
+    const existingPlanRef = doc(db, 'weeklyPlans', planId);
+    const existingPlanDoc = await getDoc(existingPlanRef);
+    
+    // If plan exists and we're doing an evolving update, merge with existing plan
+    // preserving any completed activities or user modifications
+    if (existingPlanDoc.exists()) {
+      const existingPlan = existingPlanDoc.data() as WeeklyPlan;
+      
+      // For each day, retain any activities that have been completed or modified by the user
+      days.forEach((day: DayOfWeek) => {
+        const existingActivities = existingPlan[day] as PlanActivity[];
+        
+        // Filter activities that should be preserved (completed or user-modified)
+        const preservedActivities = existingActivities.filter(activity => 
+          activity.status === 'completed' || 
+          activity.createdBy === 'user' ||
+          activity.userModified === true
+        );
+        
+        // Store these activities to keep them in the new plan
+        weeklyPlan[day] = preservedActivities;
+      });
+      
+      console.log('Found existing plan - preserving completed activities and user modifications');
+    }
     
     // Determine number of activities for each day based on preferences
     const activityCountByDay: {[key: string]: number} = {};
@@ -376,42 +403,136 @@ export async function generateWeeklyPlan(childId: string, userId: string, weekSt
     let activityIndex = 0;
     
     for (const day of days) {
+      // Get the existing activities for this day
+      const existingActivities = weeklyPlan[day] as PlanActivity[];
       const activityCount = activityCountByDay[day];
       
-      for (let i = 0; i < activityCount; i++) {
+      // Calculate how many more activities we need to add
+      const additionalActivitiesNeeded = Math.max(0, activityCount - existingActivities.length);
+      
+      for (let i = 0; i < additionalActivitiesNeeded; i++) {
         if (activityIndex < scoredActivities.length) {
           const activity = scoredActivities[activityIndex];
           
           // Assign morning/afternoon based on position
-          const timeSlot = i < Math.ceil(activityCount / 2) ? 'morning' : 'afternoon';
+          const timeSlot = i < Math.ceil(additionalActivitiesNeeded / 2) ? 'morning' : 'afternoon';
           
-          weeklyPlan[day as keyof WeeklyPlan].push({
+          existingActivities.push({
             activityId: activity.id,
             timeSlot,
             status: 'suggested',
-            order: i,
+            order: existingActivities.length + i,
             notes: activity.reasons.join('. ')
           });
           
           activityIndex++;
         }
       }
+      
+      // Update the day's activities in the plan
+      weeklyPlan[day] = existingActivities;
     }
     
-    // Create the weekly plan document
-    const planId = `${childId}_${format(weekStart, 'yyyy-MM-dd')}`;
+    // Create or update the weekly plan document
     const planRef = doc(db, 'weeklyPlans', planId);
     await setDoc(planRef, weeklyPlan);
     
     // Update child profile with last plan generation timestamp
     await updateLastGeneratedTimestamp(childId);
     
-    console.log(`Created weekly plan with ID: ${planId}`);
+    console.log(`Created/updated weekly plan with ID: ${planId}`);
     
     return { id: planId, ...weeklyPlan };
   } catch (error) {
     console.error('Error generating weekly plan:', error);
     throw error;
+  }
+}
+
+/**
+ * Automatically generate plans for a child for the current week and next week
+ */
+export async function autoGeneratePlans(childId: string, userId: string): Promise<string[]> {
+  try {
+    console.log(`Auto-generating plans for child ${childId}`);
+    const planIds: string[] = [];
+    
+    // Generate a plan for the current week
+    const currentWeekPlan = await generateWeeklyPlan(childId, userId);
+    planIds.push(currentWeekPlan.id || '');
+    
+    // Generate a plan for next week
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const nextWeekPlan = await generateWeeklyPlan(childId, userId, nextWeek);
+    planIds.push(nextWeekPlan.id || '');
+    
+    console.log(`Auto-generated ${planIds.length} plans for child ${childId}`);
+    return planIds;
+  } catch (error) {
+    console.error('Error auto-generating plans:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if any new observations should trigger plan evolution
+ * and update plans accordingly
+ */
+export async function evolvePlansBasedOnObservations(childId: string, userId: string): Promise<void> {
+  try {
+    // Check for significant observations since last plan update
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    
+    // Get the child's profile
+    const childRef = doc(db, 'children', childId);
+    const childSnap = await getDoc(childRef);
+    
+    if (!childSnap.exists()) {
+      throw new Error('Child not found');
+    }
+    
+    const childData = childSnap.data();
+    const lastPlanUpdated = childData.lastPlanEvolved || new Date(0);
+    
+    // Query for new observations since last plan update
+    const recentObservationsQuery = query(
+      collection(db, 'progressRecords'),
+      where('childId', '==', childId),
+      where('date', '>', lastPlanUpdated)
+    );
+    
+    const recentObsSnapshot = await getDocs(recentObservationsQuery);
+    
+    // If we have significant new observations, evolve the plans
+    if (recentObsSnapshot.size >= 3) {
+      console.log(`Found ${recentObsSnapshot.size} new observations, evolving plans`);
+      
+      // Get current and next week plans
+      const today = new Date();
+      const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+      
+      // Evolve current week plan
+      await generateWeeklyPlan(childId, userId, currentWeekStart);
+      
+      // Evolve next week plan
+      const nextWeek = new Date(currentWeekStart);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      await generateWeeklyPlan(childId, userId, nextWeek);
+      
+      // Update the last evolved timestamp
+      await updateDoc(childRef, {
+        lastPlanEvolved: serverTimestamp()
+      });
+      
+      console.log('Plans evolved based on new observations');
+    } else {
+      console.log('Not enough new observations to warrant plan evolution');
+    }
+  } catch (error) {
+    console.error('Error evolving plans:', error);
+    // Don't throw - this should fail silently
   }
 }
 
