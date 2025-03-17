@@ -145,9 +145,15 @@ async function getUserActivityPreferences(userId: string): Promise<ActivityPrefe
 /**
  * Generate a weekly plan for a child based on their profile, skills, and activity history
  */
-export async function generateWeeklyPlan(childId: string, userId: string): Promise<WeeklyPlan> {
+export async function generateWeeklyPlan(childId: string, userId: string, weekStartDate?: Date): Promise<WeeklyPlan> {
   try {
     console.log(`Generating plan for child ${childId}`);
+    
+    // Get the week start date (either provided or default to current week)
+    const today = new Date();
+    const weekStart = weekStartDate ? 
+      startOfWeek(weekStartDate, { weekStartsOn: 1 }) : // Use provided date
+      startOfWeek(today, { weekStartsOn: 1 }); // Default to current week
     
     // Get child data
     const childRef = doc(db, 'children', childId);
@@ -329,15 +335,10 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
     console.log(`Scored and ranked ${scoredActivities.length} activities`);
     
     // Create the weekly plan
-    const today = new Date();
-    const weekStartDate = startOfWeek(today, { weekStartsOn: 1 }); // Monday as start of week
-    
-    // Build plan with different activities for each day
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const weeklyPlan: WeeklyPlan = {
       childId,
       userId,
-      weekStarting: weekStartDate,
+      weekStarting: weekStart,
       createdBy: 'system',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -350,17 +351,21 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
       sunday: []
     };
     
+    // Define days of the week array with proper typing
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+    type DayOfWeek = typeof days[number];
+    
     // Determine number of activities for each day based on preferences
     const activityCountByDay: {[key: string]: number} = {};
     
     if (preferences.useCustomSchedule && preferences.scheduleByDay) {
       // Use custom schedule
-      days.forEach(day => {
+      days.forEach((day: DayOfWeek) => {
         activityCountByDay[day] = preferences.scheduleByDay?.[day] || 0;
       });
     } else {
       // Use simple schedule
-      days.forEach(day => {
+      days.forEach((day: DayOfWeek) => {
         activityCountByDay[day] = preferences.daysPerWeek?.includes(day) 
           ? preferences.activitiesPerDay || 2
           : 0;
@@ -394,7 +399,7 @@ export async function generateWeeklyPlan(childId: string, userId: string): Promi
     }
     
     // Create the weekly plan document
-    const planId = `${childId}_${format(weekStartDate, 'yyyy-MM-dd')}`;
+    const planId = `${childId}_${format(weekStart, 'yyyy-MM-dd')}`;
     const planRef = doc(db, 'weeklyPlans', planId);
     await setDoc(planRef, weeklyPlan);
     

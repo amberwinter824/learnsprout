@@ -65,7 +65,7 @@ interface Child {
 interface WeeklyPlanWithDayFocusProps {
   selectedDate?: Date;
   selectedChildId?: string;
-  onGeneratePlan?: (childId: string) => Promise<any>;
+  onGeneratePlan?: (childId: string, weekStartDate?: Date) => Promise<any>;
 }
 
 export default function WeeklyPlanWithDayFocus({ 
@@ -496,10 +496,10 @@ export default function WeeklyPlanWithDayFocus({
     try {
       setIsGeneratingPlan(true);
       setError(null);
-      console.log("Starting plan generation for child:", selectedChild.id);
+      console.log("Starting plan generation for child:", selectedChild.id, "for week starting:", weekStartDate);
       
-      // Call the generation function and wait for it
-      const result = await onGeneratePlan(selectedChild.id);
+      // Pass the current week's start date to the generation function
+      const result = await onGeneratePlan(selectedChild.id, weekStartDate);
       console.log("Plan generated successfully:", result);
       
       // Set a success message

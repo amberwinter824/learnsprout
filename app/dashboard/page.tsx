@@ -64,7 +64,7 @@ export default function Dashboard() {
   }, [selectedDate, updateUrlParams]);
   
   // Handle generate plan
-  const handleGeneratePlan = async (childId: string): Promise<void> => {
+  const handleGeneratePlan = async (childId: string, weekDate?: Date): Promise<void> => {
     if (!childId || !currentUser) {
       throw new Error('Missing child ID or user');
     }
@@ -72,9 +72,9 @@ export default function Dashboard() {
     try {
       setIsGeneratingPlan(true);
       
-      // Import and use your plan generator
+      // Import and use your plan generator with the week date
       const { generateWeeklyPlan } = await import('@/lib/planGenerator');
-      await generateWeeklyPlan(childId, currentUser.uid);
+      await generateWeeklyPlan(childId, currentUser.uid, weekDate);
       
       // Don't return the result
     } catch (error) {
