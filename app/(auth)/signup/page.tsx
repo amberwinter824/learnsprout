@@ -1,11 +1,14 @@
 "use client"
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Sprout } from 'lucide-react';
+import { acceptFamilyInvitation, getInvitationByCode } from '@/lib/familyService';
+import type { InvitationDetails } from '@/lib/familyService';
+import { Timestamp } from 'firebase/firestore';
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -14,14 +17,57 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isInviteMode, setIsInviteMode] = useState(false);
+  const [inviteDetails, setInviteDetails] = useState<any>(null);
+  const [familyName, setFamilyName] = useState<string>('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get invite code and email from URL
+  const inviteCode = searchParams.get('invite');
+  const inviteEmail = searchParams.get('email');
+
+  // Check invitation when component loads
+  useEffect(() => {
+    async function checkInvitation() {
+      if (inviteCode) {
+        try {
+          const invitation = await getInvitationByCode(inviteCode);
+          if (invitation) {
+            // Check if invitation has expired
+            const expiresAt = invitation.expiresAt instanceof Timestamp 
+              ? invitation.expiresAt.toDate() 
+              : new Date(invitation.expiresAt);
+              
+            if (expiresAt < new Date()) {
+              setError('This invitation has expired.');
+              return;
+            }
+
+            // Get family name
+            const familyDoc = await getDoc(doc(db, 'families', invitation.familyId));
+            if (familyDoc.exists()) {
+              setFamilyName(familyDoc.data().name);
+            }
+
+            setIsInviteMode(true);
+            setInviteDetails(invitation);
+            setEmail(inviteEmail || invitation.recipientEmail || '');
+          }
+        } catch (error) {
+          console.error('Error checking invitation:', error);
+          setError('Invalid invitation link.');
+        }
+      }
+    }
+    
+    checkInvitation();
+  }, [inviteCode, inviteEmail]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Form submitted");
     
     if (password !== confirmPassword) {
-      console.log("Passwords don't match");
       return setError('Passwords do not match');
     }
     
@@ -29,40 +75,28 @@ export default function Signup() {
       setError('');
       setLoading(true);
       
-      console.log("Creating user account with Firebase Auth directly");
-      // Use Firebase Auth directly without going through context
+      // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      console.log("User created successfully:", user.uid);
-      
-      // Create the user document in Firestore
-      try {
-        console.log("Creating user document in Firestore");
-        await setDoc(doc(db, 'users', user.uid), {
-          name,
-          email,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-        console.log("User document created successfully");
-      } catch (firestoreError) {
-        console.error("Error creating user document:", firestoreError);
-        // Continue anyway since the auth account was created
+      // Create user document
+      await setDoc(doc(db, 'users', user.uid), {
+        name,
+        email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // If this was an invitation signup, accept the invitation
+      if (isInviteMode && inviteCode) {
+        await acceptFamilyInvitation(user.uid, inviteCode);
       }
       
-      // Redirect to dashboard
-      console.log("Redirecting to dashboard");
       router.push('/dashboard');
     } catch (error: unknown) {
       console.error("SIGNUP ERROR:", error);
       
-      // Type guard to check if error is an object with code and message properties
       if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
-        console.error("Error code:", error.code);
-        console.error("Error message:", error.message);
-        
-        // Provide a more user-friendly error message
         if (error.code === 'auth/email-already-in-use') {
           setError('This email is already registered. Please log in instead.');
         } else if (error.code === 'auth/invalid-email') {
@@ -85,7 +119,14 @@ export default function Signup() {
           <div className="flex justify-center">
             <Sprout className="w-10 h-10 text-emerald-500" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">Create your account</h2>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+            {isInviteMode ? 'Join the Family' : 'Create your account'}
+          </h2>
+          {isInviteMode && familyName && (
+            <p className="mt-2 text-sm text-emerald-600">
+              You've been invited to join {familyName}
+            </p>
+          )}
           <p className="mt-2 text-sm text-gray-600">
             Already have an account?{' '}
             <Link 
@@ -132,7 +173,8 @@ export default function Signup() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                disabled={isInviteMode}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-50"
               />
             </div>
             
@@ -175,7 +217,7 @@ export default function Signup() {
               disabled={loading}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
             >
-              {loading ? 'Creating Account...' : 'Sign Up'}
+              {loading ? 'Creating Account...' : isInviteMode ? 'Join Family' : 'Sign Up'}
             </button>
           </div>
         </form>

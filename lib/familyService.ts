@@ -107,7 +107,9 @@ import {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
     });
     
-    return inviteCode;
+    // Return a complete URL for the invitation
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/signup?invite=${inviteCode}&email=${encodeURIComponent(recipientEmail)}`;
+    return inviteUrl;
   };
   
   // Accept a family invitation
@@ -292,5 +294,37 @@ import {
     } catch (error) {
       console.error('Error checking child access:', error);
       return false;
+    }
+  };
+  
+  export interface InvitationDetails {
+    id: string;
+    familyId: string;
+    familyName: string;
+    recipientEmail: string;
+    status: string;
+    createdAt: any;
+    expiresAt: any;
+  }
+
+  // Get invitation details by code
+  export const getInvitationByCode = async (inviteCode: string): Promise<any | null> => {
+    try {
+      const invitesQuery = query(
+        collection(db, 'familyInvitations'),
+        where('inviteCode', '==', inviteCode),
+        where('status', '==', 'pending')
+      );
+      
+      const querySnapshot = await getDocs(invitesQuery);
+      if (querySnapshot.empty) {
+        return null;
+      }
+      
+      const inviteDoc = querySnapshot.docs[0];
+      return { id: inviteDoc.id, ...inviteDoc.data() };
+    } catch (error) {
+      console.error('Error getting invitation:', error);
+      return null;
     }
   };

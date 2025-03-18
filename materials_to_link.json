@@ -1,0 +1,1738 @@
+[
+  {
+    "normalizedName": "work mat",
+    "name": "Work mat",
+    "activities": [
+      {
+        "id": "lan-moveable-alphabet-simple-words",
+        "title": "Moveable Alphabet - Simple Words"
+      },
+      {
+        "id": "lan-object-beginning-sound-matchin",
+        "title": "Object Beginning Sound Matching"
+      },
+      {
+        "id": "lan-sandpaper-letters",
+        "title": "Sandpaper Letters"
+      },
+      {
+        "id": "lan-story-sequencing-cards",
+        "title": "Story Sequencing Cards"
+      },
+      {
+        "id": "lan-threepart-cards",
+        "title": "Three-Part Cards"
+      },
+      {
+        "id": "mat-addition-with-number-rods",
+        "title": "Addition with Number Rods"
+      },
+      {
+        "id": "mat-counting-objects-110",
+        "title": "Counting Objects 1-10"
+      },
+      {
+        "id": "mat-golden-bead-material-introduct",
+        "title": "Golden Bead Material - Introduction"
+      },
+      {
+        "id": "mat-sandpaper-numerals",
+        "title": "Sandpaper Numerals"
+      },
+      {
+        "id": "sen-color-tablets-grading",
+        "title": "Color Tablets Grading"
+      },
+      {
+        "id": "sen-color-tablets-matching",
+        "title": "Color Tablets Matching"
+      },
+      {
+        "id": "sen-fabric-matching",
+        "title": "Fabric Matching"
+      },
+      {
+        "id": "sen-sound-cylinders",
+        "title": "Sound Cylinders"
+      }
+    ],
+    "count": 13,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "tray",
+    "name": "Tray",
+    "activities": [
+      {
+        "id": "act1",
+        "title": "Water Pouring Exercise"
+      },
+      {
+        "id": "act2",
+        "title": "Advanced Pouring with Funnel"
+      },
+      {
+        "id": "pra-dry-pouring-with-bea",
+        "title": "Dry Pouring with Beans"
+      },
+      {
+        "id": "pra-food-preparation-spreading",
+        "title": "Food Preparation - Spreading"
+      },
+      {
+        "id": "pra-pouring-liquids",
+        "title": "Pouring Liquids"
+      },
+      {
+        "id": "pra-water-pouring-with-s",
+        "title": "Water Pouring with Small Containers"
+      }
+    ],
+    "count": 6,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "water",
+    "name": "Water",
+    "activities": [
+      {
+        "id": "act1",
+        "title": "Water Pouring Exercise"
+      },
+      {
+        "id": "act2",
+        "title": "Advanced Pouring with Funnel"
+      },
+      {
+        "id": "pra-pouring-liquids",
+        "title": "Pouring Liquids"
+      }
+    ],
+    "count": 3,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "sponge",
+    "name": "Sponge",
+    "activities": [
+      {
+        "id": "act2",
+        "title": "Advanced Pouring with Funnel"
+      },
+      {
+        "id": "pra-pouring-liquids",
+        "title": "Pouring Liquids"
+      },
+      {
+        "id": "pra-table-washing",
+        "title": "Table Washing"
+      }
+    ],
+    "count": 3,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "number cards 1-10",
+    "name": "Number cards 1-10",
+    "activities": [
+      {
+        "id": "act4",
+        "title": "Counting Objects"
+      },
+      {
+        "id": "mat-counting-objects-110",
+        "title": "Counting Objects 1-10"
+      },
+      {
+        "id": "mat-number-rods",
+        "title": "Number Rods"
+      }
+    ],
+    "count": 3,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small tray",
+    "name": "Small tray",
+    "activities": [
+      {
+        "id": "cog-simple-puzzles-with-",
+        "title": "Simple Puzzles with Knobs"
+      },
+      {
+        "id": "pra-flower-arranging",
+        "title": "Flower Arranging"
+      },
+      {
+        "id": "pra-pouring-dry-ingredients",
+        "title": "Pouring Dry Ingredients"
+      }
+    ],
+    "count": 3,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "basket",
+    "name": "Basket",
+    "activities": [
+      {
+        "id": "cul-animal-classification",
+        "title": "Animal Classification"
+      },
+      {
+        "id": "lan-object-beginning-sound-matchin",
+        "title": "Object Beginning Sound Matching"
+      },
+      {
+        "id": "mat-counting-objects-110",
+        "title": "Counting Objects 1-10"
+      }
+    ],
+    "count": 3,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "two small pitchers",
+    "name": "Two small pitchers",
+    "activities": [
+      {
+        "id": "act1",
+        "title": "Water Pouring Exercise"
+      },
+      {
+        "id": "pra-water-pouring-with-s",
+        "title": "Water Pouring with Small Containers"
+      }
+    ],
+    "count": 2,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "sponge for spills",
+    "name": "Sponge for spills",
+    "activities": [
+      {
+        "id": "act1",
+        "title": "Water Pouring Exercise"
+      },
+      {
+        "id": "pra-water-pouring-with-s",
+        "title": "Water Pouring with Small Containers"
+      }
+    ],
+    "count": 2,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small pitcher",
+    "name": "Small pitcher",
+    "activities": [
+      {
+        "id": "act2",
+        "title": "Advanced Pouring with Funnel"
+      },
+      {
+        "id": "pra-pouring-liquids",
+        "title": "Pouring Liquids"
+      }
+    ],
+    "count": 2,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "two small containers",
+    "name": "Two small containers",
+    "activities": [
+      {
+        "id": "pra-dry-pouring-with-bea",
+        "title": "Dry Pouring with Beans"
+      },
+      {
+        "id": "pra-pouring-dry-ingredients",
+        "title": "Pouring Dry Ingredients"
+      }
+    ],
+    "count": 2,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "funnel",
+    "name": "Funnel",
+    "activities": [
+      {
+        "id": "act2",
+        "title": "Advanced Pouring with Funnel"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small bottles",
+    "name": "Small bottles",
+    "activities": [
+      {
+        "id": "act2",
+        "title": "Advanced Pouring with Funnel"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "color matching cards",
+    "name": "Color matching cards",
+    "activities": [
+      {
+        "id": "act3",
+        "title": "Color Matching Cards"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small objects (beads, buttons)",
+    "name": "Small objects (beads, buttons)",
+    "activities": [
+      {
+        "id": "act4",
+        "title": "Counting Objects"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "clear tube or paper towel roll",
+    "name": "Clear tube or paper towel roll",
+    "activities": [
+      {
+        "id": "cog-ball-drop-tube",
+        "title": "Ball Drop Tube"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small balls that fit inside tube",
+    "name": "Small balls that fit inside tube",
+    "activities": [
+      {
+        "id": "cog-ball-drop-tube",
+        "title": "Ball Drop Tube"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "blocks to prop tube at an angle",
+    "name": "Blocks to prop tube at an angle",
+    "activities": [
+      {
+        "id": "cog-ball-drop-tube",
+        "title": "Ball Drop Tube"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small basket",
+    "name": "Small basket",
+    "activities": [
+      {
+        "id": "cog-object-basket-matchi",
+        "title": "Object Basket Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "miniature objects (toy animals, vehicles, household items)",
+    "name": "Miniature objects (toy animals, vehicles, household items)",
+    "activities": [
+      {
+        "id": "cog-object-basket-matchi",
+        "title": "Object Basket Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "corresponding picture cards",
+    "name": "Corresponding picture cards",
+    "activities": [
+      {
+        "id": "cog-object-basket-matchi",
+        "title": "Object Basket Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "object permanence box or container with a hole in top",
+    "name": "Object permanence box or container with a hole in top",
+    "activities": [
+      {
+        "id": "cog-object-permanence-bo",
+        "title": "Object Permanence Box"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small ball",
+    "name": "Small ball",
+    "activities": [
+      {
+        "id": "cog-object-permanence-bo",
+        "title": "Object Permanence Box"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "shape sorter or posting box",
+    "name": "Shape sorter or posting box",
+    "activities": [
+      {
+        "id": "cog-posting-activities",
+        "title": "Posting Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "coin slot box",
+    "name": "Coin slot box",
+    "activities": [
+      {
+        "id": "cog-posting-activities",
+        "title": "Posting Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "objects that fit through openings",
+    "name": "Objects that fit through openings",
+    "activities": [
+      {
+        "id": "cog-posting-activities",
+        "title": "Posting Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "pairs of identical objects or picture cards",
+    "name": "Pairs of identical objects or picture cards",
+    "activities": [
+      {
+        "id": "cog-simple-matching-acti",
+        "title": "Simple Matching Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small tray or mat",
+    "name": "Small tray or mat",
+    "activities": [
+      {
+        "id": "cog-simple-matching-acti",
+        "title": "Simple Matching Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "simple knobbed puzzles with 1-3 large pieces",
+    "name": "Simple knobbed puzzles with 1-3 large pieces",
+    "activities": [
+      {
+        "id": "cog-simple-puzzles-with-",
+        "title": "Simple Puzzles with Knobs"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "stacking rings toy",
+    "name": "Stacking rings toy",
+    "activities": [
+      {
+        "id": "cog-stacking-rings",
+        "title": "Stacking Rings"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "sorting mats labeled with animal groups",
+    "name": "Sorting mats labeled with animal groups",
+    "activities": [
+      {
+        "id": "cul-animal-classification",
+        "title": "Animal Classification"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "animal figurines or picture cards",
+    "name": "Animal figurines or picture cards",
+    "activities": [
+      {
+        "id": "cul-animal-classification",
+        "title": "Animal Classification"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "globe with colored continents",
+    "name": "Globe with colored continents",
+    "activities": [
+      {
+        "id": "cul-continent-globe-exploration",
+        "title": "Continent Globe Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "optional: continent puzzle map",
+    "name": "Optional: continent puzzle map",
+    "activities": [
+      {
+        "id": "cul-continent-globe-exploration",
+        "title": "Continent Globe Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "three containers or defined areas on a mat",
+    "name": "Three containers or defined areas on a mat",
+    "activities": [
+      {
+        "id": "cul-land-air-and-water-sorting",
+        "title": "Land, Air, and Water Sorting"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "labels for land, air, and water",
+    "name": "Labels for land, air, and water",
+    "activities": [
+      {
+        "id": "cul-land-air-and-water-sorting",
+        "title": "Land, Air, and Water Sorting"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "pictures or small objects representing items from each environment",
+    "name": "Pictures or small objects representing items from each environment",
+    "activities": [
+      {
+        "id": "cul-land-air-and-water-sorting",
+        "title": "Land, Air, and Water Sorting"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small potted plant",
+    "name": "Small potted plant",
+    "activities": [
+      {
+        "id": "cul-parts-of-a-plant",
+        "title": "Parts of a Plant"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "parts of a plant cards or puzzle",
+    "name": "Parts of a plant cards or puzzle",
+    "activities": [
+      {
+        "id": "cul-parts-of-a-plant",
+        "title": "Parts of a Plant"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "optional: three-part cards with labels",
+    "name": "Optional: three-part cards with labels",
+    "activities": [
+      {
+        "id": "cul-parts-of-a-plant",
+        "title": "Parts of a Plant"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "season cards or book",
+    "name": "Season cards or book",
+    "activities": [
+      {
+        "id": "cul-seasons-exploration",
+        "title": "Seasons Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "optional: sorting cards with seasonal images",
+    "name": "Optional: sorting cards with seasonal images",
+    "activities": [
+      {
+        "id": "cul-seasons-exploration",
+        "title": "Seasons Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "simple musical instruments (drum, bells, shaker, triangle, etc.)",
+    "name": "Simple musical instruments (drum, bells, shaker, triangle, etc.)",
+    "activities": [
+      {
+        "id": "cul-simple-musical-instruments-exp",
+        "title": "Simple Musical Instruments Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "calendar grid",
+    "name": "Calendar grid",
+    "activities": [
+      {
+        "id": "cul-weather-calendar",
+        "title": "Weather Calendar"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "weather symbols (sunny, cloudy, rainy, etc.)",
+    "name": "Weather symbols (sunny, cloudy, rainy, etc.)",
+    "activities": [
+      {
+        "id": "cul-weather-calendar",
+        "title": "Weather Calendar"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "storage container for symbols",
+    "name": "Storage container for symbols",
+    "activities": [
+      {
+        "id": "cul-weather-calendar",
+        "title": "Weather Calendar"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "sturdy picture books with clear, simple images",
+    "name": "Sturdy picture books with clear, simple images",
+    "activities": [
+      {
+        "id": "lan-first-words-picture-",
+        "title": "First Words Picture Books"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "metal insets (or diy shape stencils)",
+    "name": "Metal insets (or DIY shape stencils)",
+    "activities": [
+      {
+        "id": "lan-metal-insets",
+        "title": "Metal Insets"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "paper",
+    "name": "Paper",
+    "activities": [
+      {
+        "id": "lan-metal-insets",
+        "title": "Metal Insets"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "colored pencils",
+    "name": "Colored pencils",
+    "activities": [
+      {
+        "id": "lan-metal-insets",
+        "title": "Metal Insets"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "moveable alphabet (or letter cards)",
+    "name": "Moveable alphabet (or letter cards)",
+    "activities": [
+      {
+        "id": "lan-moveable-alphabet-simple-words",
+        "title": "Moveable Alphabet - Simple Words"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "picture cards of simple objects",
+    "name": "Picture cards of simple objects",
+    "activities": [
+      {
+        "id": "lan-moveable-alphabet-simple-words",
+        "title": "Moveable Alphabet - Simple Words"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "cards with letters or pictures representing different sounds",
+    "name": "Cards with letters or pictures representing different sounds",
+    "activities": [
+      {
+        "id": "lan-object-beginning-sound-matchin",
+        "title": "Object Beginning Sound Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small objects beginning with those sounds",
+    "name": "Small objects beginning with those sounds",
+    "activities": [
+      {
+        "id": "lan-object-beginning-sound-matchin",
+        "title": "Object Beginning Sound Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "sandpaper letters (or letters made with glue and sand on cardstock)",
+    "name": "Sandpaper letters (or letters made with glue and sand on cardstock)",
+    "activities": [
+      {
+        "id": "lan-sandpaper-letters",
+        "title": "Sandpaper Letters"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "simple phonetic reading books",
+    "name": "Simple phonetic reading books",
+    "activities": [
+      {
+        "id": "lan-simple-phonetic-reading-books",
+        "title": "Simple Phonetic Reading Books"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "set of sequencing cards (4-6 cards showing a story or process)",
+    "name": "Set of sequencing cards (4-6 cards showing a story or process)",
+    "activities": [
+      {
+        "id": "lan-story-sequencing-cards",
+        "title": "Story Sequencing Cards"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "three-part cards (picture cards, label cards, and control cards showing both)",
+    "name": "Three-part cards (picture cards, label cards, and control cards showing both)",
+    "activities": [
+      {
+        "id": "lan-threepart-cards",
+        "title": "Three-Part Cards"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "number rods",
+    "name": "Number rods",
+    "activities": [
+      {
+        "id": "mat-addition-with-number-rods",
+        "title": "Addition with Number Rods"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small objects for counting (buttons, shells, etc.)",
+    "name": "Small objects for counting (buttons, shells, etc.)",
+    "activities": [
+      {
+        "id": "mat-counting-objects-110",
+        "title": "Counting Objects 1-10"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "golden bead materials (or diy versions using beads, craft sticks, paper squares)",
+    "name": "Golden bead materials (or DIY versions using beads, craft sticks, paper squares)",
+    "activities": [
+      {
+        "id": "mat-golden-bead-material-introduct",
+        "title": "Golden Bead Material - Introduction"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "rulers",
+    "name": "Rulers",
+    "activities": [
+      {
+        "id": "mat-measurement-activities",
+        "title": "Measurement Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "balance scale",
+    "name": "Balance scale",
+    "activities": [
+      {
+        "id": "mat-measurement-activities",
+        "title": "Measurement Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "measuring cups",
+    "name": "Measuring cups",
+    "activities": [
+      {
+        "id": "mat-measurement-activities",
+        "title": "Measurement Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "various objects to measure",
+    "name": "Various objects to measure",
+    "activities": [
+      {
+        "id": "mat-measurement-activities",
+        "title": "Measurement Activities"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "number rods (or painted craft sticks bundled in increasing quantities)",
+    "name": "Number rods (or painted craft sticks bundled in increasing quantities)",
+    "activities": [
+      {
+        "id": "mat-number-rods",
+        "title": "Number Rods"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "large work mat",
+    "name": "Large work mat",
+    "activities": [
+      {
+        "id": "mat-number-rods",
+        "title": "Number Rods"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "sandpaper numerals 0-9 (or numerals made with glue and sand on cardstock)",
+    "name": "Sandpaper numerals 0-9 (or numerals made with glue and sand on cardstock)",
+    "activities": [
+      {
+        "id": "mat-sandpaper-numerals",
+        "title": "Sandpaper Numerals"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "spindle box with compartments labeled 0-9 (or a divided container)",
+    "name": "Spindle box with compartments labeled 0-9 (or a divided container)",
+    "activities": [
+      {
+        "id": "mat-spindle-box",
+        "title": "Spindle Box"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "45 wooden spindles (or craft sticks)",
+    "name": "45 wooden spindles (or craft sticks)",
+    "activities": [
+      {
+        "id": "mat-spindle-box",
+        "title": "Spindle Box"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "button frame (or fabric pieces with buttons attached)",
+    "name": "Button frame (or fabric pieces with buttons attached)",
+    "activities": [
+      {
+        "id": "pra-button-frame",
+        "title": "Button Frame"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "velcro dressing frame (or fabric pieces with velcro attached)",
+    "name": "Velcro dressing frame (or fabric pieces with Velcro attached)",
+    "activities": [
+      {
+        "id": "pra-dressing-frames-velc",
+        "title": "Dressing Frames - Velcro"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "dry beans",
+    "name": "Dry beans",
+    "activities": [
+      {
+        "id": "pra-dry-pouring-with-bea",
+        "title": "Dry Pouring with Beans"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small brush and dustpan for spills",
+    "name": "Small brush and dustpan for spills",
+    "activities": [
+      {
+        "id": "pra-dry-pouring-with-bea",
+        "title": "Dry Pouring with Beans"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small vase",
+    "name": "Small vase",
+    "activities": [
+      {
+        "id": "pra-flower-arranging",
+        "title": "Flower Arranging"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "pitcher with water",
+    "name": "Pitcher with water",
+    "activities": [
+      {
+        "id": "pra-flower-arranging",
+        "title": "Flower Arranging"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "child-safe scissors",
+    "name": "Child-safe scissors",
+    "activities": [
+      {
+        "id": "pra-flower-arranging",
+        "title": "Flower Arranging"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "fresh flowers",
+    "name": "Fresh flowers",
+    "activities": [
+      {
+        "id": "pra-flower-arranging",
+        "title": "Flower Arranging"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "cloth for spills",
+    "name": "Cloth for spills",
+    "activities": [
+      {
+        "id": "pra-flower-arranging",
+        "title": "Flower Arranging"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "spreader or dull knife",
+    "name": "Spreader or dull knife",
+    "activities": [
+      {
+        "id": "pra-food-preparation-spreading",
+        "title": "Food Preparation - Spreading"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small dish with spread",
+    "name": "Small dish with spread",
+    "activities": [
+      {
+        "id": "pra-food-preparation-spreading",
+        "title": "Food Preparation - Spreading"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "bread or crackers",
+    "name": "Bread or crackers",
+    "activities": [
+      {
+        "id": "pra-food-preparation-spreading",
+        "title": "Food Preparation - Spreading"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "soap",
+    "name": "Soap",
+    "activities": [
+      {
+        "id": "pra-hand-washing",
+        "title": "Hand Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "nail brush",
+    "name": "Nail brush",
+    "activities": [
+      {
+        "id": "pra-hand-washing",
+        "title": "Hand Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "towel",
+    "name": "Towel",
+    "activities": [
+      {
+        "id": "pra-hand-washing",
+        "title": "Hand Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "water basin or sink access",
+    "name": "Water basin or sink access",
+    "activities": [
+      {
+        "id": "pra-hand-washing",
+        "title": "Hand Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "dried beans or rice",
+    "name": "Dried beans or rice",
+    "activities": [
+      {
+        "id": "pra-pouring-dry-ingredients",
+        "title": "Pouring Dry Ingredients"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small brush and dustpan",
+    "name": "Small brush and dustpan",
+    "activities": [
+      {
+        "id": "pra-pouring-dry-ingredients",
+        "title": "Pouring Dry Ingredients"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small cup",
+    "name": "Small cup",
+    "activities": [
+      {
+        "id": "pra-pouring-liquids",
+        "title": "Pouring Liquids"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small basin",
+    "name": "Small basin",
+    "activities": [
+      {
+        "id": "pra-table-washing",
+        "title": "Table Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "mild soap",
+    "name": "Mild soap",
+    "activities": [
+      {
+        "id": "pra-table-washing",
+        "title": "Table Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "drying cloth",
+    "name": "Drying cloth",
+    "activities": [
+      {
+        "id": "pra-table-washing",
+        "title": "Table Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "apron",
+    "name": "Apron",
+    "activities": [
+      {
+        "id": "pra-table-washing",
+        "title": "Table Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small table or tray",
+    "name": "Small table or tray",
+    "activities": [
+      {
+        "id": "pra-table-washing",
+        "title": "Table Washing"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small amount of water",
+    "name": "Small amount of water",
+    "activities": [
+      {
+        "id": "pra-water-pouring-with-s",
+        "title": "Water Pouring with Small Containers"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small towel",
+    "name": "Small towel",
+    "activities": [
+      {
+        "id": "pra-water-pouring-with-s",
+        "title": "Water Pouring with Small Containers"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "zipper frame (or fabric pieces with zipper attached)",
+    "name": "Zipper frame (or fabric pieces with zipper attached)",
+    "activities": [
+      {
+        "id": "pra-zipper-frame",
+        "title": "Zipper Frame"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "binomial cube (or simplified 3d puzzle with color patterns)",
+    "name": "Binomial cube (or simplified 3D puzzle with color patterns)",
+    "activities": [
+      {
+        "id": "sen-binomial-cube",
+        "title": "Binomial Cube"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "graded color tablets",
+    "name": "Graded color tablets",
+    "activities": [
+      {
+        "id": "sen-color-tablets-grading",
+        "title": "Color Tablets Grading"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "color tablets (primary colors)",
+    "name": "Color tablets (primary colors)",
+    "activities": [
+      {
+        "id": "sen-color-tablets-matching",
+        "title": "Color Tablets Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "pairs of fabric swatches (different textures)",
+    "name": "Pairs of fabric swatches (different textures)",
+    "activities": [
+      {
+        "id": "sen-fabric-matching",
+        "title": "Fabric Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "optional: blindfold",
+    "name": "Optional: blindfold",
+    "activities": [
+      {
+        "id": "sen-fabric-matching",
+        "title": "Fabric Matching"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "geometric cabinet drawer (or diy shape templates and insets)",
+    "name": "Geometric cabinet drawer (or DIY shape templates and insets)",
+    "activities": [
+      {
+        "id": "sen-geometric-cabinet",
+        "title": "Geometric Cabinet"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "knobbed cylinder block (or diy version with different sized containers)",
+    "name": "Knobbed cylinder block (or DIY version with different sized containers)",
+    "activities": [
+      {
+        "id": "sen-knobbed-cylinders",
+        "title": "Knobbed Cylinders"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "unbreakable mirror",
+    "name": "Unbreakable mirror",
+    "activities": [
+      {
+        "id": "sen-mirror-play",
+        "title": "Mirror Play"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "secure stand or wall mounting",
+    "name": "Secure stand or wall mounting",
+    "activities": [
+      {
+        "id": "sen-mirror-play",
+        "title": "Mirror Play"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "various baby-safe rattles and bells with different sounds",
+    "name": "Various baby-safe rattles and bells with different sounds",
+    "activities": [
+      {
+        "id": "sen-rattle-and-bell-expl",
+        "title": "Rattle and Bell Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "shallow bin",
+    "name": "Shallow bin",
+    "activities": [
+      {
+        "id": "sen-sensory-bins",
+        "title": "Sensory Bins"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "base material (rice, beans, water beads, etc.)",
+    "name": "Base material (rice, beans, water beads, etc.)",
+    "activities": [
+      {
+        "id": "sen-sensory-bins",
+        "title": "Sensory Bins"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "scoops, containers, funnels",
+    "name": "Scoops, containers, funnels",
+    "activities": [
+      {
+        "id": "sen-sensory-bins",
+        "title": "Sensory Bins"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "interesting objects to find and explore",
+    "name": "Interesting objects to find and explore",
+    "activities": [
+      {
+        "id": "sen-sensory-bins",
+        "title": "Sensory Bins"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "several lightweight, colorful scarves of different textures",
+    "name": "Several lightweight, colorful scarves of different textures",
+    "activities": [
+      {
+        "id": "sen-silky-scarves-play",
+        "title": "Silky Scarves Play"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small bowls or trays in different colors",
+    "name": "Small bowls or trays in different colors",
+    "activities": [
+      {
+        "id": "sen-sorting-by-color",
+        "title": "Sorting by Color"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "various objects in matching colors",
+    "name": "Various objects in matching colors",
+    "activities": [
+      {
+        "id": "sen-sorting-by-color",
+        "title": "Sorting by Color"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "small basket for mixed objects",
+    "name": "Small basket for mixed objects",
+    "activities": [
+      {
+        "id": "sen-sorting-by-color",
+        "title": "Sorting by Color"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "sound cylinders (or small containers filled with different materials)",
+    "name": "Sound cylinders (or small containers filled with different materials)",
+    "activities": [
+      {
+        "id": "sen-sound-cylinders",
+        "title": "Sound Cylinders"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "shallow basket",
+    "name": "Shallow basket",
+    "activities": [
+      {
+        "id": "sen-treasure-basket-expl",
+        "title": "Treasure Basket Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "various safe household items of different textures (wooden spoon, metal whisk, fabric scraps, etc.)",
+    "name": "Various safe household items of different textures (wooden spoon, metal whisk, fabric scraps, etc.)",
+    "activities": [
+      {
+        "id": "sen-treasure-basket-expl",
+        "title": "Treasure Basket Exploration"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "high-contrast mobile (black and white patterns)",
+    "name": "High-contrast mobile (black and white patterns)",
+    "activities": [
+      {
+        "id": "sen-visual-tracking-mobi",
+        "title": "Visual Tracking Mobile"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "secure hanging attachment",
+    "name": "Secure hanging attachment",
+    "activities": [
+      {
+        "id": "sen-visual-tracking-mobi",
+        "title": "Visual Tracking Mobile"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "large paper",
+    "name": "Large paper",
+    "activities": [
+      {
+        "id": "tod-pra-toddler-art-experien",
+        "title": "Toddler Art Experiences"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "chunky crayons, finger paint, or play clay",
+    "name": "Chunky crayons, finger paint, or play clay",
+    "activities": [
+      {
+        "id": "tod-pra-toddler-art-experien",
+        "title": "Toddler Art Experiences"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "art smock or old shirt",
+    "name": "Art smock or old shirt",
+    "activities": [
+      {
+        "id": "tod-pra-toddler-art-experien",
+        "title": "Toddler Art Experiences"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  },
+  {
+    "normalizedName": "cleaning materials",
+    "name": "Cleaning materials",
+    "activities": [
+      {
+        "id": "tod-pra-toddler-art-experien",
+        "title": "Toddler Art Experiences"
+      }
+    ],
+    "count": 1,
+    "amazonLink": "",
+    "affiliateLink": ""
+  }
+]

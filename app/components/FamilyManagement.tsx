@@ -33,7 +33,7 @@ export default function FamilyManagement() {
   const [createFamilyName, setCreateFamilyName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
   const [copied, setCopied] = useState(false);
   
   // UI states
@@ -106,8 +106,8 @@ export default function FamilyManagement() {
     setSuccess('');
     
     try {
-      const code = await inviteToFamily(inviteEmail.trim());
-      setInviteCode(code);
+      const url = await inviteToFamily(inviteEmail.trim());
+      setInviteUrl(url);
       setSuccess('Invitation created successfully!');
       setInviteEmail('');
     } catch (err: any) {
@@ -174,13 +174,6 @@ export default function FamilyManagement() {
     } finally {
       setIsLeaving(false);
     }
-  };
-  
-  // Copy invite code to clipboard
-  const copyInviteCode = () => {
-    navigator.clipboard.writeText(inviteCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
   
   if (loading) {
@@ -409,24 +402,31 @@ export default function FamilyManagement() {
               </button>
             </form>
             
-            {/* Display invite code if available */}
-            {inviteCode && (
+            {/* Display invite URL if available */}
+            {inviteUrl && (
               <div className="mt-4 p-4 bg-emerald-50 rounded-md">
-                <p className="text-emerald-700 text-sm font-medium mb-2">Invitation code created!</p>
+                <p className="text-emerald-700 text-sm font-medium mb-2">Invitation link created!</p>
                 <div className="flex items-center">
-                  <code className="bg-white px-3 py-1 rounded border border-emerald-200 text-emerald-800 flex-grow">
-                    {inviteCode}
-                  </code>
+                  <input
+                    type="text"
+                    readOnly
+                    value={inviteUrl}
+                    className="bg-white px-3 py-1 rounded border border-emerald-200 text-emerald-800 flex-grow text-sm"
+                  />
                   <button
-                    onClick={copyInviteCode}
+                    onClick={() => {
+                      navigator.clipboard.writeText(inviteUrl);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
                     className="ml-2 inline-flex items-center p-1.5 border border-emerald-300 rounded-md text-emerald-700 hover:bg-emerald-100"
-                    title="Copy code"
+                    title="Copy link"
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>
                 <p className="text-xs text-emerald-600 mt-2">
-                  Share this code with the person you're inviting.
+                  Share this link with the person you're inviting. They'll be automatically added to your family when they sign up.
                 </p>
               </div>
             )}

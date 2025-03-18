@@ -24,6 +24,7 @@ import { collection, query, where, getDocs, getDoc, doc, orderBy, limit } from '
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
 import QuickObservationForm from './QuickObservationForm';
+import { getUserMaterials } from '@/lib/materialsService';
 
 // Define types
 interface Activity {
@@ -40,6 +41,7 @@ interface Activity {
   timeSlot?: string;
   order?: number;
   lastObservedDate?: Date | any;
+  materialsNeeded?: string[];
 }
 
 interface DayActivities {
@@ -90,6 +92,9 @@ export default function WeeklyPlanWithDayFocus({
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [weekHasPlan, setWeekHasPlan] = useState(false);
+  const [filterByAvailableMaterials, setFilterByAvailableMaterials] = useState(false);
+  const [ownedMaterialIds, setOwnedMaterialIds] = useState<string[]>([]);
+  const [materialLookup, setMaterialLookup] = useState<Map<string, any>>(new Map());
   
   // Helper function to get the start of the week (Monday)
   function getWeekStart(date: Date): Date {
@@ -153,6 +158,40 @@ export default function WeeklyPlanWithDayFocus({
     
     fetchChildren();
   }, [currentUser, selectedChildId]);
+  
+  // Add useEffect to load owned materials
+  useEffect(() => {
+    const fetchOwnedMaterials = async () => {
+      if (!currentUser?.uid) return;
+      
+      try {
+        // Get materials the user owns
+        const ownedIds = await getUserMaterials(currentUser.uid);
+        setOwnedMaterialIds(ownedIds);
+        
+        // Get all materials to create a lookup table
+        const materialsRef = collection(db, 'materials');
+        const materialsSnapshot = await getDocs(materialsRef);
+        
+        const materials = new Map();
+        materialsSnapshot.forEach(doc => {
+          const data = doc.data();
+          materials.set(data.normalizedName, {
+            id: doc.id,
+            ...data
+          });
+        });
+        
+        setMaterialLookup(materials);
+      } catch (error) {
+        console.error('Error fetching owned materials:', error);
+      }
+    };
+    
+    if (currentUser?.uid) {
+      fetchOwnedMaterials();
+    }
+  }, [currentUser]);
   
   // Create a function reference for fetchWeekActivities
   const fetchWeekActivitiesRef = async () => {
@@ -548,6 +587,26 @@ export default function WeeklyPlanWithDayFocus({
     return day.activities.filter(a => a.status === 'completed').length;
   };
   
+  // Add a function to check if an activity can be done with owned materials
+  const canDoActivityWithOwnedMaterials = (activity: Activity) => {
+    // If no materials needed, activity can be done
+    if (!activity.materialsNeeded || !Array.isArray(activity.materialsNeeded) || activity.materialsNeeded.length === 0) {
+      return true;
+    }
+    
+    // Check if all required materials are owned
+    return activity.materialsNeeded.every(materialName => {
+      const normalizedName = materialName.trim().toLowerCase();
+      const material = materialLookup.get(normalizedName);
+      
+      // If material isn't in our database, we can't check if it's owned
+      if (!material) return false;
+      
+      // Check if the user owns this material
+      return ownedMaterialIds.includes(material.id);
+    });
+  };
+  
   // Loading state
   if (loading) {
     return (
@@ -656,6 +715,22 @@ export default function WeeklyPlanWithDayFocus({
         </div>
       </div>
       
+      {/* Add material filter */}
+      <div className="px-4 py-2 border-b border-gray-200 flex justify-end">
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="filter-materials"
+            checked={filterByAvailableMaterials}
+            onChange={() => setFilterByAvailableMaterials(!filterByAvailableMaterials)}
+            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+          />
+          <label htmlFor="filter-materials" className="ml-2 text-sm text-gray-700">
+            Show only activities I can do now
+          </label>
+        </div>
+      </div>
+      
       {/* Weekly calendar strip */}
       <div className="px-4 py-4 border-b border-gray-200 overflow-x-auto">
         <div className="flex min-w-max">
@@ -752,7 +827,9 @@ export default function WeeklyPlanWithDayFocus({
           
           {selectedDayActivities && (
             <p className="text-sm text-gray-500">
-              {selectedDayActivities.activities.length} {selectedDayActivities.activities.length === 1 ? 'activity' : 'activities'}
+              {selectedDayActivities.activities.filter(activity => 
+                !filterByAvailableMaterials || canDoActivityWithOwnedMaterials(activity)
+              ).length} {selectedDayActivities.activities.length === 1 ? 'activity' : 'activities'}
               {selectedDayActivities.activities.filter(a => a.status === 'completed').length > 0 && 
                `, ${selectedDayActivities.activities.filter(a => a.status === 'completed').length} completed`}
             </p>
@@ -762,85 +839,100 @@ export default function WeeklyPlanWithDayFocus({
         {/* Day activities or empty state */}
         {selectedDayActivities && (
           <div>
-            {selectedDayActivities.activities.length > 0 ? (
+            {selectedDayActivities.activities.filter(activity => 
+              !filterByAvailableMaterials || canDoActivityWithOwnedMaterials(activity)
+            ).length > 0 ? (
               <div className="space-y-4">
-                {selectedDayActivities.activities.map(activity => (
-                  <div 
-                    key={activity.id}
-                    className={`border rounded-lg overflow-hidden ${
-                      activity.status === 'completed' ? 'border-green-300 bg-green-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                          {activity.description && (
-                            <p className="mt-1 text-sm text-gray-600">{activity.description}</p>
+                {selectedDayActivities.activities
+                  .filter(activity => 
+                    !filterByAvailableMaterials || canDoActivityWithOwnedMaterials(activity)
+                  )
+                  .map(activity => (
+                    <div 
+                      key={activity.id}
+                      className={`border rounded-lg overflow-hidden ${
+                        activity.status === 'completed' ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{activity.title}</h4>
+                            {activity.description && (
+                              <p className="mt-1 text-sm text-gray-600">{activity.description}</p>
+                            )}
+                          </div>
+                          {activity.status === 'completed' && (
+                            <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {activity.lastObservedDate ? (
+                                <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
+                              ) : (
+                                <>Observed</>
+                              )}
+                            </span>
                           )}
                         </div>
-                        {activity.status === 'completed' && (
-                          <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {activity.lastObservedDate ? (
-                              <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
-                            ) : (
-                              <>Observed</>
-                            )}
-                          </span>
-                        )}
+                        
+                        <div className="flex items-center text-xs text-gray-500 space-x-3 mt-2">
+                          {activity.area && (
+                            <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                              {activity.area.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                          {activity.duration && (
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {activity.duration} min
+                            </span>
+                          )}
+                          {activity.isHomeSchoolConnection && (
+                            <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                              <Star className="h-3 w-3 mr-1" />
+                              School Connection
+                            </span>
+                          )}
+                          {activity.timeSlot && (
+                            <span className="capitalize">
+                              {activity.timeSlot}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="flex items-center text-xs text-gray-500 space-x-3 mt-2">
-                        {activity.area && (
-                          <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                            {activity.area.replace(/_/g, ' ')}
-                          </span>
-                        )}
-                        {activity.duration && (
-                          <span className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {activity.duration} min
-                          </span>
-                        )}
-                        {activity.isHomeSchoolConnection && (
-                          <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                            <Star className="h-3 w-3 mr-1" />
-                            School Connection
-                          </span>
-                        )}
-                        {activity.timeSlot && (
-                          <span className="capitalize">
-                            {activity.timeSlot}
-                          </span>
-                        )}
+                      <div className="bg-gray-50 px-4 py-2 flex space-x-4">
+                        <button
+                          onClick={() => openActivityDetails(activity.activityId)}
+                          className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                          type="button"
+                        >
+                          <InfoIcon className="h-3 w-3 mr-1" />
+                          How to
+                        </button>
+                        <button
+                          onClick={() => openObservationForm(activity)}
+                          className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
+                          type="button"
+                        >
+                          <PlusCircle className="h-3 w-3 mr-1" />
+                          {activity.status === 'completed' ? 'Add Another Observation' : 'Add Observation'}
+                        </button>
                       </div>
                     </div>
-                    
-                    <div className="bg-gray-50 px-4 py-2 flex space-x-4">
-                      <button
-                        onClick={() => openActivityDetails(activity.activityId)}
-                        className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
-                        type="button"
-                      >
-                        <InfoIcon className="h-3 w-3 mr-1" />
-                        How to
-                      </button>
-                      <button
-                        onClick={() => openObservationForm(activity)}
-                        className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
-                        type="button"
-                      >
-                        <PlusCircle className="h-3 w-3 mr-1" />
-                        {activity.status === 'completed' ? 'Add Another Observation' : 'Add Observation'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             ) : (
               <div className="bg-gray-50 rounded-lg p-6 text-center">
-                {selectedDayActivities.isRestDay ? (
+                {filterByAvailableMaterials ? (
+                  <>
+                    <p className="text-gray-700 font-medium mb-2">
+                      No activities available with current materials
+                    </p>
+                    <p className="text-gray-500 text-sm">
+                      Try unchecking the filter or marking more materials as owned.
+                    </p>
+                  </>
+                ) : selectedDayActivities.isRestDay ? (
                   <>
                     <p className="text-gray-700 font-medium mb-2">
                       Rest Day

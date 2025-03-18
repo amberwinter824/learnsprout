@@ -13,9 +13,12 @@
     "init:institutions": "node scripts/createDefaultInstitution.js",
     "init:schema": "node scripts/initFirebaseSchema.js",
     "init:standalone": "node scripts/standaloneSchemaInit.js",
-    "setup:dev": "npm run init:roles && npm run init:institutions && npm run init:schema && npm run init:standalone"
+    "setup:dev": "npm run init:roles && npm run init:institutions && npm run init:schema && npm run init:standalone",
+    "extract-materials": "node scripts/extractMaterials.cjs",
+    "import-materials": "node scripts/importMaterialLinks.cjs"
   },
   "dependencies": {
+    "csv-parser": "^3.2.0",
     "date-fns": "^4.1.0",
     "firebase": "^9.23.0",
     "firebase-admin": "^13.2.0",

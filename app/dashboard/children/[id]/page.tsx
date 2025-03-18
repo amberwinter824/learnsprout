@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ChildFamilyAccess from '@/app/components/ChildFamilyAccess';
+import MaterialsForecast from '@/app/components/parent/MaterialsForecast';
 
 // Define interfaces
 interface Child {
@@ -752,6 +753,50 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
             </div>
           </div>
           
+          {/* Weekly Plan */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Weekly Plan</h3>
+            {weeklyActivities.length > 0 ? (
+              <div className="space-y-4">
+                {weeklyActivities.map((activity, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <Play className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">{activity.activityTitle}</p>
+                        <p className="text-xs text-gray-500">
+                          {format(activity.plannedFor.toDate(), 'EEEE, MMMM d')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      {activity.completed ? (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full flex items-center">
+                          <Clock4 className="h-3 w-3 mr-1" />
+                          Planned
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No activities planned for this week.</p>
+            )}
+          </div>
+          
+          {/* Materials Forecast */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <MaterialsForecast childId={childId} period={90} />
+          </div>
+          
           {/* Activity Timeline */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
@@ -819,6 +864,45 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
                 </div>
               )}
             </div>
+          </div>
+        </div>
+        
+        {/* Right column content */}
+        <div className="space-y-6">
+          {/* Skills Summary */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Skills Summary</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {skillsStats.map(skill => (
+                <div key={skill.area} className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">{skill.areaLabel}</span>
+                  <span className="text-sm font-medium text-gray-700">{skill.mastered} mastered</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Recommended Activities */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Recommended Activities</h2>
+            {recommendedActivities.length > 0 ? (
+              <div className="space-y-4">
+                {recommendedActivities.map(activity => (
+                  <div key={activity.id} className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">{activity.activityTitle || 'Activity'}</span>
+                    <span className="text-sm font-medium text-gray-700">{activity.priority ? `Priority: ${activity.priority}` : 'No priority'}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 mb-2">No recommended activities yet</p>
+                <p className="text-sm text-gray-500">
+                  Start tracking your child's progress to receive personalized activity recommendations
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
