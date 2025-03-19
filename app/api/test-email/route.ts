@@ -1,12 +1,16 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 
+if (!process.env.RESEND_API_KEY) {
+  throw new Error('Missing RESEND_API_KEY environment variable');
+}
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Learn Sprout <noreply@learnsprout.com>',
+      from: 'onboarding@resend.dev', // Use the default Resend sender for testing
       to: 'amberwinter824@gmail.com',
       subject: 'Test Email from Learn Sprout',
       html: `
@@ -32,6 +36,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ data });
   } catch (error) {
-    return NextResponse.json({ error }, { status: 500 });
+    console.error('Error sending email:', error);
+    return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
   }
 } 
