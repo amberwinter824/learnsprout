@@ -10,7 +10,8 @@ import {
   BarChart2, 
   Settings, 
   Loader2,
-  User
+  User,
+  Package
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -18,6 +19,8 @@ import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFoc
 import AllChildrenWeeklyView from '@/app/components/parent/AllChildrenWeeklyView';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
 import { ErrorBoundary } from 'react-error-boundary';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -39,6 +42,7 @@ export default function Dashboard() {
     childIdParam ?? undefined
   );
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [children, setChildren] = useState<any[]>([]);
   
   // Update URL when parameters change
   const updateUrlParams = useCallback((date?: Date, childId?: string) => {
@@ -55,6 +59,36 @@ export default function Dashboard() {
     // Replace current URL to maintain navigation history
     router.replace(`/dashboard?${params.toString()}`, { scroll: false });
   }, [router]);
+  
+  // Fetch children data
+  useEffect(() => {
+    async function fetchChildren() {
+      if (!currentUser) return;
+      
+      try {
+        const childrenSnapshot = await getDocs(
+          query(collection(db, 'children'), where('userId', '==', currentUser.uid))
+        );
+        
+        const childrenData = childrenSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setChildren(childrenData);
+        
+        // If no child is selected and we have children, select the first one
+        if (!selectedChildId && childrenData.length > 0) {
+          setSelectedChildId(childrenData[0].id);
+          updateUrlParams(selectedDate, childrenData[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching children:', error);
+      }
+    }
+    
+    fetchChildren();
+  }, [currentUser, selectedChildId, selectedDate, updateUrlParams]);
   
   // Handle date selection
   const handleDateSelect = useCallback((date: Date) => {
@@ -148,12 +182,27 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content - Moved up for mobile view */}
           <div className="lg:col-span-3 order-1 lg:order-2">
-            {/* Unified Weekly Plan with Day Focus */}
-            <WeeklyPlanWithDayFocus 
-              selectedDate={selectedDate}
-              selectedChildId={selectedChildId}
-              onGeneratePlan={handleGeneratePlan}
-            />
+            {children.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+                <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h2 className="text-lg font-medium text-gray-900 mb-2">Welcome to Learn Sprout!</h2>
+                <p className="text-gray-600 mb-4">
+                  Get started by adding your first child to begin creating personalized activity plans.
+                </p>
+                <Link
+                  href="/dashboard/children/new"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700"
+                >
+                  Add Your First Child
+                </Link>
+              </div>
+            ) : (
+              <WeeklyPlanWithDayFocus 
+                selectedDate={selectedDate}
+                selectedChildId={selectedChildId}
+                onGeneratePlan={handleGeneratePlan}
+              />
+            )}
           </div>
           
           {/* Sidebar - Moved down for mobile view */}
@@ -163,6 +212,14 @@ export default function Dashboard() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Links</h2>
               
               <div className="space-y-2">
+                <Link
+                  href="/dashboard/children/new"
+                  className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  <User className="h-5 w-5 mr-3 text-emerald-500" />
+                  <span>Add New Child</span>
+                </Link>
+
                 <Link
                   href="/dashboard/activities"
                   className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
@@ -178,6 +235,14 @@ export default function Dashboard() {
                   <BarChart2 className="h-5 w-5 mr-3 text-emerald-500" />
                   <span>Progress Tracking</span>
                 </Link>
+
+                <Link
+                  href="/dashboard/materials"
+                  className="flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  <Package className="h-5 w-5 mr-3 text-emerald-500" />
+                  <span>Materials Inventory</span>
+                </Link>
                 
                 <Link
                   href="/dashboard/settings"
@@ -187,6 +252,26 @@ export default function Dashboard() {
                   <span>Settings</span>
                 </Link>
               </div>
+            </div>
+            
+            {/* Materials Forecast */}
+            <div className="mb-6">
+              <ErrorBoundary
+                fallback={
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <h2 className="text-lg font-medium text-red-800 mb-2">Something went wrong</h2>
+                    <p className="text-red-600 mb-4">We couldn't load your materials forecast.</p>
+                    <button 
+                      onClick={() => window.location.reload()} 
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                }
+              >
+                <AllChildrenMaterialsForecast />
+              </ErrorBoundary>
             </div>
             
             {/* App Features Section */}
