@@ -86,6 +86,8 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
           return;
         }
         
+        console.log('Found weekly plans:', plansSnapshot.size);
+        
         // Extract all activity IDs from upcoming plans
         const activityIds: string[] = [];
         const planDates: string[] = [];
@@ -93,12 +95,14 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
         plansSnapshot.forEach(doc => {
           const planData = doc.data();
           planDates.push(planData.weekStarting);
+          console.log('Processing plan for week:', planData.weekStarting);
           
           // Extract activities from all days
           const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
           
           dayNames.forEach(day => {
             const dayActivities = planData[day] || [];
+            console.log(`Found ${dayActivities.length} activities for ${day}`);
             dayActivities.forEach((activity: any) => {
               if (activity.activityId) {
                 activityIds.push(activity.activityId);
@@ -111,6 +115,7 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
         
         // Remove duplicates
         const uniqueActivityIds = [...new Set(activityIds)];
+        console.log('Unique activity IDs:', uniqueActivityIds);
         
         if (uniqueActivityIds.length === 0) {
           setMaterials([]);
@@ -126,6 +131,7 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
               
               if (activityDoc.exists()) {
                 const data = activityDoc.data();
+                console.log(`Activity ${activityId} materials:`, data.materialsNeeded);
                 return {
                   id: activityId,
                   title: data.title || 'Untitled Activity',
@@ -144,6 +150,8 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
         const validActivities = activitiesWithMaterials.filter(
           activity => activity !== null && activity.materialsNeeded?.length > 0
         );
+        
+        console.log('Activities with materials:', validActivities.length);
         
         // Process materials into a unified list with de-duplication
         const materialMap = new Map<string, MaterialWithActivities>();

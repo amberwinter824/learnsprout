@@ -111,6 +111,20 @@
             "order": "DESCENDING"
           }
         ]
+      },
+      {
+        "collectionGroup": "userMaterials",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "userId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "inInventory",
+            "order": "ASCENDING"
+          }
+        ]
       }
     ],
     "fieldOverrides": []

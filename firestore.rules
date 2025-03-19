@@ -95,5 +95,13 @@ service cloud.firestore {
                         .hasOnly(['outcome', 'parentFeedback']);
       allow delete: if false; // Preserve recommendation history
     }
+    
+    // User materials collection
+    match /userMaterials/{materialId} {
+      allow read: if isSignedIn() && hasUserAccess(resource.data);
+      allow create: if isSignedIn() && hasUserAccess(request.resource.data);
+      allow update: if isSignedIn() && hasUserAccess(resource.data) && hasUserAccess(request.resource.data);
+      allow delete: if isSignedIn() && hasUserAccess(resource.data);
+    }
   }
 }

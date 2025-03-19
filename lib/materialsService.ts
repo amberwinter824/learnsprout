@@ -149,6 +149,46 @@ export async function getUserMaterials(userId: string): Promise<string[]> {
 }
 
 /**
+ * Check if a material is a common household item that most users would have
+ */
+function isCommonHouseholdItem(materialName: string): boolean {
+  const commonItems = [
+    // Kitchen items
+    'water', 'spoon', 'fork', 'knife', 'plate', 'bowl', 'cup', 'mug', 'napkin', 'paper towel',
+    'towel', 'dish soap', 'sponge', 'container', 'basket', 'tray', 'measuring cup', 'measuring spoon',
+    
+    // Art supplies
+    'paper', 'pencil', 'pen', 'marker', 'crayon', 'scissors', 'glue', 'tape', 'paint', 'brush',
+    'coloring book', 'construction paper', 'cardboard', 'box', 'string', 'yarn', 'ribbon',
+    
+    // Household items
+    'basket', 'container', 'box', 'bag', 'bottle', 'jar', 'lid', 'cloth', 'fabric', 'tissue',
+    'cotton ball', 'cotton swab', 'sponge', 'brush', 'broom', 'dustpan', 'mop', 'rag',
+    
+    // Natural items
+    'water', 'sand', 'dirt', 'soil', 'rock', 'stone', 'leaf', 'stick', 'shell', 'seed',
+    'flower', 'grass', 'pinecone', 'acorn', 'feather',
+    
+    // Food items
+    'rice', 'bean', 'pasta', 'cereal', 'flour', 'salt', 'sugar', 'spice', 'herb', 'fruit',
+    'vegetable', 'grain', 'seed', 'nut', 'raisin', 'cracker', 'cookie', 'bread',
+    
+    // Cleaning items
+    'soap', 'sponge', 'rag', 'towel', 'broom', 'dustpan', 'mop', 'bucket', 'spray bottle',
+    
+    // Basic tools
+    'hammer', 'screwdriver', 'pliers', 'scissors', 'knife', 'spoon', 'fork', 'tongs', 'clamp',
+    
+    // Educational items
+    'book', 'paper', 'pencil', 'pen', 'marker', 'crayon', 'chalk', 'board', 'card', 'puzzle',
+    'block', 'bead', 'button', 'coin', 'key', 'lock', 'magnet', 'mirror', 'magnifying glass'
+  ];
+  
+  const normalizedName = materialName.trim().toLowerCase();
+  return commonItems.some(item => normalizedName.includes(item));
+}
+
+/**
  * Find activities that can be done with the materials a user already has
  */
 export async function findActivitiesWithAvailableMaterials(
@@ -167,11 +207,6 @@ export async function findActivitiesWithAvailableMaterials(
     );
     
     const ownedMaterialIds = userMaterialsSnapshot.docs.map(doc => doc.data().materialId);
-    
-    // If the user doesn't have any materials, return empty array
-    if (ownedMaterialIds.length === 0) {
-      return [];
-    }
     
     // Get all materials to create a lookup table
     const materialsSnapshot = await getDocs(collection(db, 'materials'));
@@ -247,22 +282,25 @@ export async function findActivitiesWithAvailableMaterials(
         continue;
       }
       
-      // Check if all required materials are owned
-      const allMaterialsOwned = activity.materialsNeeded.every((materialName: string) => {
+      // Check if all required materials are either owned or common household items
+      const allMaterialsAvailable = activity.materialsNeeded.every((materialName: string) => {
         // Normalize the material name
         const normalizedName = materialName.trim().toLowerCase();
         
-        // Look up the material in our map
-        const material = materialsByName.get(normalizedName);
+        // First check if it's a common household item
+        if (isCommonHouseholdItem(normalizedName)) {
+          return true;
+        }
         
-        // If the material isn't in our database, we can't check if it's owned
+        // Then check if it's in our database and owned
+        const material = materialsByName.get(normalizedName);
         if (!material) return false;
         
-        // Check if the user owns this material
         return ownedMaterialIds.includes(material.id!);
       });
       
-      if (allMaterialsOwned) {
+      // If all materials are available (either owned or common), include the activity
+      if (allMaterialsAvailable) {
         doableActivityIds.push(activity.id);
       }
     }
