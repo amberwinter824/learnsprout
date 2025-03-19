@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function TestEmailPage() {
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const sendTestEmail = async () => {
     try {
       setIsSending(true);
       setMessage('');
+      setError('');
       
       const response = await fetch('/api/test-email', {
         method: 'POST',
@@ -21,10 +23,10 @@ export default function TestEmailPage() {
       if (response.ok) {
         setMessage('Test email sent successfully! Check your inbox.');
       } else {
-        setMessage(`Error: ${data.error?.message || 'Failed to send email'}`);
+        setError(data.error || 'Failed to send email. Please try again.');
       }
     } catch (error) {
-      setMessage('Error sending test email. Please try again.');
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setIsSending(false);
     }
@@ -52,10 +54,18 @@ export default function TestEmailPage() {
           </button>
           
           {message && (
-            <div className={`mt-4 p-4 rounded-md ${
-              message.includes('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-            }`}>
+            <div className="mt-4 p-4 rounded-md bg-green-50 text-green-700">
               {message}
+            </div>
+          )}
+          
+          {error && (
+            <div className="mt-4 p-4 rounded-md bg-red-50 text-red-700 flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Error</p>
+                <p className="text-sm">{error}</p>
+              </div>
             </div>
           )}
         </div>

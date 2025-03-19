@@ -1,13 +1,17 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('Missing RESEND_API_KEY environment variable');
-}
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Only initialize Resend on the server side
+const resend = typeof window === 'undefined' ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export async function POST(request: Request) {
+  if (!resend) {
+    return NextResponse.json(
+      { error: 'Email service can only be used on the server side' },
+      { status: 500 }
+    );
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: 'onboarding@resend.dev', // Use the default Resend sender for testing
@@ -31,12 +35,16 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+      console.error('Resend API error:', error);
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({ data });
   } catch (error) {
     console.error('Error sending email:', error);
-    return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to send email. Please try again later.' },
+      { status: 500 }
+    );
   }
 } 

@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Only initialize Resend on the server side
+const resend = typeof window === 'undefined' ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export async function sendFamilyInvitationEmail(
   recipientEmail: string,
@@ -8,9 +9,13 @@ export async function sendFamilyInvitationEmail(
   familyName: string,
   inviterName: string
 ) {
+  if (!resend) {
+    throw new Error('Email service can only be used on the server side');
+  }
+
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Learn Sprout <noreply@learnsprout.com>',
+      from: 'onboarding@resend.dev', // Use the default Resend sender for testing
       to: recipientEmail,
       subject: `You've been invited to join ${familyName} on Learn Sprout`,
       html: `
@@ -32,7 +37,7 @@ export async function sendFamilyInvitationEmail(
     });
 
     if (error) {
-      console.error('Error sending invitation email:', error);
+      console.error('Resend API error:', error);
       throw error;
     }
 
