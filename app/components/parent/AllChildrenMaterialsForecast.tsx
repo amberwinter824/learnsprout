@@ -47,6 +47,12 @@ export default function AllChildrenMaterialsForecast() {
           ...doc.data()
         }));
 
+        if (children.length === 0) {
+          setMaterialsNeeded([]);
+          setLoading(false);
+          return;
+        }
+
         // Calculate date range for forecast (next 90 days)
         const today = startOfDay(new Date());
         const forecastEndDate = addDays(today, 90);
