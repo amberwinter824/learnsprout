@@ -31,10 +31,18 @@ interface Material {
   imageUrl?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  activities?: string[]; // Array of activity IDs that use this material
+}
+
+interface Activity {
+  id: string;
+  name: string;
+  category: string;
 }
 
 export default function MaterialsAdminPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -42,13 +50,33 @@ export default function MaterialsAdminPage() {
     name: '',
     amazonLink: '',
     category: '',
-    imageUrl: ''
+    imageUrl: '',
+    activities: []
   });
 
-  // Fetch materials
+  // Fetch materials and activities
   useEffect(() => {
     fetchMaterials();
+    fetchActivities();
   }, []);
+
+  const fetchActivities = async () => {
+    try {
+      const activitiesQuery = query(
+        collection(db, 'activities'),
+        orderBy('name', 'asc')
+      );
+      const snapshot = await getDocs(activitiesQuery);
+      const activitiesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Activity[];
+      setActivities(activitiesData);
+    } catch (err) {
+      console.error('Error fetching activities:', err);
+      setError('Failed to load activities');
+    }
+  };
 
   const fetchMaterials = async () => {
     try {
@@ -94,7 +122,8 @@ export default function MaterialsAdminPage() {
         name: '',
         amazonLink: '',
         category: '',
-        imageUrl: ''
+        imageUrl: '',
+        activities: []
       });
       setEditingMaterial(null);
       fetchMaterials();
@@ -127,7 +156,8 @@ export default function MaterialsAdminPage() {
       name: '',
       amazonLink: '',
       category: '',
-      imageUrl: ''
+      imageUrl: '',
+      activities: []
     });
   };
 
@@ -225,6 +255,31 @@ export default function MaterialsAdminPage() {
               />
             </div>
 
+            <div>
+              <label htmlFor="activities" className="block text-sm font-medium text-gray-700">
+                Associated Activities
+              </label>
+              <select
+                id="activities"
+                multiple
+                value={formData.activities || []}
+                onChange={(e) => {
+                  const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                  setFormData({ ...formData, activities: selectedOptions });
+                }}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+              >
+                {activities.map(activity => (
+                  <option key={activity.id} value={activity.id}>
+                    {activity.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-sm text-gray-500">
+                Hold Ctrl/Cmd to select multiple activities
+              </p>
+            </div>
+
             <div className="flex justify-end space-x-3">
               {editingMaterial && (
                 <button
@@ -263,13 +318,16 @@ export default function MaterialsAdminPage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
+                Material
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Category
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amazon Link
+                Purchase Links
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Used In Activities
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
@@ -297,14 +355,35 @@ export default function MaterialsAdminPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <a
-                    href={material.amazonLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-emerald-600 hover:text-emerald-900 truncate block max-w-xs"
-                  >
-                    {material.amazonLink}
-                  </a>
+                  <div className="space-y-1">
+                    <a
+                      href={material.amazonLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-emerald-600 hover:text-emerald-900 block truncate max-w-xs"
+                    >
+                      Amazon
+                    </a>
+                    {/* Add more purchase links here if needed */}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-900">
+                    {material.activities?.length ? (
+                      <ul className="list-disc list-inside space-y-1">
+                        {material.activities.map(activityId => {
+                          const activity = activities.find(a => a.id === activityId);
+                          return (
+                            <li key={activityId} className="text-emerald-600 hover:text-emerald-900">
+                              {activity?.name || 'Unknown Activity'}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <span className="text-gray-500 italic">Not used in any activities</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
