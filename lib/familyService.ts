@@ -17,6 +17,7 @@ import {
   import { Family } from './dataTypes'; // Import your data types
   import { UserData } from '../contexts/AuthContext';
   import { nanoid } from 'nanoid'; // For generating invite codes
+  import { sendFamilyInvitationEmail } from './emailService';
   
   // Create a new family
   export const createFamily = async (
@@ -95,6 +96,17 @@ import {
     // Generate a unique invite code
     const inviteCode = nanoid(10);
     
+    // Get family name and inviter name
+    const familyDoc = await getDoc(doc(db, 'families', familyId));
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    
+    if (!familyDoc.exists() || !userDoc.exists()) {
+      throw new Error('Family or user not found');
+    }
+    
+    const familyName = familyDoc.data().name;
+    const inviterName = userDoc.data().displayName || userDoc.data().email;
+    
     // Store the invitation in a new collection
     const inviteRef = doc(collection(db, 'familyInvitations'));
     await setDoc(inviteRef, {
@@ -107,8 +119,18 @@ import {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
     });
     
-    // Return a complete URL for the invitation
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/signup?invite=${inviteCode}&email=${encodeURIComponent(recipientEmail)}`;
+    // Generate the invitation URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    const inviteUrl = `${baseUrl}/signup?invite=${inviteCode}&email=${encodeURIComponent(recipientEmail)}`;
+    
+    // Send the invitation email
+    try {
+      await sendFamilyInvitationEmail(recipientEmail, inviteUrl, familyName, inviterName);
+    } catch (error) {
+      console.error('Error sending invitation email:', error);
+      // Don't throw here - we still want to return the URL even if email fails
+    }
+    
     return inviteUrl;
   };
   
