@@ -48,10 +48,13 @@ export default function AllChildrenMaterialsForecast() {
         }));
 
         if (children.length === 0) {
+          console.log('No children found for user');
           setMaterialsNeeded([]);
           setLoading(false);
           return;
         }
+
+        console.log(`Found ${children.length} children for user`);
 
         // Calculate date range for forecast (next 90 days)
         const today = startOfDay(new Date());
@@ -66,6 +69,8 @@ export default function AllChildrenMaterialsForecast() {
             where('weekStarting', '<=', format(forecastEndDate, 'yyyy-MM-dd'))
           )
         );
+
+        console.log(`Found ${plansSnapshot.size} weekly plans`);
 
         // Extract all activities from all plans
         const activityIds = new Set<string>();
@@ -84,17 +89,25 @@ export default function AllChildrenMaterialsForecast() {
           });
         });
 
+        console.log(`Found ${activityIds.size} unique activities`);
+
         // Get all activities with their materials
         const activities: Activity[] = [];
         for (const activityId of activityIds) {
           const activityDoc = await getDoc(doc(db, 'activities', activityId));
           if (activityDoc.exists()) {
-            activities.push({
-              id: activityDoc.id,
-              ...activityDoc.data()
-            } as Activity);
+            const data = activityDoc.data();
+            if (data.materialsNeeded && Array.isArray(data.materialsNeeded)) {
+              activities.push({
+                id: activityDoc.id,
+                title: data.title || 'Untitled Activity',
+                materialsNeeded: data.materialsNeeded
+              });
+            }
           }
         }
+
+        console.log(`Found ${activities.length} activities with materials`);
 
         // Get all materials to create a lookup table
         const materialsSnapshot = await getDocs(collection(db, 'materials'));
@@ -102,11 +115,13 @@ export default function AllChildrenMaterialsForecast() {
 
         materialsSnapshot.forEach(doc => {
           const data = doc.data() as Material;
-          materialsByName.set(data.normalizedName, {
+          materialsByName.set(data.name.toLowerCase(), {
             ...data,
             id: doc.id
           });
         });
+
+        console.log(`Found ${materialsByName.size} materials in database`);
 
         // Count materials needed
         const materialsCount = new Map<string, { count: number; activities: Set<string> }>();
@@ -137,6 +152,7 @@ export default function AllChildrenMaterialsForecast() {
           activities: Array.from(data.activities)
         })).sort((a, b) => b.count - a.count);
 
+        console.log(`Found ${materialsArray.length} materials needed for activities`);
         setMaterialsNeeded(materialsArray);
       } catch (err) {
         console.error('Error fetching materials forecast:', err);
