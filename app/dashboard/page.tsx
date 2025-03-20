@@ -19,7 +19,7 @@ import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFoc
 import AllChildrenWeeklyView from '@/app/components/parent/AllChildrenWeeklyView';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
 import { ErrorBoundary } from 'react-error-boundary';
-import { getDocs, query, where, collection } from 'firebase/firestore';
+import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function Dashboard() {
@@ -129,6 +129,41 @@ export default function Dashboard() {
       setLoading(false);
     }
   }, [currentUser]);
+  
+  // Update the handleMarkMaterialOwned function
+  const handleMarkMaterialOwned = async (materialId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      // Get the user's document
+      const userRef = doc(db, 'users', currentUser.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error('User document not found');
+      }
+      
+      const userData = userDoc.data();
+      const ownedMaterials = userData.ownedMaterials || [];
+      
+      // Check if material is already owned
+      if (ownedMaterials.includes(materialId)) {
+        return;
+      }
+      
+      // Update the user's owned materials
+      await updateDoc(userRef, {
+        ownedMaterials: arrayUnion(materialId)
+      });
+      
+      // Show success toast or notification
+      // You might want to add a toast notification system if you haven't already
+      
+    } catch (error) {
+      console.error('Error marking material as owned:', error);
+      // Show error toast or notification
+    }
+  };
   
   // Loading state
   if (loading) {
@@ -270,7 +305,7 @@ export default function Dashboard() {
                   </div>
                 }
               >
-                <AllChildrenMaterialsForecast />
+                <AllChildrenMaterialsForecast onMarkMaterialOwned={handleMarkMaterialOwned} />
               </ErrorBoundary>
             </div>
             

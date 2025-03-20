@@ -631,143 +631,22 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
       
       {/* Skills Tab */}
       {activeTab === 'skills' && (
-        <div>
-          <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
-            <div className="px-4 py-5 border-b border-gray-200 flex flex-wrap gap-4 items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Developmental Skills</h2>
-              
-              <div className="flex flex-wrap gap-2">
-                {/* Search box */}
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    className="focus:ring-emerald-500 focus:border-emerald-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                    placeholder="Search skills..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                
-                {/* Area filter */}
-                <select
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-md"
-                  value={selectedArea || ''}
-                  onChange={(e) => setSelectedArea(e.target.value || null)}
-                >
-                  <option value="">All Areas</option>
-                  {uniqueAreas.map(area => (
-                    <option key={area} value={area}>
-                      {getAreaLabel(area)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div className="px-4 py-5 sm:p-6">
-              <div className="mb-6 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-start">
-                  <Info className="h-5 w-5 text-gray-400 mr-2 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-600">
-                      Skills progress through four stages: <span className="font-medium">Not Started</span>,{' '}
-                      <span className="font-medium text-amber-700">Emerging</span>,{' '}
-                      <span className="font-medium text-blue-700">Developing</span>, and{' '}
-                      <span className="font-medium text-green-700">Mastered</span>.{' '}
-                      Activities help develop skills, and observations track progress.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {filteredSkills.length > 0 ? (
-                <div className="space-y-8">
-                  {/* Group skills by area */}
-                  {uniqueAreas
-                    .filter(area => !selectedArea || area === selectedArea)
-                    .map(area => {
-                      const areaSkills = filteredSkills.filter(skill => skill.area === area);
-                      
-                      if (areaSkills.length === 0) return null;
-                      
-                      return (
-                        <div key={area} className="pb-6 border-b border-gray-200 last:border-b-0">
-                          <h3 className={`text-sm font-medium mb-4 ${getAreaColor(area)}`}>
-                            {getAreaLabel(area)}
-                          </h3>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {areaSkills.map(skill => (
-                              <div key={skill.id} className={`border rounded-lg p-4 ${
-                                skill.status !== 'not_started' ? `border-l-4 ${getStatusColor(skill.status)}` : ''
-                              }`}>
-                                <div className="flex justify-between">
-                                  <h4 className="font-medium text-gray-900">{skill.name}</h4>
-                                  <span className={`flex items-center text-xs px-2 py-0.5 rounded-full ${getStatusColor(skill.status)}`}>
-                                    {getStatusIcon(skill.status)}
-                                    {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
-                                  </span>
-                                </div>
-                                
-                                {skill.description && (
-                                  <p className="mt-2 text-sm text-gray-600">{skill.description}</p>
-                                )}
-                                
-                                {skill.lastAssessed && (
-                                  <div className="mt-2 text-xs text-gray-500">
-                                    Last assessed: {formatDate(skill.lastAssessed)}
-                                  </div>
-                                )}
-                                
-                                {skill.notes && (
-                                  <div className="mt-2 text-xs text-gray-600 italic">
-                                    "{skill.notes}"
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Filter className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900">No skills match your filters</h3>
-                  <p className="text-gray-500 mt-2">Try adjusting your search or filter criteria</p>
-                  
-                  {(searchQuery || selectedArea) && (
-                    <button 
-                      onClick={() => {
-                        setSearchQuery('');
-                        setSelectedArea(null);
-                      }}
-                      className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      Reset Filters
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Skills Journey Maps */}
-          <div className="space-y-6">
-            {uniqueAreas.map(area => {
+        <div className="space-y-6">
+          {/* Skills Journey Map */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory', 'play'].map((area) => {
               const areaSkills = skills
                 .filter(skill => skill.area === area)
                 .map(skill => ({
-                  ...skill,
+                  id: skill.id,
+                  name: skill.name,
                   description: skill.description || 'No description available',
-                  lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate() : undefined
+                  area: skill.area,
+                  status: skill.status,
+                  lastAssessed: skill.lastAssessed?.toDate()
                 }));
               if (areaSkills.length === 0) return null;
-
+              
               return (
                 <SkillsJourneyMap
                   key={area}
@@ -776,6 +655,80 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 />
               );
             })}
+          </div>
+
+          {/* Skills Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search skills..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={selectedArea || ''}
+                onChange={(e) => setSelectedArea(e.target.value || null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Areas</option>
+                {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory', 'play'].map((area) => (
+                  <option key={area} value={area}>
+                    {getAreaLabel(area)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Skills List */}
+          <div className="bg-white rounded-lg shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skill</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Assessed</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredSkills.map((skill) => (
+                    <tr key={skill.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{skill.name}</div>
+                        {skill.description && (
+                          <div className="text-sm text-gray-500">{skill.description}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getAreaColor(skill.area)}`}>
+                          {getAreaLabel(skill.area)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <span className={`${getStatusColor(skill.status)} mr-2`}>
+                            {getStatusIcon(skill.status)}
+                          </span>
+                          <span className="text-sm text-gray-900 capitalize">
+                            {skill.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(skill.lastAssessed)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

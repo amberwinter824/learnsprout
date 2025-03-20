@@ -16,18 +16,44 @@ interface Material {
   id: string;
   name: string;
   normalizedName: string;
+  amazonLink?: string;
   [key: string]: any;
 }
 
-export default function AllChildrenMaterialsForecast() {
+interface AllChildrenMaterialsForecastProps {
+  onMarkMaterialOwned: (materialId: string) => Promise<void>;
+}
+
+export default function AllChildrenMaterialsForecast({ onMarkMaterialOwned }: AllChildrenMaterialsForecastProps) {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [materialsNeeded, setMaterialsNeeded] = useState<{
     material: string;
+    materialId: string;
     count: number;
     activities: string[];
+    amazonLink?: string;
   }[]>([]);
+  const [ownedMaterials, setOwnedMaterials] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchOwnedMaterials() {
+      if (!currentUser) return;
+      
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setOwnedMaterials(userData.ownedMaterials || []);
+        }
+      } catch (error) {
+        console.error('Error fetching owned materials:', error);
+      }
+    }
+    
+    fetchOwnedMaterials();
+  }, [currentUser]);
 
   useEffect(() => {
     async function fetchMaterialsNeeded() {
@@ -148,11 +174,18 @@ export default function AllChildrenMaterialsForecast() {
         });
 
         // Convert to array and sort by count
-        const materialsArray = Array.from(materialsCount.entries()).map(([material, data]) => ({
-          material,
-          count: data.count,
-          activities: Array.from(data.activities)
-        })).sort((a, b) => b.count - a.count);
+        const materialsArray = Array.from(materialsCount.entries()).map(([material, data]) => {
+          const materialDoc = materialsByName.get(material.toLowerCase());
+          return {
+            material,
+            materialId: materialDoc?.id || '',
+            count: data.count,
+            activities: Array.from(data.activities),
+            amazonLink: materialDoc?.amazonLink || ''
+          };
+        })
+        .filter(item => !ownedMaterials.includes(item.materialId))
+        .sort((a, b) => b.count - a.count);
 
         console.log(`Found ${materialsArray.length} materials needed for activities`);
         setMaterialsNeeded(materialsArray);
@@ -165,7 +198,7 @@ export default function AllChildrenMaterialsForecast() {
     }
 
     fetchMaterialsNeeded();
-  }, [currentUser]);
+  }, [currentUser, ownedMaterials]);
 
   // Helper function to check if a material is a common household item
   function isCommonHouseholdItem(materialName: string): boolean {
@@ -245,16 +278,23 @@ export default function AllChildrenMaterialsForecast() {
                   {item.count}
                 </span>
               </div>
-              <div className="mt-2">
-                <p className="text-sm text-gray-600">Activities:</p>
-                <ul className="mt-1 text-sm text-gray-500 list-disc list-inside">
-                  {item.activities.slice(0, 3).map((activity, idx) => (
-                    <li key={idx}>{activity}</li>
-                  ))}
-                  {item.activities.length > 3 && (
-                    <li>...and {item.activities.length - 3} more</li>
-                  )}
-                </ul>
+              <div className="mt-2 flex items-center space-x-2">
+                <button
+                  onClick={() => onMarkMaterialOwned(item.materialId)}
+                  className="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-md hover:bg-emerald-200"
+                >
+                  Mark as Owned
+                </button>
+                {item.amazonLink && (
+                  <a
+                    href={item.amazonLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
+                  >
+                    Buy on Amazon
+                  </a>
+                )}
               </div>
             </div>
           ))}
