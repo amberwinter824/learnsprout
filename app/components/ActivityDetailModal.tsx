@@ -32,6 +32,13 @@ interface ActivityData {
   [key: string]: any;
 }
 
+interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  area: string;
+}
+
 export default function ActivityDetailModal({
   activityId,
   childId,
@@ -47,6 +54,7 @@ export default function ActivityDetailModal({
   const [activeTab, setActiveTab] = useState<'details' | 'observation'>('details');
   const [mounted, setMounted] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -76,6 +84,23 @@ export default function ActivityDetailModal({
         } as ActivityData;
         
         setActivity(activityData);
+
+        // Fetch related skills if they exist
+        if (activityData.skillsAddressed?.length) {
+          const skillPromises = activityData.skillsAddressed.map(
+            (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+          );
+
+          const skillDocs = await Promise.all(skillPromises);
+          const skills = skillDocs
+            .filter((doc) => doc.exists())
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data()
+            } as Skill));
+
+          setActivitySkills(skills);
+        }
       } catch (err) {
         console.error('Error fetching activity:', err);
         setError('Failed to load activity details');
@@ -201,6 +226,24 @@ export default function ActivityDetailModal({
           ) : activeTab === 'details' ? (
             // Activity details tab
             <div className="p-6 space-y-6">
+              {/* Activity Skills Overview */}
+              {activitySkills.length > 0 && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
+                  <div className="space-y-3">
+                    {activitySkills.map(skill => (
+                      <div key={skill.id} className="flex items-start">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-800">{skill.name}</p>
+                          <p className="text-sm text-blue-700">{skill.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Category and difficulty */}
               <div className="flex flex-wrap gap-2">
                 {activity?.area && (
@@ -253,20 +296,6 @@ export default function ActivityDetailModal({
                 </div>
               )}
               
-              {/* Skills addressed */}
-              {activity?.skillsAddressed && activity.skillsAddressed.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Skills Addressed</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {activity.skillsAddressed.map((skillId) => (
-                      <span key={skillId} className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                        {skillId}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               {/* Record observation button */}
               <div className="flex justify-end pt-4">
                 <button
@@ -286,8 +315,8 @@ export default function ActivityDetailModal({
                 childId={childId}
                 onSuccess={handleObservationSuccess}
                 onClose={onClose}
-                weeklyPlanId={weeklyPlanId} // Pass weeklyPlanId to the form
-                dayOfWeek={dayOfWeek}       // Pass dayOfWeek to the form
+                weeklyPlanId={weeklyPlanId}
+                dayOfWeek={dayOfWeek}
               />
             </div>
           )}

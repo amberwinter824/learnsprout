@@ -454,302 +454,335 @@ export default function ProgressDashboardPage() {
   }
   
   return (
-    <div className="py-6 max-w-7xl mx-auto">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Progress Overview</h1>
-          <p className="mt-1 text-sm text-gray-500">Track your children's development and learning journey</p>
-        </div>
-        
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
-      
-      {/* Child Selection Filter */}
-      {children.length > 1 && (
-        <div className="mb-6 bg-white shadow-sm rounded-lg p-4">
-          <div className="flex items-center flex-wrap gap-2">
-            <span className="text-sm font-medium text-gray-700 mr-2">Filter by child:</span>
-            <button
-              className={`px-3 py-1 text-sm font-medium rounded-md ${
-                selectedChild === null
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}
-              onClick={() => setSelectedChild(null)}
-            >
-              All Children
-            </button>
-            
-            {children.map(child => (
-              <button
-                key={child.id}
-                className={`px-3 py-1 text-sm font-medium rounded-md ${
-                  selectedChild === child.id
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                }`}
-                onClick={() => setSelectedChild(child.id)}
-              >
-                {child.name}
-              </button>
-            ))}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Developmental Domains Overview */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Understanding Progress Tracking</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-medium text-blue-800 mb-2">Core Areas</h3>
+              <p className="text-sm text-blue-700">
+                We track progress across key developmental domains: Practical Life, Sensorial, Language, Mathematics, Cultural, and Social & Emotional development.
+              </p>
+            </div>
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <h3 className="font-medium text-purple-800 mb-2">Skill Progression</h3>
+              <p className="text-sm text-purple-700">
+                Skills are tracked through stages: Emerging (initial interest), Developing (growing competence), and Mastered (consistent performance).
+              </p>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <h3 className="font-medium text-green-800 mb-2">Activity Engagement</h3>
+              <p className="text-sm text-green-700">
+                Activities are designed to support multiple developmental areas simultaneously, creating an integrated learning experience.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-600">
+            <p>For detailed progress tracking and skill development information, visit your child's individual progress page.</p>
           </div>
         </div>
-      )}
-      
-      {/* Progress Summary Cards */}
-      <div className="mb-8">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Progress Summary</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {progressSummaries
-            .filter(summary => selectedChild === null || summary.childId === selectedChild)
-            .map(summary => (
-              <div key={summary.childId} className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {summary.childName}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Last activity: {summary.lastActivity ? getRelativeTime(summary.lastActivity) : 'Never'}
+
+        {/* Progress Overview */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Progress Overview</h1>
+              <p className="mt-1 text-sm text-gray-500">Track your children's development and learning journey</p>
+            </div>
+            
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+          
+          {/* Child Selection Filter */}
+          {children.length > 1 && (
+            <div className="mb-6 bg-white shadow-sm rounded-lg p-4">
+              <div className="flex items-center flex-wrap gap-2">
+                <span className="text-sm font-medium text-gray-700 mr-2">Filter by child:</span>
+                <button
+                  className={`px-3 py-1 text-sm font-medium rounded-md ${
+                    selectedChild === null
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                  onClick={() => setSelectedChild(null)}
+                >
+                  All Children
+                </button>
+                
+                {children.map(child => (
+                  <button
+                    key={child.id}
+                    className={`px-3 py-1 text-sm font-medium rounded-md ${
+                      selectedChild === child.id
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    }`}
+                    onClick={() => setSelectedChild(child.id)}
+                  >
+                    {child.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Progress Summary Cards */}
+          <div className="mb-8">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Progress Summary</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {progressSummaries
+                .filter(summary => selectedChild === null || summary.childId === selectedChild)
+                .map(summary => (
+                  <div key={summary.childId} className="bg-white shadow rounded-lg overflow-hidden">
+                    <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {summary.childName}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Last activity: {summary.lastActivity ? getRelativeTime(summary.lastActivity) : 'Never'}
+                      </p>
+                    </div>
+                    
+                    <div className="px-4 py-5 sm:p-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-emerald-50 p-3 rounded-lg">
+                          <div className="text-lg font-bold text-emerald-700">{summary.completedActivities}</div>
+                          <div className="text-xs text-gray-500">Activities Completed</div>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <div className="text-lg font-bold text-blue-700">{summary.recentActivities}</div>
+                          <div className="text-xs text-gray-500">Recent Activities</div>
+                        </div>
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <div className="text-lg font-bold text-green-700">{summary.masteredSkills}</div>
+                          <div className="text-xs text-gray-500">Mastered Skills</div>
+                        </div>
+                        <div className="bg-amber-50 p-3 rounded-lg">
+                          <div className="text-lg font-bold text-amber-700">{summary.inProgressSkills}</div>
+                          <div className="text-xs text-gray-500">Skills in Progress</div>
+                        </div>
+                      </div>
+                      
+                      {/* Skill Progress Bar */}
+                      <div className="mt-6">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <span>Skill Progress</span>
+                          <span>
+                            {summary.totalSkills > 0 
+                              ? `${Math.round((summary.masteredSkills / summary.totalSkills) * 100)}% Mastered` 
+                              : '0% Mastered'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                          <div 
+                            className="bg-emerald-500 h-2.5" 
+                            style={{ 
+                              width: `${summary.totalSkills > 0 
+                                ? (summary.masteredSkills / summary.totalSkills) * 100 
+                                : 0}%` 
+                            }}
+                          ></div>
+                          <div 
+                            className="bg-amber-400 h-2.5" 
+                            style={{ 
+                              width: `${summary.totalSkills > 0 
+                                ? (summary.inProgressSkills / summary.totalSkills) * 100 
+                                : 0}%` 
+                            }}
+                          ></div>
+                        </div>
+                        <div className="flex text-xs text-gray-500 mt-1 justify-between">
+                          <span className="flex items-center">
+                            <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
+                            Mastered
+                          </span>
+                          <span className="flex items-center">
+                            <span className="w-2 h-2 bg-amber-400 rounded-full mr-1"></span>
+                            In Progress
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-6 text-right">
+                        <Link 
+                          href={`/dashboard/children/${summary.childId}/progress`}
+                          className="inline-flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                        >
+                          View detailed progress
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+          
+          {/* Recent Activities */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
+                <Link 
+                  href="/dashboard/activities"
+                  className="text-sm text-emerald-600 hover:text-emerald-700 inline-flex items-center"
+                >
+                  Browse All
+                  <ArrowUpRight className="ml-1 h-3 w-3" />
+                </Link>
+              </div>
+              
+              <div className="px-4 py-5 sm:p-6">
+                {recentProgress.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentProgress
+                      .filter(record => selectedChild === null || record.childId === selectedChild)
+                      .slice(0, 5)
+                      .map(record => (
+                        <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                          <div className="flex justify-between">
+                            <h3 className="font-medium text-gray-900">{record.activityTitle || 'Activity'}</h3>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(record.completionStatus)}`}>
+                              {record.completionStatus.charAt(0).toUpperCase() + record.completionStatus.slice(1).replace('_', ' ')}
+                            </span>
+                          </div>
+                          
+                          <div className="mt-1 flex items-center">
+                            <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                              {children.find(c => c.id === record.childId)?.name || 'Unknown Child'}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2 flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {formatDate(record.date)}
+                            </span>
+                          </div>
+                          
+                          {record.notes && (
+                            <p className="mt-2 text-sm text-gray-600 line-clamp-2">{record.notes}</p>
+                          )}
+                          
+                          <Link 
+                            href={`/dashboard/children/${record.childId}?record=${record.id}`}
+                            className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
+                          >
+                            View details
+                          </Link>
+                        </div>
+                      ))
+                    }
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Book className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No activity records found</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Recent Skill Progress */}
+            <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">Recent Skill Development</h2>
+              </div>
+              
+              <div className="px-4 py-5 sm:p-6">
+                {recentSkills.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentSkills
+                      .filter(skill => selectedChild === null || skill.childId === selectedChild)
+                      .slice(0, 5)
+                      .map(skill => (
+                        <div key={skill.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                          <div className="flex justify-between">
+                            <h3 className="font-medium text-gray-900">{skill.skillName || 'Skill'}</h3>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${getSkillStatusColor(skill.status)}`}>
+                              {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
+                            </span>
+                          </div>
+                          
+                          <div className="mt-1 flex items-center">
+                            <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                              {children.find(c => c.id === skill.childId)?.name || 'Unknown Child'}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2 flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {formatDate(skill.lastAssessed)}
+                            </span>
+                          </div>
+                          
+                          <Link 
+                            href={`/dashboard/children/${skill.childId}/progress`}
+                            className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
+                          >
+                            View skill progress
+                          </Link>
+                        </div>
+                      ))
+                    }
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Award className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No skill progress recorded yet</p>
+                    <p className="text-sm text-gray-500 mt-2">Complete activities to develop new skills</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Progress Insights */}
+          <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
+            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Progress Insights</h2>
+            </div>
+            
+            <div className="px-4 py-5 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Activity Trends */}
+                <div className="p-4 border rounded-lg bg-blue-50">
+                  <h3 className="font-medium text-blue-800 mb-2">Activity Engagement</h3>
+                  <p className="text-sm text-blue-700 mb-4">
+                    {(() => {
+                      const filteredSummaries = progressSummaries.filter(
+                        s => selectedChild === null || s.childId === selectedChild
+                      );
+                      
+                      const totalRecent = filteredSummaries.reduce((sum, s) => sum + s.recentActivities, 0);
+                      const totalActivities = filteredSummaries.reduce((sum, s) => sum + s.totalActivities, 0);
+                      
+                      if (totalActivities === 0) {
+                        return "No activities have been completed yet";
+                      }
+                      
+                      if (totalRecent === 0) {
+                        return "No activities have been completed in the last 30 days";
+                      }
+                      
+                      const percentage = Math.round((totalRecent / totalActivities) * 100);
+                      
+                      if (percentage > 50) {
+                        return `Strong recent engagement with ${totalRecent} activities in the last 30 days`;
+                      } else if (percentage > 20) {
+                        return `Moderate engagement with ${totalRecent} activities in the last 30 days`;
+                      } else {
+                        return `Light recent activity with ${totalRecent} activities in the last 30 days`;
+                      }
+                    })()}
                   </p>
                 </div>
-                
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-emerald-50 p-3 rounded-lg">
-                      <div className="text-lg font-bold text-emerald-700">{summary.completedActivities}</div>
-                      <div className="text-xs text-gray-500">Activities Completed</div>
-                    </div>
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <div className="text-lg font-bold text-blue-700">{summary.recentActivities}</div>
-                      <div className="text-xs text-gray-500">Recent Activities</div>
-                    </div>
-                    <div className="bg-green-50 p-3 rounded-lg">
-                      <div className="text-lg font-bold text-green-700">{summary.masteredSkills}</div>
-                      <div className="text-xs text-gray-500">Mastered Skills</div>
-                    </div>
-                    <div className="bg-amber-50 p-3 rounded-lg">
-                      <div className="text-lg font-bold text-amber-700">{summary.inProgressSkills}</div>
-                      <div className="text-xs text-gray-500">Skills in Progress</div>
-                    </div>
-                  </div>
-                  
-                  {/* Skill Progress Bar */}
-                  <div className="mt-6">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Skill Progress</span>
-                      <span>
-                        {summary.totalSkills > 0 
-                          ? `${Math.round((summary.masteredSkills / summary.totalSkills) * 100)}% Mastered` 
-                          : '0% Mastered'}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                      <div 
-                        className="bg-emerald-500 h-2.5" 
-                        style={{ 
-                          width: `${summary.totalSkills > 0 
-                            ? (summary.masteredSkills / summary.totalSkills) * 100 
-                            : 0}%` 
-                        }}
-                      ></div>
-                      <div 
-                        className="bg-amber-400 h-2.5" 
-                        style={{ 
-                          width: `${summary.totalSkills > 0 
-                            ? (summary.inProgressSkills / summary.totalSkills) * 100 
-                            : 0}%` 
-                        }}
-                      ></div>
-                    </div>
-                    <div className="flex text-xs text-gray-500 mt-1 justify-between">
-                      <span className="flex items-center">
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
-                        Mastered
-                      </span>
-                      <span className="flex items-center">
-                        <span className="w-2 h-2 bg-amber-400 rounded-full mr-1"></span>
-                        In Progress
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 text-right">
-                    <Link 
-                      href={`/dashboard/children/${summary.childId}/progress`}
-                      className="inline-flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-700"
-                    >
-                      View detailed progress
-                      <ChevronRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
               </div>
-            ))}
-        </div>
-      </div>
-      
-      {/* Recent Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
-            <Link 
-              href="/dashboard/activities"
-              className="text-sm text-emerald-600 hover:text-emerald-700 inline-flex items-center"
-            >
-              Browse All
-              <ArrowUpRight className="ml-1 h-3 w-3" />
-            </Link>
-          </div>
-          
-          <div className="px-4 py-5 sm:p-6">
-            {recentProgress.length > 0 ? (
-              <div className="space-y-4">
-                {recentProgress
-                  .filter(record => selectedChild === null || record.childId === selectedChild)
-                  .slice(0, 5)
-                  .map(record => (
-                    <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                      <div className="flex justify-between">
-                        <h3 className="font-medium text-gray-900">{record.activityTitle || 'Activity'}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(record.completionStatus)}`}>
-                          {record.completionStatus.charAt(0).toUpperCase() + record.completionStatus.slice(1).replace('_', ' ')}
-                        </span>
-                      </div>
-                      
-                      <div className="mt-1 flex items-center">
-                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                          {children.find(c => c.id === record.childId)?.name || 'Unknown Child'}
-                        </span>
-                        <span className="text-xs text-gray-500 ml-2 flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {formatDate(record.date)}
-                        </span>
-                      </div>
-                      
-                      {record.notes && (
-                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">{record.notes}</p>
-                      )}
-                      
-                      <Link 
-                        href={`/dashboard/children/${record.childId}?record=${record.id}`}
-                        className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
-                      >
-                        View details
-                      </Link>
-                    </div>
-                  ))
-                }
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Book className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No activity records found</p>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Recent Skill Progress */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Recent Skill Development</h2>
-          </div>
-          
-          <div className="px-4 py-5 sm:p-6">
-            {recentSkills.length > 0 ? (
-              <div className="space-y-4">
-                {recentSkills
-                  .filter(skill => selectedChild === null || skill.childId === selectedChild)
-                  .slice(0, 5)
-                  .map(skill => (
-                    <div key={skill.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                      <div className="flex justify-between">
-                        <h3 className="font-medium text-gray-900">{skill.skillName || 'Skill'}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getSkillStatusColor(skill.status)}`}>
-                          {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
-                        </span>
-                      </div>
-                      
-                      <div className="mt-1 flex items-center">
-                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                          {children.find(c => c.id === skill.childId)?.name || 'Unknown Child'}
-                        </span>
-                        <span className="text-xs text-gray-500 ml-2 flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {formatDate(skill.lastAssessed)}
-                        </span>
-                      </div>
-                      
-                      <Link 
-                        href={`/dashboard/children/${skill.childId}/progress`}
-                        className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
-                      >
-                        View skill progress
-                      </Link>
-                    </div>
-                  ))
-                }
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Award className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No skill progress recorded yet</p>
-                <p className="text-sm text-gray-500 mt-2">Complete activities to develop new skills</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      {/* Progress Insights */}
-      <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Progress Insights</h2>
-        </div>
-        
-        <div className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Activity Trends */}
-            <div className="p-4 border rounded-lg bg-blue-50">
-              <h3 className="font-medium text-blue-800 mb-2">Activity Engagement</h3>
-              <p className="text-sm text-blue-700 mb-4">
-                {(() => {
-                  const filteredSummaries = progressSummaries.filter(
-                    s => selectedChild === null || s.childId === selectedChild
-                  );
-                  
-                  const totalRecent = filteredSummaries.reduce((sum, s) => sum + s.recentActivities, 0);
-                  const totalActivities = filteredSummaries.reduce((sum, s) => sum + s.totalActivities, 0);
-                  
-                  if (totalActivities === 0) {
-                    return "No activities have been completed yet";
-                  }
-                  
-                  if (totalRecent === 0) {
-                    return "No activities have been completed in the last 30 days";
-                  }
-                  
-                  const percentage = Math.round((totalRecent / totalActivities) * 100);
-                  
-                  if (percentage > 50) {
-                    return `Strong recent engagement with ${totalRecent} activities in the last 30 days`;
-                  } else if (percentage > 20) {
-                    return `Moderate engagement with ${totalRecent} activities in the last 30 days`;
-                  } else {
-                    return `Light recent activity with ${totalRecent} activities in the last 30 days`;
-                  }
-                })()}
-              </p>
             </div>
           </div>
         </div>

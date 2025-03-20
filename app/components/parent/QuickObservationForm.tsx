@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Camera, Smile, Frown, Meh, CheckCircle, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { addDoc, collection, doc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -11,6 +11,8 @@ type EngagementLevel = 'low' | 'medium' | 'high';
 interface Skill {
   id: string;
   name: string;
+  description: string;
+  area: string;
 }
 
 interface QuickObservationFormProps {
@@ -47,13 +49,55 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Simplified skill options - in a real implementation, these would be loaded from Firebase
-  const skillOptions = [
-    { id: 'skill1', name: 'Fine Motor Control' },
-    { id: 'skill2', name: 'Concentration' },
-    { id: 'skill3', name: 'Independence' }
-  ];
+  // Fetch activity skills when component mounts
+  useEffect(() => {
+    async function fetchActivitySkills() {
+      if (!activityId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Get activity document
+        const activityDoc = await getDoc(doc(db, 'activities', activityId));
+        if (!activityDoc.exists()) {
+          console.error('Activity not found');
+          setLoading(false);
+          return;
+        }
+
+        const activityData = activityDoc.data();
+        if (!activityData.skillsAddressed?.length) {
+          setLoading(false);
+          return;
+        }
+
+        // Get skill documents
+        const skillPromises = activityData.skillsAddressed.map(
+          (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+        );
+
+        const skillDocs = await Promise.all(skillPromises);
+        const skills = skillDocs
+          .filter(doc => doc.exists())
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Skill));
+
+        setActivitySkills(skills);
+      } catch (err) {
+        console.error('Error fetching activity skills:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchActivitySkills();
+  }, [activityId]);
   
   // Simplified handlers
   const handleEngagementSelect = (level: EngagementLevel) => {
@@ -261,6 +305,24 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
           <div className="font-medium">{activityTitle || 'Untitled Activity'}</div>
         </div>
         
+        {/* Activity Skills */}
+        {activitySkills.length > 0 && (
+          <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
+            <div className="space-y-3">
+              {activitySkills.map(skill => (
+                <div key={skill.id} className="flex items-start">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">{skill.name}</p>
+                    <p className="text-sm text-blue-700">{skill.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
         {/* Engagement selection with emoji faces */}
         <div className="mb-4">
           <div className="text-sm text-gray-500 mb-2">How did it go?</div>
@@ -436,15 +498,18 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
             <div className="mt-3 p-3 border border-gray-200 rounded-md">
               <div className="text-sm text-gray-500 mb-2">Skills observed</div>
               <div className="space-y-2">
-                {skillOptions.map(skill => (
-                  <label key={skill.id} className="flex items-center">
+                {activitySkills.map(skill => (
+                  <label key={skill.id} className="flex items-start">
                     <input
                       type="checkbox"
                       checked={selectedSkills.includes(skill.id)}
                       onChange={() => handleSkillToggle(skill.id)}
-                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded mt-1"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{skill.name}</span>
+                    <div className="ml-2">
+                      <span className="text-sm text-gray-700">{skill.name}</span>
+                      <p className="text-xs text-gray-500">{skill.description}</p>
+                    </div>
                   </label>
                 ))}
               </div>

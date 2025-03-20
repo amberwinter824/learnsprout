@@ -20,14 +20,36 @@ interface ActivityDetailsPopupProps {
   onClose: () => void;
 }
 
+interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  area: string;
+}
+
+interface ActivityData {
+  id: string;
+  title: string;
+  description?: string;
+  instructions?: string;
+  area?: string;
+  materialsNeeded?: string[];
+  duration?: number;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  ageRanges?: string[];
+  skillsAddressed?: string[];
+  [key: string]: any;
+}
+
 export default function ActivityDetailsPopup({ 
   activityId, 
   onClose 
 }: ActivityDetailsPopupProps) {
-  const [activity, setActivity] = useState<any | null>(null);
+  const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'setup' | 'instructions'>('setup');
+  const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
 
   useEffect(() => {
     const fetchActivityDetails = async () => {
@@ -41,10 +63,29 @@ export default function ActivityDetailsPopup({
           return;
         }
         
-        setActivity({
+        const activityData = {
           id: activityDoc.id,
           ...activityDoc.data()
-        });
+        } as ActivityData;
+        setActivity(activityData);
+
+        // Fetch related skills if they exist
+        if (activityData.skillsAddressed?.length) {
+          const skillPromises = activityData.skillsAddressed.map(
+            (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+          );
+
+          const skillDocs = await Promise.all(skillPromises);
+          const skills = skillDocs
+            .filter((doc) => doc.exists())
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data()
+            } as Skill));
+
+          setActivitySkills(skills);
+        }
+        
         setLoading(false);
       } catch (err) {
         console.error('Error fetching activity details:', err);
@@ -187,6 +228,24 @@ export default function ActivityDetailsPopup({
         
         {/* Content */}
         <div className="p-6">
+          {/* Activity Skills Overview */}
+          {activitySkills.length > 0 && (
+            <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
+              <div className="space-y-3">
+                {activitySkills.map(skill => (
+                  <div key={skill.id} className="flex items-start">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">{skill.name}</p>
+                      <p className="text-sm text-blue-700">{skill.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {tab === 'setup' && (
             <div>
               {/* Activity info and tags */}

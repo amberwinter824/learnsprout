@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { addProgressRecord, getActivityProgress } from '../../lib/progressTracking';
@@ -89,61 +89,68 @@ export function ActivityObservationForm({
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [showCameraCapture, setShowCameraCapture] = useState<boolean>(false);
   
+  // Fetch activity and related skills when component mounts
   useEffect(() => {
-    const fetchActivityAndSkills = async () => {
+    async function fetchActivityAndSkills() {
+      if (!activityId) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        setLoading(true);
-        
-        // Get activity details
-        const activityRef = doc(db, 'activities', activityId);
-        const activityDoc = await getDoc(activityRef);
-        
+        // Get activity document
+        const activityDoc = await getDoc(doc(db, 'activities', activityId));
         if (!activityDoc.exists()) {
-          setError('Activity not found');
+          console.error('Activity not found');
           setLoading(false);
           return;
         }
-        
+
         const activityData = activityDoc.data() as ActivityData;
         activityData.id = activityDoc.id;
         setActivity(activityData);
-        
+
         // Get related skills
-        if (activityData.skillsAddressed && activityData.skillsAddressed.length > 0) {
-          const skillPromises = activityData.skillsAddressed.map(skillId => 
-            getDoc(doc(db, 'developmentalSkills', skillId))
+        if (activityData.skillsAddressed?.length) {
+          const skillPromises = activityData.skillsAddressed.map(
+            (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
           );
-          
+
           const skillDocs = await Promise.all(skillPromises);
-          
           const skills = skillDocs
             .filter(doc => doc.exists())
             .map(doc => ({
               id: doc.id,
               ...doc.data()
             } as Skill));
-          
+
           setRelatedSkills(skills);
-          
-          // Pre-select the skills
-          setSelectedSkills(skills.map(skill => skill.id));
         }
-        
-        // Get previous observations for this activity and child
-        const previousRecords = await getActivityProgress(childId, activityId);
-        setPreviousObservations(previousRecords);
-        
-        setLoading(false);
-      } catch (err: any) {
-        console.error('Error fetching activity and skills:', err);
-        setError('Failed to load activity details');
+
+        // Get previous observations
+        const progressQuery = query(
+          collection(db, 'progressRecords'),
+          where('childId', '==', childId),
+          where('activityId', '==', activityId),
+          orderBy('date', 'desc')
+        );
+
+        const progressSnapshot = await getDocs(progressQuery);
+        const observations = progressSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as ProgressRecord));
+
+        setPreviousObservations(observations);
+      } catch (err) {
+        console.error('Error fetching activity data:', err);
+        setError('Failed to load activity data');
+      } finally {
         setLoading(false);
       }
-    };
-    
-    if (activityId && childId) {
-      fetchActivityAndSkills();
     }
+
+    fetchActivityAndSkills();
   }, [activityId, childId]);
 
   // Add this function to handle photo capture
@@ -325,6 +332,24 @@ export function ActivityObservationForm({
       )}
       
       <div className="p-6">
+        {/* Activity Skills Overview */}
+        {relatedSkills.length > 0 && (
+          <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
+            <div className="space-y-3">
+              {relatedSkills.map(skill => (
+                <div key={skill.id} className="flex items-start">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">{skill.name}</p>
+                    <p className="text-sm text-blue-700">{skill.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <h3 className="text-lg font-medium text-gray-900 mb-4">
           Record Observation for {activity.title}
         </h3>
