@@ -702,7 +702,6 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                       status: skill.status,
                       lastAssessed: skill.lastAssessed?.toDate()
                     }));
-                  if (areaSkills.length === 0) return null;
                   
                   return (
                     <SkillsJourneyMap

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle, Circle, Clock, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { ArrowRight, CheckCircle, Circle, Clock, ChevronDown, ChevronUp, Info, ChevronRight } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -22,6 +22,7 @@ interface SkillsJourneyMapProps {
 export default function SkillsJourneyMap({ skills, area }: SkillsJourneyMapProps) {
   const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
   const [showHelp, setShowHelp] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Group skills by status
   const skillsByStatus = skills.reduce((acc, skill) => {
@@ -72,18 +73,39 @@ export default function SkillsJourneyMap({ skills, area }: SkillsJourneyMapProps
     }
   };
 
-  // Get area label
-  const getAreaLabel = (area: string): string => {
-    const labels: Record<string, string> = {
-      'cognitive': 'Cognitive Development',
-      'physical': 'Physical Development',
-      'social_emotional': 'Social-Emotional Development',
-      'language': 'Language Development',
-      'adaptive': 'Adaptive Development',
-      'sensory': 'Sensory Development',
-      'play': 'Play Development'
+  // Get area label and description
+  const getAreaInfo = (area: string): { label: string; description: string } => {
+    const info: Record<string, { label: string; description: string }> = {
+      'cognitive': {
+        label: 'Cognitive Development',
+        description: 'Thinking, problem-solving, and understanding concepts. This area includes skills like memory, attention, and reasoning.'
+      },
+      'physical': {
+        label: 'Physical Development',
+        description: 'Large and small muscle movements, coordination, and physical abilities. This includes both gross motor and fine motor skills.'
+      },
+      'social_emotional': {
+        label: 'Social-Emotional Development',
+        description: 'Understanding and managing emotions, building relationships, and developing social awareness.'
+      },
+      'language': {
+        label: 'Language Development',
+        description: 'Communication, vocabulary, and understanding of language. This includes both expressive and receptive language skills.'
+      },
+      'adaptive': {
+        label: 'Adaptive Development',
+        description: 'Self-care skills and daily living activities. This includes skills needed for independence in daily routines.'
+      },
+      'sensory': {
+        label: 'Sensory Development',
+        description: 'Processing and responding to different sensory inputs. This includes visual, auditory, tactile, and other sensory experiences.'
+      },
+      'play': {
+        label: 'Play Development',
+        description: 'Imagination, creativity, and social play. This includes both independent and interactive play skills.'
+      }
     };
-    return labels[area] || area;
+    return info[area] || { label: area, description: 'Development in this area' };
   };
 
   // Toggle skill expansion
@@ -97,18 +119,35 @@ export default function SkillsJourneyMap({ skills, area }: SkillsJourneyMapProps
     setExpandedSkills(newExpanded);
   };
 
+  const areaInfo = getAreaInfo(area);
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-medium text-gray-900">
-          {getAreaLabel(area)} Journey
-        </h2>
-        <button
-          onClick={() => setShowHelp(!showHelp)}
-          className="text-gray-400 hover:text-gray-500"
-        >
-          <Info className="h-5 w-5" />
-        </button>
+        <div>
+          <h2 className="text-lg font-medium text-gray-900">
+            {areaInfo.label}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">{areaInfo.description}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <Info className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            {isExpanded ? (
+              <ChevronUp className="h-5 w-5" />
+            ) : (
+              <ChevronRight className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Help Modal */}
@@ -168,107 +207,128 @@ export default function SkillsJourneyMap({ skills, area }: SkillsJourneyMapProps
       </div>
 
       {/* Skills Journey Visualization */}
-      <div className="space-y-6">
-        {['not_started', 'emerging', 'developing', 'mastered'].map((status, index) => {
-          const statusSkills = skillsByStatus[status] || [];
-          if (statusSkills.length === 0) return null;
-
-          return (
-            <div key={status} className="relative">
-              {/* Status Label */}
-              <div className="flex items-center mb-3">
-                <div className={`${getStatusColor(status)} rounded-full p-1 mr-2`}>
-                  {getStatusIcon(status)}
-                </div>
-                <h3 className="text-sm font-medium text-gray-900 capitalize">
-                  {status.replace('_', ' ')}
-                </h3>
-              </div>
-
-              {/* Skills List */}
-              <div className="space-y-3">
-                {statusSkills.map(skill => (
-                  <div 
-                    key={skill.id} 
-                    className={`${getStatusBgColor(status)} rounded-lg p-4 cursor-pointer hover:bg-opacity-75 transition-colors`}
-                    onClick={() => toggleSkill(skill.id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className={`text-sm font-medium ${getStatusTextColor(status)}`}>
-                          {skill.name}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">{skill.description}</p>
-                      </div>
-                      {expandedSkills.has(skill.id) ? (
-                        <ChevronUp className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-400" />
-                      )}
-                    </div>
-
-                    {/* Expanded Content */}
-                    {expandedSkills.has(skill.id) && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        {/* Prerequisites */}
-                        {skill.prerequisites && skill.prerequisites.length > 0 && (
-                          <div className="mb-4">
-                            <h5 className="text-xs font-medium text-gray-500 mb-2">Prerequisites</h5>
-                            <div className="flex flex-wrap gap-2">
-                              {skill.prerequisites.map(prereq => (
-                                <span
-                                  key={prereq}
-                                  className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full"
-                                >
-                                  {prereq}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Next Steps */}
-                        {skill.nextSteps && skill.nextSteps.length > 0 && (
-                          <div className="mb-4">
-                            <h5 className="text-xs font-medium text-gray-500 mb-2">Next Steps</h5>
-                            <div className="flex flex-wrap gap-2">
-                              {skill.nextSteps.map(step => (
-                                <span
-                                  key={step}
-                                  className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full"
-                                >
-                                  {step}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Indicators */}
-                        {skill.indicators && skill.indicators.length > 0 && (
-                          <div>
-                            <h5 className="text-xs font-medium text-gray-500 mb-2">What to Look For</h5>
-                            <ul className="text-xs text-gray-600 space-y-1 ml-4 list-disc">
-                              {skill.indicators.map((indicator, idx) => (
-                                <li key={idx}>{indicator}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Connection Line */}
-              {index < 3 && (
-                <div className="absolute left-4 top-full w-0.5 h-6 bg-gray-200" />
-              )}
+      {isExpanded && (
+        <div className="space-y-6">
+          {skills.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <p className="text-gray-500">No skills have been assessed in this area yet</p>
+              <p className="text-sm text-gray-400 mt-2">Complete activities to develop skills in this area</p>
             </div>
-          );
-        })}
-      </div>
+          ) : (
+            ['not_started', 'emerging', 'developing', 'mastered'].map((status, index) => {
+              const statusSkills = skillsByStatus[status] || [];
+              if (statusSkills.length === 0) return null;
+
+              return (
+                <div key={status} className="relative">
+                  {/* Status Label */}
+                  <div className="flex items-center mb-3">
+                    <div className={`${getStatusColor(status)} rounded-full p-1 mr-2`}>
+                      {getStatusIcon(status)}
+                    </div>
+                    <h3 className="text-sm font-medium text-gray-900 capitalize">
+                      {status.replace('_', ' ')}
+                    </h3>
+                  </div>
+
+                  {/* Skills List */}
+                  <div className="space-y-3">
+                    {statusSkills.map(skill => (
+                      <div 
+                        key={skill.id} 
+                        className={`${getStatusBgColor(status)} rounded-lg p-4 cursor-pointer hover:bg-opacity-75 transition-colors`}
+                        onClick={() => toggleSkill(skill.id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className={`text-sm font-medium ${getStatusTextColor(status)}`}>
+                              {skill.name}
+                            </h4>
+                            <p className="text-sm text-gray-600 mt-1">{skill.description}</p>
+                            {skill.ageRanges && skill.ageRanges.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {skill.ageRanges.map(range => (
+                                  <span
+                                    key={range}
+                                    className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full"
+                                  >
+                                    {range}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {expandedSkills.has(skill.id) ? (
+                            <ChevronUp className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+
+                        {/* Expanded Content */}
+                        {expandedSkills.has(skill.id) && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            {/* Prerequisites */}
+                            {skill.prerequisites && skill.prerequisites.length > 0 && (
+                              <div className="mb-4">
+                                <h5 className="text-xs font-medium text-gray-500 mb-2">Prerequisites</h5>
+                                <div className="flex flex-wrap gap-2">
+                                  {skill.prerequisites.map(prereq => (
+                                    <span
+                                      key={prereq}
+                                      className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full"
+                                    >
+                                      {prereq}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Next Steps */}
+                            {skill.nextSteps && skill.nextSteps.length > 0 && (
+                              <div className="mb-4">
+                                <h5 className="text-xs font-medium text-gray-500 mb-2">Next Steps</h5>
+                                <div className="flex flex-wrap gap-2">
+                                  {skill.nextSteps.map(step => (
+                                    <span
+                                      key={step}
+                                      className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full"
+                                    >
+                                      {step}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Indicators */}
+                            {skill.indicators && skill.indicators.length > 0 && (
+                              <div>
+                                <h5 className="text-xs font-medium text-gray-500 mb-2">What to Look For</h5>
+                                <ul className="text-xs text-gray-600 space-y-1 ml-4 list-disc">
+                                  {skill.indicators.map((indicator, idx) => (
+                                    <li key={idx}>{indicator}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Connection Line */}
+                  {index < 3 && (
+                    <div className="absolute left-4 top-full w-0.5 h-6 bg-gray-200" />
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 } 
