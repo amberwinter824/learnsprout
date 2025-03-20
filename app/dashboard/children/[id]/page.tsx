@@ -28,6 +28,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import ChildFamilyAccess from '@/app/components/ChildFamilyAccess';
 import MaterialsForecast from '@/app/components/parent/MaterialsForecast';
+import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
 
 // Define interfaces
 interface Child {
@@ -756,40 +757,10 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
           {/* Weekly Plan */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Weekly Plan</h3>
-            {weeklyActivities.length > 0 ? (
-              <div className="space-y-4">
-                {weeklyActivities.map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <Play className="h-5 w-5 text-emerald-500" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{activity.activityTitle}</p>
-                        <p className="text-xs text-gray-500">
-                          {format(activity.plannedFor.toDate(), 'EEEE, MMMM d')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center">
-                      {activity.completed ? (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full flex items-center">
-                          <Clock4 className="h-3 w-3 mr-1" />
-                          Planned
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">No activities planned for this week.</p>
-            )}
+            <WeekAtAGlanceView 
+              childId={childId}
+              childName={child?.name || ''}
+            />
           </div>
           
           {/* Materials Forecast */}

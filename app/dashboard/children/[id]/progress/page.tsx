@@ -21,6 +21,7 @@ import {
   Award,
   Info
 } from 'lucide-react';
+import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 
 // Define interfaces
 interface ChildData {
@@ -753,6 +754,28 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Skills Journey Maps */}
+          <div className="space-y-6">
+            {uniqueAreas.map(area => {
+              const areaSkills = skills
+                .filter(skill => skill.area === area)
+                .map(skill => ({
+                  ...skill,
+                  description: skill.description || 'No description available',
+                  lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate() : undefined
+                }));
+              if (areaSkills.length === 0) return null;
+
+              return (
+                <SkillsJourneyMap
+                  key={area}
+                  skills={areaSkills}
+                  area={area}
+                />
+              );
+            })}
           </div>
         </div>
       )}

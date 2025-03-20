@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, setDoc } from 'firebase/firestore';
-import { Loader2, Package, Plus, Search, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Package, Plus, Search, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 
 interface Material {
   id: string;
@@ -12,6 +12,8 @@ interface Material {
   normalizedName: string;
   category?: string;
   description?: string;
+  amazonLink?: string;
+  affiliateLink?: string;
   isOwned: boolean;
 }
 
@@ -24,7 +26,7 @@ export default function MaterialsInventory() {
   const [filter, setFilter] = useState<'all' | 'owned' | 'needed'>('all');
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.uid) return;
 
     async function fetchMaterials() {
       try {
@@ -51,6 +53,8 @@ export default function MaterialsInventory() {
             normalizedName: data.normalizedName,
             category: data.category,
             description: data.description,
+            amazonLink: data.amazonLink,
+            affiliateLink: data.affiliateLink,
             isOwned: ownedMaterialIds.has(doc.id)
           };
         });
@@ -200,6 +204,32 @@ export default function MaterialsInventory() {
                 )}
                 {material.description && (
                   <p className="text-sm text-gray-600 mt-2">{material.description}</p>
+                )}
+                {(material.amazonLink || material.affiliateLink) && (
+                  <div className="mt-2">
+                    {material.affiliateLink && (
+                      <a
+                        href={material.affiliateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center mr-3 mb-1"
+                      >
+                        Buy (Affiliate Link)
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    )}
+                    {material.amazonLink && !material.affiliateLink && (
+                      <a
+                        href={material.amazonLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                      >
+                        Buy on Amazon
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
               <button

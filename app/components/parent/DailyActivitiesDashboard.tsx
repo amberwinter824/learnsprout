@@ -36,6 +36,8 @@ interface Activity {
   isHomeSchoolConnection?: boolean;
   timeSlot?: string;
   order?: number;
+  skills: string[];
+  skillDescriptions?: Record<string, string>;
 }
 
 interface PendingObservation {
@@ -150,7 +152,8 @@ export default function DailyActivitiesDashboard({
                                           !!activityData.classroomExtension,
                     status: activity.status,
                     timeSlot: activity.timeSlot,
-                    order: activity.order
+                    order: activity.order,
+                    skills: activityData.skills || []
                   };
                 }
                 
@@ -160,7 +163,8 @@ export default function DailyActivitiesDashboard({
                   title: 'Unknown Activity',
                   status: activity.status,
                   timeSlot: activity.timeSlot,
-                  order: activity.order
+                  order: activity.order,
+                  skills: []
                 };
               } catch (error) {
                 console.error(`Error fetching activity ${activity.activityId}:`, error);
@@ -168,7 +172,8 @@ export default function DailyActivitiesDashboard({
                   id: `${expectedPlanId}_${dayOfWeek}_${activity.activityId}`,
                   activityId: activity.activityId,
                   title: 'Error Loading Activity',
-                  status: activity.status
+                  status: activity.status,
+                  skills: []
                 };
               }
             })
@@ -437,6 +442,22 @@ export default function DailyActivitiesDashboard({
     }
   };
 
+  // Helper function to get skill descriptions
+  const getSkillDescription = (skillId: string): string => {
+    const descriptions: Record<string, string> = {
+      'fine_motor': 'Fine motor skills involve the coordination of small muscles in the hands and fingers. These skills are essential for writing, drawing, and self-care tasks.',
+      'gross_motor': 'Gross motor skills involve large muscle movements and coordination. These skills are important for walking, running, jumping, and overall physical development.',
+      'cognitive': 'Cognitive skills include thinking, problem-solving, and understanding concepts. These skills form the foundation for academic learning.',
+      'language': 'Language skills involve communication, vocabulary, and understanding. These skills are fundamental for expressing needs and learning.',
+      'social': 'Social skills include interacting with others, sharing, and understanding social cues. These skills are crucial for building relationships.',
+      'emotional': 'Emotional skills involve self-awareness and managing feelings. These skills help children understand and express their emotions appropriately.',
+      'sensory': 'Sensory skills involve processing and responding to different sensory inputs. These skills help children understand and interact with their environment.',
+      'adaptive': 'Adaptive skills include self-care and daily living activities. These skills help children become more independent.',
+      'play': 'Play skills involve imagination, creativity, and social play. These skills support learning and social interaction.'
+    };
+    return descriptions[skillId] || 'This skill is important for your child\'s development.';
+  };
+
   // Render loading state
   if (loading) {
     return (
@@ -450,46 +471,48 @@ export default function DailyActivitiesDashboard({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
+    <div className="space-y-6">
       {/* Header with date navigation */}
-      <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <div className="flex items-center">
-          <Calendar className="h-5 w-5 text-emerald-500 mr-2" />
-          <h2 className="text-lg font-medium">Daily Activities</h2>
-        </div>
-        
-        {/* Date navigation */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">
-            {childName}'s Activities
-          </h3>
-          
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
           <div className="flex items-center">
-            <button
-              onClick={() => handleDateChange(-1)}
-              className="p-1 rounded-full hover:bg-gray-100"
-              aria-label="Previous day"
-              type="button"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
+            <Calendar className="h-5 w-5 text-emerald-500 mr-2" />
+            <h2 className="text-lg font-medium">Daily Activities</h2>
+          </div>
+          
+          {/* Date navigation */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">
+              {childName}'s Activities
+            </h3>
             
-            <div className="w-36 text-center mx-1 font-medium">
-              {isToday(currentDate) ? 'Today' : format(currentDate, 'EEEE, MMMM d')}
+            <div className="flex items-center">
+              <button
+                onClick={() => handleDateChange(-1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+                aria-label="Previous day"
+                type="button"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              
+              <div className="w-36 text-center mx-1 font-medium">
+                {isToday(currentDate) ? 'Today' : format(currentDate, 'EEEE, MMMM d')}
+              </div>
+              
+              <button
+                onClick={() => handleDateChange(1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+                aria-label="Next day"
+                type="button"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             </div>
-            
-            <button
-              onClick={() => handleDateChange(1)}
-              className="p-1 rounded-full hover:bg-gray-100"
-              aria-label="Next day"
-              type="button"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
           </div>
         </div>
       </div>
@@ -504,24 +527,29 @@ export default function DailyActivitiesDashboard({
         
         {/* Quick observation form */}
         {showQuickObserve && selectedActivity && (
-          <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="font-medium text-gray-900">Quick Observation</h3>
-              <button
-                onClick={() => {
-                  setShowQuickObserve(false);
-                  setSelectedActivity(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-                type="button"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Observation</h3>
             
-            <div className="mb-3">
-              <div className="text-sm text-gray-500 mb-1">Activity</div>
-              <div className="font-medium">{selectedActivity?.title}</div>
+            {/* Pre-Activity Context */}
+            <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
+              <div className="space-y-3">
+                {selectedActivity.skills.map(skillId => (
+                  <div key={skillId} className="flex items-start">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">
+                        {skillId.split('_').map(word => 
+                          word.charAt(0).toUpperCase() + word.slice(1)
+                        ).join(' ')}
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        {getSkillDescription(skillId)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="mb-4">
@@ -779,6 +807,23 @@ export default function DailyActivitiesDashboard({
           </button>
         </div>
       </div>
+
+      {/* Activity Recording Form */}
+      {showQuickObserve && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Activity Impact</h3>
+          
+          {/* Post-Activity Reflection */}
+          {submittingObservation && (
+            <div className="mt-6 bg-emerald-50 rounded-lg p-4 border border-emerald-100">
+              <p className="text-sm text-emerald-700">
+                By recording this activity, you're helping track your child's development in{' '}
+                {selectedActivity?.skills?.length} key areas. This information helps us provide personalized recommendations and track progress over time.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

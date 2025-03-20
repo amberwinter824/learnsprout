@@ -48,6 +48,16 @@ interface ProgressRecord {
   [key: string]: any;
 }
 
+interface ChildSkill {
+  id: string;
+  childId: string;
+  skillName: string;
+  status: string;
+  lastAssessed?: Timestamp | Date;
+  area: string;
+  [key: string]: any;
+}
+
 interface RecentProgressDashboardProps {
   childrenData: Child[];
   selectedChildId?: string | null;
@@ -62,9 +72,14 @@ export default function RecentProgressDashboard({
   onViewDetails
 }: RecentProgressDashboardProps) {
   const [recentProgress, setRecentProgress] = useState<ProgressRecord[]>([]);
-  const [recentSkills, setRecentSkills] = useState<any[]>([]);
+  const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [developmentSpotlight, setDevelopmentSpotlight] = useState<{
+    area: string;
+    description: string;
+    skills: ChildSkill[];
+  } | null>(null);
   
   // Fetch recent progress records
   useEffect(() => {
@@ -170,13 +185,50 @@ export default function RecentProgressDashboard({
           const data = doc.data();
           return {
             id: doc.id,
-            ...data,
+            childId: data.childId,
+            skillName: data.skillName || data.name || 'Unknown Skill',
+            status: data.status || 'not_started',
+            area: data.area || 'unknown',
+            lastAssessed: data.lastAssessed,
             childName: data.childId && childIdToName[data.childId] ? 
               childIdToName[data.childId] : 'Unknown Child'
-          };
+          } as ChildSkill;
         });
         
         setRecentSkills(skillsData);
+
+        // Calculate development spotlight
+        const skillsByArea = skillsData.reduce((acc, skill) => {
+          if (!acc[skill.area]) {
+            acc[skill.area] = [];
+          }
+          acc[skill.area].push(skill);
+          return acc;
+        }, {} as Record<string, ChildSkill[]>);
+
+        // Find area with most developing/emerging skills
+        let spotlightArea = '';
+        let maxSkills = 0;
+        Object.entries(skillsByArea).forEach(([area, skills]) => {
+          const activeSkills = skills.filter(s => 
+            s.status === 'developing' || s.status === 'emerging'
+          ).length;
+          if (activeSkills > maxSkills) {
+            maxSkills = activeSkills;
+            spotlightArea = area;
+          }
+        });
+
+        if (spotlightArea) {
+          setDevelopmentSpotlight({
+            area: spotlightArea,
+            description: getDevelopmentAreaDescription(spotlightArea),
+            skills: skillsByArea[spotlightArea]
+              .filter(s => s.status === 'developing' || s.status === 'emerging')
+              .slice(0, 3)
+          });
+        }
+
         setLoading(false);
       } catch (err) {
         console.error('Error fetching recent progress:', err);
@@ -231,6 +283,20 @@ export default function RecentProgressDashboard({
     if (!status) return '';
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
+
+  // Helper function to get development area descriptions
+  const getDevelopmentAreaDescription = (area: string): string => {
+    const descriptions: Record<string, string> = {
+      'cognitive': 'Cognitive development includes thinking, problem-solving, and understanding concepts. These skills form the foundation for academic learning.',
+      'physical': 'Physical development encompasses both gross and fine motor skills, coordination, and body awareness. These skills are essential for daily activities and self-care.',
+      'social_emotional': 'Social-emotional development includes self-awareness, managing emotions, and building relationships. These skills are crucial for healthy social interactions.',
+      'language': 'Language development involves communication, vocabulary, and understanding. These skills are fundamental for expressing needs and learning.',
+      'adaptive': 'Adaptive development includes self-care skills and daily living activities. These skills help children become more independent.',
+      'sensory': 'Sensory development involves processing and responding to different sensory inputs. These skills help children understand and interact with their environment.',
+      'play': 'Play development includes imagination, creativity, and social play. These skills support learning and social interaction.'
+    };
+    return descriptions[area] || 'This developmental area is important for your child\'s growth.';
+  };
   
   if (loading) {
     return (
@@ -284,6 +350,32 @@ export default function RecentProgressDashboard({
       </div>
       
       <div className="p-4">
+        {/* Development Spotlight */}
+        {developmentSpotlight && (
+          <div className="mb-6 bg-emerald-50 rounded-lg p-4 border border-emerald-100">
+            <h3 className="text-sm font-medium text-emerald-800 mb-2">
+              Development Spotlight: {developmentSpotlight.area.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+              ).join(' ')}
+            </h3>
+            <p className="text-sm text-emerald-700 mb-3">
+              {developmentSpotlight.description}
+            </p>
+            <div className="space-y-2">
+              {developmentSpotlight.skills.map(skill => (
+                <div key={skill.id} className="flex items-center text-sm">
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    skill.status === 'developing' ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`} />
+                  <span className="text-emerald-800">
+                    {skill.skillName || skill.name || 'Skill'} - {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {recentProgress.length > 0 ? (
           <div className="space-y-5">
             <h3 className="text-sm font-medium text-gray-500">Completed Activities</h3>

@@ -65,8 +65,8 @@ export default function AllChildrenMaterialsForecast() {
           query(
             collection(db, 'weeklyPlans'),
             where('userId', '==', currentUser.uid),
-            where('weekStarting', '>=', format(today, 'yyyy-MM-dd')),
-            where('weekStarting', '<=', format(forecastEndDate, 'yyyy-MM-dd'))
+            where('weekStarting', '>=', Timestamp.fromDate(today)),
+            where('weekStarting', '<=', Timestamp.fromDate(forecastEndDate))
           )
         );
 
@@ -78,14 +78,15 @@ export default function AllChildrenMaterialsForecast() {
 
         plansSnapshot.forEach(doc => {
           const plan = doc.data();
+          console.log('Processing plan:', plan.weekStarting);
+          
           days.forEach(day => {
-            if (plan[day] && Array.isArray(plan[day])) {
-              plan[day].forEach((item: { activityId?: string }) => {
-                if (item.activityId) {
-                  activityIds.add(item.activityId);
-                }
-              });
-            }
+            const dayActivities = plan[day] || [];
+            dayActivities.forEach((activity: any) => {
+              if (activity.activityId) {
+                activityIds.add(activity.activityId);
+              }
+            });
           });
         });
 
@@ -97,9 +98,10 @@ export default function AllChildrenMaterialsForecast() {
           const activityDoc = await getDoc(doc(db, 'activities', activityId));
           if (activityDoc.exists()) {
             const data = activityDoc.data();
-            if (data.materialsNeeded && Array.isArray(data.materialsNeeded)) {
+            console.log(`Activity ${activityId} materials:`, data.materialsNeeded);
+            if (data.materialsNeeded && Array.isArray(data.materialsNeeded) && data.materialsNeeded.length > 0) {
               activities.push({
-                id: activityDoc.id,
+                id: activityId,
                 title: data.title || 'Untitled Activity',
                 materialsNeeded: data.materialsNeeded
               });
@@ -107,7 +109,7 @@ export default function AllChildrenMaterialsForecast() {
           }
         }
 
-        console.log(`Found ${activities.length} activities with materials`);
+        console.log(`Found ${activities.length} activities with materials:`, activities);
 
         // Get all materials to create a lookup table
         const materialsSnapshot = await getDocs(collection(db, 'materials'));
