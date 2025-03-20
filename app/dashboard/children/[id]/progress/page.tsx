@@ -368,58 +368,6 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
           </button>
         </div>
 
-        {/* Developmental Domains Overview */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Understanding Developmental Domains</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-medium text-blue-800 mb-2">Practical Life</h3>
-              <p className="text-sm text-blue-700">
-                Focuses on self-care, independence, and fine motor coordination. These skills help children develop confidence and independence in daily activities.
-              </p>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <h3 className="font-medium text-purple-800 mb-2">Sensorial</h3>
-              <p className="text-sm text-purple-700">
-                Enhances the refinement of senses and perception. Children learn to classify, sort, and understand their environment through sensory experiences.
-              </p>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <h3 className="font-medium text-green-800 mb-2">Language</h3>
-              <p className="text-sm text-green-700">
-                Develops communication, vocabulary, and literacy skills. This foundation supports reading, writing, and effective communication.
-              </p>
-            </div>
-            <div className="p-4 bg-red-50 rounded-lg">
-              <h3 className="font-medium text-red-800 mb-2">Mathematics</h3>
-              <p className="text-sm text-red-700">
-                Builds understanding of numbers, quantities, and mathematical concepts through concrete materials and hands-on experiences.
-              </p>
-            </div>
-            <div className="p-4 bg-amber-50 rounded-lg">
-              <h3 className="font-medium text-amber-800 mb-2">Cultural</h3>
-              <p className="text-sm text-amber-700">
-                Explores geography, science, art, and music. This broadens children's understanding of the world and different cultures.
-              </p>
-            </div>
-            <div className="p-4 bg-pink-50 rounded-lg">
-              <h3 className="font-medium text-pink-800 mb-2">Social & Emotional</h3>
-              <p className="text-sm text-pink-700">
-                Develops self-awareness, emotional regulation, and social skills. These skills are crucial for building relationships and understanding oneself.
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 text-sm text-gray-600">
-            <p className="mb-2">Each domain is interconnected and supports your child's overall development. Progress in one area often influences growth in others.</p>
-            <p>Skills are tracked through four stages:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li><span className="font-medium">Emerging:</span> Initial interest and basic understanding</li>
-              <li><span className="font-medium">Developing:</span> Growing competence and regular practice</li>
-              <li><span className="font-medium">Mastered:</span> Consistent independent performance</li>
-            </ul>
-          </div>
-        </div>
-
         {/* Child Info */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="mb-6">
@@ -428,6 +376,49 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               Back to {child?.name}'s Profile
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Progress Tracking</h1>
+          </div>
+
+          {/* Developmental Domains Overview */}
+          <div className="mb-8">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Understanding Developmental Domains</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-medium text-blue-800 mb-2">Practical Life</h3>
+                <p className="text-sm text-blue-700">
+                  Focuses on self-care, independence, and fine motor coordination. These skills help children develop confidence and independence in daily activities.
+                </p>
+              </div>
+              <div className="p-4 bg-purple-50 rounded-lg">
+                <h3 className="font-medium text-purple-800 mb-2">Sensorial</h3>
+                <p className="text-sm text-purple-700">
+                  Enhances the refinement of senses and perception. Children learn to classify, sort, and understand their environment through sensory experiences.
+                </p>
+              </div>
+              <div className="p-4 bg-green-50 rounded-lg">
+                <h3 className="font-medium text-green-800 mb-2">Language</h3>
+                <p className="text-sm text-green-700">
+                  Develops communication, vocabulary, and literacy skills. This foundation supports reading, writing, and effective communication.
+                </p>
+              </div>
+              <div className="p-4 bg-red-50 rounded-lg">
+                <h3 className="font-medium text-red-800 mb-2">Mathematics</h3>
+                <p className="text-sm text-red-700">
+                  Builds understanding of numbers, quantities, and mathematical concepts through concrete materials and hands-on experiences.
+                </p>
+              </div>
+              <div className="p-4 bg-amber-50 rounded-lg">
+                <h3 className="font-medium text-amber-800 mb-2">Cultural</h3>
+                <p className="text-sm text-amber-700">
+                  Explores geography, science, art, and music. This broadens children's understanding of the world and different cultures.
+                </p>
+              </div>
+              <div className="p-4 bg-pink-50 rounded-lg">
+                <h3 className="font-medium text-pink-800 mb-2">Social & Emotional</h3>
+                <p className="text-sm text-pink-700">
+                  Develops self-awareness, emotional regulation, and social skills. These skills are crucial for building relationships and understanding oneself.
+                </p>
+              </div>
+            </div>
           </div>
           
           {/* Tab Navigation */}

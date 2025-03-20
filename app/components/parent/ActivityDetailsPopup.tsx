@@ -228,24 +228,6 @@ export default function ActivityDetailsPopup({
         
         {/* Content */}
         <div className="p-6">
-          {/* Activity Skills Overview */}
-          {activitySkills.length > 0 && (
-            <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
-              <div className="space-y-3">
-                {activitySkills.map(skill => (
-                  <div key={skill.id} className="flex items-start">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">{skill.name}</p>
-                      <p className="text-sm text-blue-700">{skill.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {tab === 'setup' && (
             <div>
               {/* Activity info and tags */}
@@ -303,20 +285,38 @@ export default function ActivityDetailsPopup({
               </div>
               
               {/* Preparation */}
-              <div>
+              <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Preparation</h3>
                 <p className="text-gray-600 mb-2">
                   Before starting this activity, make sure you have all materials ready and create a calm environment.
                 </p>
-                
-                <button
-                  onClick={() => setTab('instructions')}
-                  className="mt-4 w-full py-2 bg-emerald-600 text-white rounded-md flex items-center justify-center"
-                >
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  View Instructions
-                </button>
               </div>
+
+              {/* Activity Skills Overview */}
+              {activitySkills.length > 0 && (
+                <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
+                  <div className="space-y-3">
+                    {activitySkills.map(skill => (
+                      <div key={skill.id} className="flex items-start">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-800">{skill.name}</p>
+                          <p className="text-sm text-blue-700">{skill.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <button
+                onClick={() => setTab('instructions')}
+                className="mt-4 w-full py-2 bg-emerald-600 text-white rounded-md flex items-center justify-center"
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                View Instructions
+              </button>
             </div>
           )}
           
