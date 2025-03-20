@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoPlanGeneration } from '@/hooks/useAutoPlanGeneration';
@@ -19,7 +19,7 @@ import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFoc
 import AllChildrenWeeklyView from '@/app/components/parent/AllChildrenWeeklyView';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
 import { ErrorBoundary } from 'react-error-boundary';
-import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function Dashboard() {
@@ -43,6 +43,7 @@ export default function Dashboard() {
   );
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [children, setChildren] = useState<any[]>([]);
+  const materialsForecastRef = useRef<{ fetchMaterialsNeeded: () => void }>(null);
   
   // Update URL when parameters change
   const updateUrlParams = useCallback((date?: Date, childId?: string) => {
@@ -135,33 +136,24 @@ export default function Dashboard() {
     if (!currentUser) return;
     
     try {
-      // Get the user's document
-      const userRef = doc(db, 'users', currentUser.uid);
-      const userDoc = await getDoc(userRef);
+      // Create a document in userMaterials collection
+      const userMaterialRef = doc(db, 'userMaterials', `${currentUser.uid}_${materialId}`);
       
-      if (!userDoc.exists()) {
-        throw new Error('User document not found');
-      }
-      
-      const userData = userDoc.data();
-      const ownedMaterials = userData.ownedMaterials || [];
-      
-      // Check if material is already owned
-      if (ownedMaterials.includes(materialId)) {
-        return;
-      }
-      
-      // Update the user's owned materials
-      await updateDoc(userRef, {
-        ownedMaterials: arrayUnion(materialId)
+      // Add the material to user's inventory
+      await setDoc(userMaterialRef, {
+        userId: currentUser.uid,
+        materialId: materialId,
+        inInventory: true,
+        addedAt: new Date()
       });
       
-      // Show success toast or notification
-      // You might want to add a toast notification system if you haven't already
+      // Force a refresh of the materials forecast
+      if (materialsForecastRef.current) {
+        materialsForecastRef.current.fetchMaterialsNeeded();
+      }
       
     } catch (error) {
       console.error('Error marking material as owned:', error);
-      // Show error toast or notification
     }
   };
   
@@ -305,7 +297,10 @@ export default function Dashboard() {
                   </div>
                 }
               >
-                <AllChildrenMaterialsForecast onMarkMaterialOwned={handleMarkMaterialOwned} />
+                <AllChildrenMaterialsForecast 
+                  ref={materialsForecastRef}
+                  onMarkMaterialOwned={handleMarkMaterialOwned} 
+                />
               </ErrorBoundary>
             </div>
             

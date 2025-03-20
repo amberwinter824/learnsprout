@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { startOfDay, addDays, format } from 'date-fns';
@@ -24,39 +24,60 @@ interface AllChildrenMaterialsForecastProps {
   onMarkMaterialOwned: (materialId: string) => Promise<void>;
 }
 
-export default function AllChildrenMaterialsForecast({ onMarkMaterialOwned }: AllChildrenMaterialsForecastProps) {
-  const { currentUser } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [materialsNeeded, setMaterialsNeeded] = useState<{
-    material: string;
-    materialId: string;
-    count: number;
-    activities: string[];
-    amazonLink?: string;
-  }[]>([]);
-  const [ownedMaterials, setOwnedMaterials] = useState<string[]>([]);
+const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => void }, AllChildrenMaterialsForecastProps>(
+  ({ onMarkMaterialOwned }, ref) => {
+    const { currentUser } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [materialsNeeded, setMaterialsNeeded] = useState<{
+      material: string;
+      materialId: string;
+      count: number;
+      activities: string[];
+      amazonLink?: string;
+    }[]>([]);
+    const [ownedMaterials, setOwnedMaterials] = useState<string[]>([]);
 
-  useEffect(() => {
-    async function fetchOwnedMaterials() {
-      if (!currentUser) return;
-      
-      try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setOwnedMaterials(userData.ownedMaterials || []);
-        }
-      } catch (error) {
-        console.error('Error fetching owned materials:', error);
-      }
+    // Helper function to check if a material is a common household item
+    function isCommonHouseholdItem(materialName: string): boolean {
+      const commonItems = [
+        // Kitchen items
+        'water', 'spoon', 'fork', 'knife', 'plate', 'bowl', 'cup', 'mug', 'napkin', 'paper towel',
+        'towel', 'dish soap', 'sponge', 'container', 'basket', 'tray', 'measuring cup', 'measuring spoon',
+        
+        // Art supplies
+        'paper', 'pencil', 'pen', 'marker', 'crayon', 'scissors', 'glue', 'tape', 'paint', 'brush',
+        'coloring book', 'construction paper', 'cardboard', 'box', 'string', 'yarn', 'ribbon',
+        
+        // Household items
+        'basket', 'container', 'box', 'bag', 'bottle', 'jar', 'lid', 'cloth', 'fabric', 'tissue',
+        'cotton ball', 'cotton swab', 'sponge', 'brush', 'broom', 'dustpan', 'mop', 'rag',
+        
+        // Natural items
+        'water', 'sand', 'dirt', 'soil', 'rock', 'stone', 'leaf', 'stick', 'shell', 'seed',
+        'flower', 'grass', 'pinecone', 'acorn', 'feather',
+        
+        // Food items
+        'rice', 'bean', 'pasta', 'cereal', 'flour', 'salt', 'sugar', 'spice', 'herb', 'fruit',
+        'vegetable', 'grain', 'seed', 'nut', 'raisin', 'cracker', 'cookie', 'bread',
+        
+        // Cleaning items
+        'soap', 'sponge', 'rag', 'towel', 'broom', 'dustpan', 'mop', 'bucket', 'spray bottle',
+        
+        // Basic tools
+        'hammer', 'screwdriver', 'pliers', 'scissors', 'knife', 'spoon', 'fork', 'tongs', 'clamp',
+        
+        // Educational items
+        'book', 'paper', 'pencil', 'pen', 'marker', 'crayon', 'chalk', 'board', 'card', 'puzzle',
+        'block', 'bead', 'button', 'coin', 'key', 'lock', 'magnet', 'mirror', 'magnifying glass'
+      ];
+
+      const normalizedName = materialName.trim().toLowerCase();
+      return commonItems.some(item => normalizedName.includes(item));
     }
-    
-    fetchOwnedMaterials();
-  }, [currentUser]);
 
-  useEffect(() => {
-    async function fetchMaterialsNeeded() {
+    // Function to fetch materials needed
+    const fetchMaterialsNeeded = async () => {
       if (!currentUser) return;
 
       try {
@@ -195,113 +216,112 @@ export default function AllChildrenMaterialsForecast({ onMarkMaterialOwned }: Al
       } finally {
         setLoading(false);
       }
+    };
+
+    // Expose fetchMaterialsNeeded to parent
+    useImperativeHandle(ref, () => ({
+      fetchMaterialsNeeded
+    }));
+
+    // Fetch owned materials
+    useEffect(() => {
+      async function fetchOwnedMaterials() {
+        if (!currentUser) return;
+        
+        try {
+          // Get user's owned materials from userMaterials collection
+          const userMaterialsRef = collection(db, 'userMaterials');
+          const userMaterialsQuery = query(
+            userMaterialsRef,
+            where('userId', '==', currentUser.uid),
+            where('inInventory', '==', true)
+          );
+          
+          const userMaterialsSnapshot = await getDocs(userMaterialsQuery);
+          const ownedMaterialIds = userMaterialsSnapshot.docs.map(doc => doc.data().materialId);
+          setOwnedMaterials(ownedMaterialIds);
+        } catch (error) {
+          console.error('Error fetching owned materials:', error);
+        }
+      }
+      
+      fetchOwnedMaterials();
+    }, [currentUser]);
+
+    // Initial fetch of materials needed
+    useEffect(() => {
+      fetchMaterialsNeeded();
+    }, [currentUser, ownedMaterials]);
+
+    if (loading) {
+      return (
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+          </div>
+        </div>
+      );
     }
 
-    fetchMaterialsNeeded();
-  }, [currentUser, ownedMaterials]);
-
-  // Helper function to check if a material is a common household item
-  function isCommonHouseholdItem(materialName: string): boolean {
-    const commonItems = [
-      // Kitchen items
-      'water', 'spoon', 'fork', 'knife', 'plate', 'bowl', 'cup', 'mug', 'napkin', 'paper towel',
-      'towel', 'dish soap', 'sponge', 'container', 'basket', 'tray', 'measuring cup', 'measuring spoon',
-      
-      // Art supplies
-      'paper', 'pencil', 'pen', 'marker', 'crayon', 'scissors', 'glue', 'tape', 'paint', 'brush',
-      'coloring book', 'construction paper', 'cardboard', 'box', 'string', 'yarn', 'ribbon',
-      
-      // Household items
-      'basket', 'container', 'box', 'bag', 'bottle', 'jar', 'lid', 'cloth', 'fabric', 'tissue',
-      'cotton ball', 'cotton swab', 'sponge', 'brush', 'broom', 'dustpan', 'mop', 'rag',
-      
-      // Natural items
-      'water', 'sand', 'dirt', 'soil', 'rock', 'stone', 'leaf', 'stick', 'shell', 'seed',
-      'flower', 'grass', 'pinecone', 'acorn', 'feather',
-      
-      // Food items
-      'rice', 'bean', 'pasta', 'cereal', 'flour', 'salt', 'sugar', 'spice', 'herb', 'fruit',
-      'vegetable', 'grain', 'seed', 'nut', 'raisin', 'cracker', 'cookie', 'bread',
-      
-      // Cleaning items
-      'soap', 'sponge', 'rag', 'towel', 'broom', 'dustpan', 'mop', 'bucket', 'spray bottle',
-      
-      // Basic tools
-      'hammer', 'screwdriver', 'pliers', 'scissors', 'knife', 'spoon', 'fork', 'tongs', 'clamp',
-      
-      // Educational items
-      'book', 'paper', 'pencil', 'pen', 'marker', 'crayon', 'chalk', 'board', 'card', 'puzzle',
-      'block', 'bead', 'button', 'coin', 'key', 'lock', 'magnet', 'mirror', 'magnifying glass'
-    ];
-
-    const normalizedName = materialName.trim().toLowerCase();
-    return commonItems.some(item => normalizedName.includes(item));
-  }
-
-  if (loading) {
-    return (
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+    if (error) {
+      return (
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="text-red-600">{error}</div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (error) {
     return (
       <div className="bg-white shadow rounded-lg p-6">
-        <div className="text-red-600">{error}</div>
-      </div>
-    );
-  }
+        <div className="flex items-center mb-4">
+          <Package className="h-5 w-5 text-emerald-500 mr-2" />
+          <h3 className="text-lg font-medium text-gray-900">Materials Needed</h3>
+        </div>
 
-  return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex items-center mb-4">
-        <Package className="h-5 w-5 text-emerald-500 mr-2" />
-        <h3 className="text-lg font-medium text-gray-900">Materials Needed</h3>
-      </div>
-
-      {materialsNeeded.length > 0 ? (
-        <div className="space-y-4">
-          {materialsNeeded.map((item, index) => (
-            <div key={index} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-medium text-gray-900 capitalize">{item.material}</h4>
-                  <p className="text-sm text-gray-500">
-                    Needed for {item.count} {item.count === 1 ? 'activity' : 'activities'}
-                  </p>
+        {materialsNeeded.length > 0 ? (
+          <div className="space-y-4">
+            {materialsNeeded.map((item, index) => (
+              <div key={index} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-medium text-gray-900 capitalize">{item.material}</h4>
+                    <p className="text-sm text-gray-500">
+                      Needed for {item.count} {item.count === 1 ? 'activity' : 'activities'}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                    {item.count}
+                  </span>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                  {item.count}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center space-x-2">
-                <button
-                  onClick={() => onMarkMaterialOwned(item.materialId)}
-                  className="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-md hover:bg-emerald-200"
-                >
-                  Mark as Owned
-                </button>
-                {item.amazonLink && (
-                  <a
-                    href={item.amazonLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
+                <div className="mt-2 flex items-center space-x-2">
+                  <button
+                    onClick={() => onMarkMaterialOwned(item.materialId)}
+                    className="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-md hover:bg-emerald-200"
                   >
-                    Buy on Amazon
-                  </a>
-                )}
+                    Mark as Owned
+                  </button>
+                  {item.amazonLink && (
+                    <a
+                      href={item.amazonLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
+                    >
+                      Buy on Amazon
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500 text-sm">No materials needed for upcoming activities.</p>
-      )}
-    </div>
-  );
-} 
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">No materials needed for upcoming activities.</p>
+        )}
+      </div>
+    );
+  }
+);
+
+AllChildrenMaterialsForecast.displayName = 'AllChildrenMaterialsForecast';
+
+export default AllChildrenMaterialsForecast; 

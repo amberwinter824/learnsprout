@@ -29,6 +29,7 @@ import ActivityDetailModal from '@/app/components/ActivityDetailModal';
 import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
 import AddActivityToWeeklyPlan from '../AddActivityToWeeklyPlan';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Activity interface
 interface Activity {
@@ -75,6 +76,7 @@ export default function WeekAtAGlanceView({
   selectedDate
 }: WeekAtAGlanceViewProps) {
   const router = useRouter();
+  const { currentUser } = useAuth();
   
   // State
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
@@ -83,7 +85,7 @@ export default function WeekAtAGlanceView({
   const [error, setError] = useState<string | null>(null);
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [areaProgress, setAreaProgress] = useState<Record<string, number>>({});
+  const [schedulePreferences, setSchedulePreferences] = useState<{[key: string]: number}>({});
   
   // Activity detail modal state
   const [showActivityDetail, setShowActivityDetail] = useState(false);
@@ -118,6 +120,48 @@ export default function WeekAtAGlanceView({
   const weekStart = useMemo(() => {
     return startOfWeek(currentWeek, { weekStartsOn: 1 });
   }, [currentWeek]);
+
+  // Fetch user preferences
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    async function fetchPreferences() {
+      try {
+        // Get user preferences
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const activityPreferences = userData?.preferences?.activityPreferences;
+          
+          if (activityPreferences?.scheduleByDay) {
+            setSchedulePreferences(activityPreferences.scheduleByDay);
+          } else {
+            // Default to Monday, Wednesday, Friday with 2 activities each
+            const defaultSchedule: {[key: string]: number} = {
+              monday: 2,
+              tuesday: 0,
+              wednesday: 2,
+              thursday: 0,
+              friday: 2,
+              saturday: 0,
+              sunday: 0
+            };
+            setSchedulePreferences(defaultSchedule);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user preferences:', error);
+      }
+    }
+    
+    fetchPreferences();
+  }, [currentUser]);
+
+  // Check if a day is a rest day
+  const isRestDay = (dayName: string): boolean => {
+    const dayKey = dayName.toLowerCase();
+    return (schedulePreferences[dayKey] || 0) === 0;
+  };
 
   // Extract fetchWeeklyPlan from useEffect to make it accessible
   const fetchWeeklyPlan = async () => {
@@ -433,38 +477,24 @@ export default function WeekAtAGlanceView({
   
   // Calculate completion stats for the week
   const calculateWeekStats = () => {
-    const totalActivities = Object.values(weekActivities).reduce(
-      (sum, dayActivities) => sum + dayActivities.length, 
-      0
-    );
-    
-    const completedActivities = Object.values(weekActivities).reduce(
-      (sum, dayActivities) => sum + dayActivities.filter(a => a.status === 'completed').length, 
-      0
-    );
-    
-    const areasSet = new Set<string>();
+    const stats = {
+      total: 0,
+      completed: 0,
+      confirmed: 0,
+      suggested: 0
+    };
+
     Object.values(weekActivities).forEach(dayActivities => {
       dayActivities.forEach(activity => {
-        if (activity.area) {
-          areasSet.add(activity.area);
-        }
+        stats.total++;
+        if (activity.status === 'completed') stats.completed++;
+        if (activity.status === 'confirmed') stats.confirmed++;
+        if (activity.status === 'suggested') stats.suggested++;
       });
     });
-    
-    const uniqueAreas = Array.from(areasSet);
-    
-    return {
-      totalActivities,
-      completedActivities,
-      percentComplete: totalActivities > 0 
-        ? Math.round((completedActivities / totalActivities) * 100) 
-        : 0,
-      uniqueAreas
-    };
+
+    return stats;
   };
-  
-  const weekStats = calculateWeekStats();
 
   // Handle "How To" button click
   const handleHowTo = (activity: Activity) => {
@@ -510,57 +540,6 @@ export default function WeekAtAGlanceView({
       setSelectedDay(day.dayName);
     }
   };
-
-  // Calculate area progress
-  const calculateAreaProgress = async () => {
-    try {
-      const progressQuery = query(
-        collection(db, 'progressRecords'),
-        where('childId', '==', childId),
-        where('date', '>=', startOfWeek(currentWeek, { weekStartsOn: 1 }))
-      );
-      
-      const progressSnapshot = await getDocs(progressQuery);
-      const areaCounts: Record<string, number> = {};
-      const totalActivities: Record<string, number> = {};
-      
-      // Count completed activities by area
-      progressSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.area) {
-          areaCounts[data.area] = (areaCounts[data.area] || 0) + 1;
-        }
-      });
-      
-      // Count total activities by area from weekly plan
-      Object.values(weekActivities).forEach(dayActivities => {
-        dayActivities.forEach(activity => {
-          if (activity.area) {
-            totalActivities[activity.area] = (totalActivities[activity.area] || 0) + 1;
-          }
-        });
-      });
-      
-      // Calculate progress percentage for each area
-      const progress: Record<string, number> = {};
-      Object.keys(totalActivities).forEach(area => {
-        progress[area] = totalActivities[area] > 0 
-          ? Math.round((areaCounts[area] || 0) / totalActivities[area] * 100)
-          : 0;
-      });
-      
-      setAreaProgress(progress);
-    } catch (error) {
-      console.error('Error calculating area progress:', error);
-    }
-  };
-
-  // Update area progress when activities change
-  useEffect(() => {
-    if (weekActivities && Object.keys(weekActivities).length > 0) {
-      calculateAreaProgress();
-    }
-  }, [weekActivities, childId, currentWeek]);
 
   if (loading) {
     return (
@@ -652,110 +631,23 @@ export default function WeekAtAGlanceView({
           </div>
           
           {/* Progress stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="border border-gray-200 bg-white rounded-lg p-3">
-              <div className="text-sm text-gray-500 mb-1">Total Activities</div>
-              <div className="text-xl font-medium">
-                {weekStats.totalActivities}
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="text-sm text-gray-500">Total Activities</div>
+              <div className="text-2xl font-semibold">{calculateWeekStats().total}</div>
             </div>
-            
-            <div className="border border-gray-200 bg-white rounded-lg p-3">
-              <div className="text-sm text-gray-500 mb-1">Completed</div>
-              <div className="flex items-baseline">
-                <span className="text-xl font-medium text-green-600">
-                  {weekStats.completedActivities}
-                </span>
-                <span className="text-sm text-gray-500 ml-2">
-                  ({weekStats.percentComplete}%)
-                </span>
-              </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="text-sm text-gray-500">Completed</div>
+              <div className="text-2xl font-semibold text-green-600">{calculateWeekStats().completed}</div>
             </div>
-
-            <div className="border border-gray-200 bg-white rounded-lg p-3">
-              <div className="text-sm text-gray-500 mb-1">Areas Covered</div>
-              <div className="flex flex-wrap gap-1">
-                {weekStats.uniqueAreas.map((area, index) => (
-                  <span 
-                    key={index}
-                    className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(area)}`}
-                  >
-                    {area.replace('_', ' ')}
-                  </span>
-                ))}
-              </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="text-sm text-gray-500">Confirmed</div>
+              <div className="text-2xl font-semibold text-blue-600">{calculateWeekStats().confirmed}</div>
             </div>
-
-            <div className="border border-gray-200 bg-white rounded-lg p-3">
-              <div className="text-sm text-gray-500 mb-1">School Connection</div>
-              <div className="text-xl font-medium text-indigo-600">
-                {Object.values(weekActivities).reduce((sum, activities) => 
-                  sum + activities.filter(a => a.isHomeSchoolConnection).length, 0
-                )}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">Activities</div>
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="text-sm text-gray-500">Suggested</div>
+              <div className="text-2xl font-semibold text-amber-600">{calculateWeekStats().suggested}</div>
             </div>
-          </div>
-
-          {/* Developmental Progress */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Developmental Progress</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="bg-white rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Activity Engagement</span>
-                  <span className="text-sm font-medium text-emerald-600">
-                    {Math.round((weekStats.completedActivities / weekStats.totalActivities) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-emerald-500 h-2 rounded-full"
-                    style={{ width: `${(weekStats.completedActivities / weekStats.totalActivities) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Areas Balance</span>
-                  <span className="text-sm font-medium text-blue-600">
-                    {weekStats.uniqueAreas.length}/7
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-500 h-2 rounded-full"
-                    style={{ width: `${(weekStats.uniqueAreas.length / 7) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Area Progress Overview */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Area Progress This Week</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(areaProgress).map(([area, progress]) => (
-              <div key={area} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 capitalize">
-                    {area.replace('_', ' ')}
-                  </span>
-                  <span className="text-sm font-medium text-emerald-600">
-                    {progress}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${getAreaColor(area)}`}
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
         
@@ -789,6 +681,11 @@ export default function WeekAtAGlanceView({
                       Today
                     </span>
                   )}
+                  {isRestDay(day.dayName) && (
+                    <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-800 text-xs rounded-full">
+                      Rest Day
+                    </span>
+                  )}
                 </div>
                 
                 <div className="text-sm text-gray-500">
@@ -799,7 +696,14 @@ export default function WeekAtAGlanceView({
               
               {/* Activities for the day */}
               <div className="divide-y divide-gray-100">
-                {weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
+                {isRestDay(day.dayName) ? (
+                  <div className="p-6 text-center text-gray-500">
+                    <p>Rest day - no activities scheduled</p>
+                    <p className="text-sm mt-1">
+                      Based on your preferences in settings
+                    </p>
+                  </div>
+                ) : weekActivities[day.dayName] && weekActivities[day.dayName].length > 0 ? (
                   weekActivities[day.dayName].map(activity => (
                     <div 
                       key={activity.id} 
@@ -853,37 +757,6 @@ export default function WeekAtAGlanceView({
                             {activity.timeSlot}
                           </span>
                         )}
-                      </div>
-
-                      {/* Developmental Context */}
-                      <div className="mt-3 bg-blue-50 rounded-md p-3">
-                        <div className="flex items-center text-blue-700 mb-2">
-                          <Info className="h-4 w-4 mr-1" />
-                          <span className="text-sm font-medium">Learning Objectives</span>
-                        </div>
-                        <div className="text-sm text-blue-600 space-y-1">
-                          {activity.area === 'practical_life' && (
-                            <p>• Develops independence and self-care skills</p>
-                          )}
-                          {activity.area === 'sensorial' && (
-                            <p>• Enhances sensory perception and discrimination</p>
-                          )}
-                          {activity.area === 'language' && (
-                            <p>• Builds vocabulary and communication skills</p>
-                          )}
-                          {activity.area === 'mathematics' && (
-                            <p>• Strengthens numerical understanding and problem-solving</p>
-                          )}
-                          {activity.area === 'cultural' && (
-                            <p>• Expands knowledge of world cultures and sciences</p>
-                          )}
-                          {activity.area === 'science' && (
-                            <p>• Fosters scientific thinking and observation skills</p>
-                          )}
-                          {activity.area === 'art' && (
-                            <p>• Promotes creative expression and fine motor skills</p>
-                          )}
-                        </div>
                       </div>
                       
                       <div className="bg-gray-50 px-3 py-2 mt-3 flex space-x-4 rounded-md">
