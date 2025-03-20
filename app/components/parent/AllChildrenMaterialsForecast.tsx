@@ -101,7 +101,17 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
           return;
         }
 
-        console.log(`Found ${children.length} children for user`);
+        // Get user's owned materials
+        const userMaterialsRef = collection(db, 'userMaterials');
+        const userMaterialsQuery = query(
+          userMaterialsRef,
+          where('userId', '==', currentUser.uid),
+          where('inInventory', '==', true)
+        );
+        
+        const userMaterialsSnapshot = await getDocs(userMaterialsQuery);
+        const ownedMaterialIds = userMaterialsSnapshot.docs.map(doc => doc.data().materialId);
+        setOwnedMaterials(ownedMaterialIds);
 
         // Calculate date range for forecast (next 90 days)
         const today = startOfDay(new Date());
@@ -205,7 +215,7 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
             amazonLink: materialDoc?.amazonLink || ''
           };
         })
-        .filter(item => !ownedMaterials.includes(item.materialId))
+        .filter(item => !ownedMaterialIds.includes(item.materialId))
         .sort((a, b) => b.count - a.count);
 
         console.log(`Found ${materialsArray.length} materials needed for activities`);
@@ -223,35 +233,10 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
       fetchMaterialsNeeded
     }));
 
-    // Fetch owned materials
-    useEffect(() => {
-      async function fetchOwnedMaterials() {
-        if (!currentUser) return;
-        
-        try {
-          // Get user's owned materials from userMaterials collection
-          const userMaterialsRef = collection(db, 'userMaterials');
-          const userMaterialsQuery = query(
-            userMaterialsRef,
-            where('userId', '==', currentUser.uid),
-            where('inInventory', '==', true)
-          );
-          
-          const userMaterialsSnapshot = await getDocs(userMaterialsQuery);
-          const ownedMaterialIds = userMaterialsSnapshot.docs.map(doc => doc.data().materialId);
-          setOwnedMaterials(ownedMaterialIds);
-        } catch (error) {
-          console.error('Error fetching owned materials:', error);
-        }
-      }
-      
-      fetchOwnedMaterials();
-    }, [currentUser]);
-
     // Initial fetch of materials needed
     useEffect(() => {
       fetchMaterialsNeeded();
-    }, [currentUser, ownedMaterials]);
+    }, [currentUser]);
 
     if (loading) {
       return (

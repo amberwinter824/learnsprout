@@ -152,6 +152,13 @@ export default function Dashboard() {
         materialsForecastRef.current.fetchMaterialsNeeded();
       }
       
+      // Add a small delay to ensure the database update is complete
+      setTimeout(() => {
+        if (materialsForecastRef.current) {
+          materialsForecastRef.current.fetchMaterialsNeeded();
+        }
+      }, 500);
+      
     } catch (error) {
       console.error('Error marking material as owned:', error);
     }
@@ -302,34 +309,6 @@ export default function Dashboard() {
                   onMarkMaterialOwned={handleMarkMaterialOwned} 
                 />
               </ErrorBoundary>
-            </div>
-            
-            {/* App Features Section */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Learn Sprout Features</h2>
-              
-              <div className="space-y-4">
-                <div className="p-3 bg-emerald-50 rounded-lg">
-                  <h3 className="font-medium text-emerald-800 text-sm">Weekly Activity Plans</h3>
-                  <p className="text-xs text-emerald-700 mt-1">
-                    Personalized activities based on your child's age and interests.
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <h3 className="font-medium text-blue-800 text-sm">Progress Tracking</h3>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Document observations and track developmental milestones.
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <h3 className="font-medium text-purple-800 text-sm">Montessori Resources</h3>
-                  <p className="text-xs text-purple-700 mt-1">
-                    Access educational resources and activity guides.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
