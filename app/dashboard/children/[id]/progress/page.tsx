@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format, parseISO, subMonths } from 'date-fns';
-import { collection, query, where, getDocs, getDoc, doc, Timestamp, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, Timestamp, orderBy, limit, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, 
@@ -19,7 +19,8 @@ import {
   Activity,
   Clock,
   Award,
-  Info
+  Info,
+  BookOpen
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 
@@ -32,14 +33,13 @@ interface ChildData {
   interests?: string[];
 }
 
-interface SkillData {
+interface Skill {
   id: string;
   skillId: string;
   name: string;
   description?: string;
   area: string;
   status: 'not_started' | 'emerging' | 'developing' | 'mastered';
-  progressLevel?: number;
   lastAssessed?: Timestamp;
   notes?: string;
 }
@@ -63,7 +63,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   
   // State
   const [child, setChild] = useState<ChildData | null>(null);
-  const [skills, setSkills] = useState<SkillData[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [progressRecords, setProgressRecords] = useState<ProgressRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +71,11 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'activities'>('overview');
   const [timeRange, setTimeRange] = useState<'all' | 'month' | 'quarter'>('all');
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<'emerging' | 'developing' | 'mastered'>('emerging');
+  const [updateNotes, setUpdateNotes] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Fetch child and progress data
   useEffect(() => {
@@ -104,7 +109,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
         );
         
         const childSkillsSnapshot = await getDocs(childSkillsQuery);
-        const childSkillsData: SkillData[] = [];
+        const childSkillsData: Skill[] = [];
         
         childSkillsSnapshot.forEach(doc => {
           const data = doc.data();
@@ -118,7 +123,6 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               description: devSkill.description,
               area: devSkill.area || 'unknown',
               status: data.status || 'not_started',
-              progressLevel: data.progressLevel,
               lastAssessed: data.lastAssessed,
               notes: data.notes
             });
@@ -130,7 +134,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
           const exists = childSkillsData.some(s => s.skillId === skillId);
           if (!exists) {
             childSkillsData.push({
-              id: '',
+              id: `new-${skillId}`,
               skillId,
               name: devSkill.name || 'Unnamed Skill',
               description: devSkill.description,
@@ -157,25 +161,48 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
           orderBy('date', 'desc')
         );
         
+        console.log('Fetching progress records for childId:', childId);
         const progressSnapshot = await getDocs(progressQuery);
+        console.log('Progress records found:', progressSnapshot.size);
+        
         const progressData: ProgressRecord[] = [];
         
         progressSnapshot.forEach(doc => {
-          progressData.push({ id: doc.id, ...doc.data() } as ProgressRecord);
+          const data = doc.data();
+          console.log('Progress record data:', data);
+          progressData.push({ 
+            id: doc.id, 
+            childId: data.childId,
+            activityId: data.activityId,
+            activityTitle: data.activityTitle || 'Untitled Activity',
+            date: data.date,
+            notes: data.notes || '',
+            completionStatus: data.completionStatus || 'started',
+            engagementLevel: data.engagementLevel,
+            skillsDemonstrated: data.skillsDemonstrated || [],
+            photoUrls: data.photoUrls || []
+          });
         });
+        
+        console.log('Processed progress data:', progressData);
         
         // Fetch activity titles
         const activityIds = progressData
           .map(record => record.activityId)
           .filter((id, index, self) => id && self.indexOf(id) === index);
         
+        console.log('Activity IDs to fetch:', activityIds);
+        
         const activityTitles: Record<string, string> = {};
         
         for (const activityId of activityIds) {
+          if (!activityId) continue;
           try {
+            console.log('Fetching activity:', activityId);
             const activityDoc = await getDoc(doc(db, 'activities', activityId));
             if (activityDoc.exists()) {
               activityTitles[activityId] = activityDoc.data().title || 'Unknown Activity';
+              console.log('Activity title found:', activityTitles[activityId]);
             }
           } catch (err) {
             console.error(`Error fetching activity ${activityId}:`, err);
@@ -189,6 +216,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
           }
         });
         
+        console.log('Final progress records:', progressData);
         setProgressRecords(progressData);
         setLoading(false);
       } catch (err) {
@@ -330,6 +358,68 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
     }
   };
   
+  const handleUpdateSkillStatus = async (skillId: string) => {
+    const skill = skills.find(s => s.id === skillId);
+    if (skill) {
+      setSelectedSkill(skill);
+      setUpdateStatus(skill.status as 'emerging' | 'developing' | 'mastered');
+      setUpdateNotes(skill.notes || '');
+      setIsUpdateModalOpen(true);
+    }
+  };
+
+  const handleSubmitStatusUpdate = async () => {
+    if (!selectedSkill) return;
+
+    try {
+      setIsUpdating(true);
+      
+      // Create a new childSkill document if it doesn't exist
+      const skillRef = selectedSkill.id 
+        ? doc(db, 'childSkills', selectedSkill.id)
+        : doc(collection(db, 'childSkills'));
+
+      const updateData = {
+        childId,
+        skillId: selectedSkill.skillId,
+        status: updateStatus,
+        notes: updateNotes,
+        lastAssessed: Timestamp.now()
+      };
+
+      if (selectedSkill.id) {
+        await updateDoc(skillRef, updateData);
+      } else {
+        await setDoc(skillRef, updateData);
+      }
+
+      // Update local state - only update the specific skill
+      setSkills(prevSkills => 
+        prevSkills.map(skill => 
+          skill.skillId === selectedSkill.skillId
+            ? { 
+                ...skill, 
+                status: updateStatus,
+                notes: updateNotes,
+                lastAssessed: Timestamp.now()
+              }
+            : skill
+        )
+      );
+
+      // Close modal and reset state
+      setIsUpdateModalOpen(false);
+      setSelectedSkill(null);
+      setUpdateStatus('emerging');
+      setUpdateNotes('');
+    } catch (error) {
+      console.error('Error updating skill status:', error);
+      // You might want to show an error message to the user here
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -357,17 +447,6 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Back button */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </button>
-        </div>
-
         {/* Child Info */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="mb-6">
@@ -376,49 +455,6 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               Back to {child?.name}'s Profile
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Progress Tracking</h1>
-          </div>
-
-          {/* Developmental Domains Overview */}
-          <div className="mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Understanding Developmental Domains</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h3 className="font-medium text-blue-800 mb-2">Practical Life</h3>
-                <p className="text-sm text-blue-700">
-                  Focuses on self-care, independence, and fine motor coordination. These skills help children develop confidence and independence in daily activities.
-                </p>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <h3 className="font-medium text-purple-800 mb-2">Sensorial</h3>
-                <p className="text-sm text-purple-700">
-                  Enhances the refinement of senses and perception. Children learn to classify, sort, and understand their environment through sensory experiences.
-                </p>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <h3 className="font-medium text-green-800 mb-2">Language</h3>
-                <p className="text-sm text-green-700">
-                  Develops communication, vocabulary, and literacy skills. This foundation supports reading, writing, and effective communication.
-                </p>
-              </div>
-              <div className="p-4 bg-red-50 rounded-lg">
-                <h3 className="font-medium text-red-800 mb-2">Mathematics</h3>
-                <p className="text-sm text-red-700">
-                  Builds understanding of numbers, quantities, and mathematical concepts through concrete materials and hands-on experiences.
-                </p>
-              </div>
-              <div className="p-4 bg-amber-50 rounded-lg">
-                <h3 className="font-medium text-amber-800 mb-2">Cultural</h3>
-                <p className="text-sm text-amber-700">
-                  Explores geography, science, art, and music. This broadens children's understanding of the world and different cultures.
-                </p>
-              </div>
-              <div className="p-4 bg-pink-50 rounded-lg">
-                <h3 className="font-medium text-pink-800 mb-2">Social & Emotional</h3>
-                <p className="text-sm text-pink-700">
-                  Develops self-awareness, emotional regulation, and social skills. These skills are crucial for building relationships and understanding oneself.
-                </p>
-              </div>
-            </div>
           </div>
           
           {/* Tab Navigation */}
@@ -442,7 +478,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 }`}
                 onClick={() => setActiveTab('skills')}
               >
-                Skills
+                Skill Development
               </button>
               <button
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -641,17 +677,28 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                           .slice(0, 5)
                           .map(skill => (
                             <div key={skill.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                              <div className="flex justify-between">
-                                <h3 className="font-medium text-gray-900">{skill.name}</h3>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(skill.status)}`}>
-                                  {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
-                                </span>
-                              </div>
-                              
-                              <div className="mt-1">
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(skill.area)}`}>
-                                  {getAreaLabel(skill.area)}
-                                </span>
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-medium text-gray-900">{skill.name}</h3>
+                                  <div className="mt-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(skill.area)}`}>
+                                      {getAreaLabel(skill.area)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(skill.status)}`}>
+                                    {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
+                                  </span>
+                                  <button
+                                    onClick={() => handleUpdateSkillStatus(skill.id)}
+                                    className="text-emerald-600 hover:text-emerald-700"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </div>
                               
                               <div className="mt-2 flex items-center text-xs text-gray-500">
@@ -689,13 +736,35 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
           {/* Skills Tab */}
           {activeTab === 'skills' && (
             <div className="space-y-6">
+              {/* Developmental Domains Link */}
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-4 py-5 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-medium text-gray-900">Understanding Skill Development</h2>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Learn more about developmental domains and how they relate to your child's progress
+                      </p>
+                    </div>
+                    <Link 
+                      href="/dashboard/developmental-domains"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      View Developmental Domains
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
               {/* Skills Journey Map */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory', 'play'].map((area) => {
                   const areaSkills = skills
                     .filter(skill => skill.area === area)
                     .map(skill => ({
                       id: skill.id,
+                      skillId: skill.id,
                       name: skill.name,
                       description: skill.description || 'No description available',
                       area: skill.area,
@@ -704,11 +773,18 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                     }));
                   
                   return (
-                    <SkillsJourneyMap
-                      key={area}
-                      skills={areaSkills}
-                      area={area}
-                    />
+                    <div key={area} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">{getAreaLabel(area)}</h3>
+                      </div>
+                      <div className="p-4">
+                        <SkillsJourneyMap
+                          skills={areaSkills}
+                          area={area}
+                          onUpdateSkill={handleUpdateSkillStatus}
+                        />
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -742,32 +818,33 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               </div>
 
               {/* Skills List */}
-              <div className="bg-white rounded-lg shadow-sm">
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skill</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Assessed</th>
+                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skill</th>
+                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area</th>
+                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Assessed</th>
+                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredSkills.map((skill) => (
-                        <tr key={skill.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                        <tr key={skill.id || `skill-${skill.skillId}`} className="hover:bg-gray-50">
+                          <td className="px-4 sm:px-6 py-4">
                             <div className="text-sm font-medium text-gray-900">{skill.name}</div>
                             {skill.description && (
-                              <div className="text-sm text-gray-500">{skill.description}</div>
+                              <div className="text-sm text-gray-500 mt-1">{skill.description}</div>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getAreaColor(skill.area)}`}>
                               {getAreaLabel(skill.area)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <span className={`${getStatusColor(skill.status)} mr-2`}>
                                 {getStatusIcon(skill.status)}
@@ -777,8 +854,16 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {formatDate(skill.lastAssessed)}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => handleUpdateSkillStatus(skill.id || `skill-${skill.skillId}`)}
+                              className="text-emerald-600 hover:text-emerald-700"
+                            >
+                              Update Status
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -831,92 +916,98 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 </div>
                 
                 <div className="px-4 py-5 sm:p-6">
-                  {filteredProgressRecords.length > 0 ? (
+                  {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+                    </div>
+                  ) : filteredProgressRecords.length > 0 ? (
                     <div className="space-y-6">
-                      {filteredProgressRecords.map(record => (
-                        <div key={record.id} className={`border rounded-lg p-4 ${
-                          record.completionStatus === 'completed' 
-                            ? 'border-green-200 bg-green-50' 
-                            : record.completionStatus === 'in_progress' 
-                              ? 'border-blue-200 bg-blue-50' 
-                              : 'border-gray-200 bg-gray-50'
-                        }`}>
-                          <div className="flex flex-wrap justify-between items-start">
-                            <div>
-                              <h3 className="font-medium text-lg text-gray-900">{record.activityTitle || 'Activity'}</h3>
-                              <div className="flex items-center mt-1">
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  record.completionStatus === 'completed' ? 'bg-green-100 text-green-800' :
-                                  record.completionStatus === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {record.completionStatus.replace('_', ' ').charAt(0).toUpperCase() + record.completionStatus.replace('_', ' ').slice(1)}
-                                </span>
-                                
-                                <span className="text-xs text-gray-500 ml-2 flex items-center">
-                                  <Calendar className="h-3 w-3 mr-1" />
-                                  {formatDate(record.date)}
-                                </span>
+                      {filteredProgressRecords.map(record => {
+                        // Ensure we have valid data before rendering
+                        const activityTitle = typeof record.activityTitle === 'string' ? record.activityTitle : 'Activity';
+                        const completionStatus = typeof record.completionStatus === 'string' ? record.completionStatus : 'not_started';
+                        const engagementLevel = typeof record.engagementLevel === 'string' ? record.engagementLevel : '';
+                        const notes = typeof record.notes === 'string' ? record.notes : '';
+                        const skillsDemonstrated = Array.isArray(record.skillsDemonstrated) ? record.skillsDemonstrated : [];
+                        const photoUrls = Array.isArray(record.photoUrls) ? record.photoUrls : [];
+                        
+                        return (
+                          <div key={record.id} className={`border rounded-lg p-4 ${
+                            completionStatus === 'completed' 
+                              ? 'border-green-200 bg-green-50' 
+                              : completionStatus === 'in_progress' 
+                                ? 'border-blue-200 bg-blue-50' 
+                                : 'border-gray-200 bg-gray-50'
+                          }`}>
+                            <div className="flex flex-wrap justify-between items-start">
+                              <div>
+                                <h3 className="font-medium text-lg text-gray-900">{activityTitle}</h3>
+                                <div className="flex items-center mt-1">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    completionStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                                    completionStatus === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {completionStatus.replace('_', ' ').charAt(0).toUpperCase() + completionStatus.replace('_', ' ').slice(1)}
+                                  </span>
+                                  
+                                  <span className="text-xs text-gray-500 ml-2 flex items-center">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    {formatDate(record.date)}
+                                  </span>
+                                </div>
                               </div>
+                              
+                              {engagementLevel && (
+                                <div className={`text-sm px-3 py-1 rounded-md ${
+                                  engagementLevel === 'high' ? 'bg-green-100 text-green-800' :
+                                  engagementLevel === 'medium' ? 'bg-amber-100 text-amber-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {engagementLevel.charAt(0).toUpperCase() + engagementLevel.slice(1)} Engagement
+                                </div>
+                              )}
                             </div>
                             
-                            {record.engagementLevel && (
-                              <div className={`text-sm px-3 py-1 rounded-md ${
-                                record.engagementLevel === 'high' ? 'bg-green-100 text-green-800' :
-                                record.engagementLevel === 'medium' ? 'bg-amber-100 text-amber-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {record.engagementLevel.charAt(0).toUpperCase() + record.engagementLevel.slice(1)} Engagement
+                            {notes && (
+                              <div className="mt-4">
+                                <h4 className="text-sm font-medium text-gray-700">Notes:</h4>
+                                <p className="mt-1 text-gray-600">{notes}</p>
+                              </div>
+                            )}
+                            
+                            {skillsDemonstrated.length > 0 && (
+                              <div className="mt-4">
+                                <h4 className="text-sm font-medium text-gray-700">Skills Demonstrated:</h4>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                  {skillsDemonstrated.map(skillId => {
+                                    const skill = skills.find(s => s.skillId === skillId);
+                                    const skillName = skill ? skill.name : String(skillId);
+                                    return (
+                                      <span key={skillId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {skillName}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {photoUrls.length > 0 && (
+                              <div className="mt-4">
+                                <h4 className="text-sm font-medium text-gray-700">Photos:</h4>
+                                <div className="mt-1 flex space-x-2 overflow-x-auto pb-2">
+                                  {photoUrls.map((url, idx) => (
+                                    <div key={idx} className="h-20 w-20 flex-shrink-0 rounded-md bg-gray-100 flex items-center justify-center">
+                                      <img src={url} alt={`Activity photo ${idx + 1}`} className="h-full w-full object-cover rounded-md" />
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
-                          
-                          {record.notes && (
-                            <div className="mt-4">
-                              <h4 className="text-sm font-medium text-gray-700">Notes:</h4>
-                              <p className="mt-1 text-gray-600">{record.notes}</p>
-                            </div>
-                          )}
-                          
-                          {record.skillsDemonstrated && record.skillsDemonstrated.length > 0 && (
-                            <div className="mt-4">
-                              <h4 className="text-sm font-medium text-gray-700">Skills Demonstrated:</h4>
-                              <div className="mt-1 flex flex-wrap gap-2">
-                                {record.skillsDemonstrated.map(skillId => {
-                                  const skillName = skills.find(s => s.skillId === skillId)?.name || skillId;
-                                  return (
-                                    <span key={skillId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                      {skillName}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {record.photoUrls && record.photoUrls.length > 0 && (
-                            <div className="mt-4">
-                              <h4 className="text-sm font-medium text-gray-700">Photos:</h4>
-                              <div className="mt-1 flex space-x-2 overflow-x-auto pb-2">
-                                {record.photoUrls.map((url, idx) => (
-                                  <div key={idx} className="h-20 w-20 flex-shrink-0 rounded-md bg-gray-100 flex items-center justify-center">
-                                    <img src={url} alt={`Activity photo ${idx + 1}`} className="h-full w-full object-cover rounded-md" />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="mt-4 flex justify-end">
-                            <Link 
-                              href={`/dashboard/children/${childId}?record=${record.id}`}
-                              className="text-sm text-emerald-600 hover:text-emerald-700"
-                            >
-                              View details
-                            </Link>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-12">
@@ -936,6 +1027,63 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
           )}
         </div>
       </div>
+
+      {/* Status Update Modal */}
+      {isUpdateModalOpen && selectedSkill && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Update Skill Status: {selectedSkill.name}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={updateStatus}
+                  onChange={(e) => setUpdateStatus(e.target.value as 'emerging' | 'developing' | 'mastered')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  <option value="emerging">Emerging</option>
+                  <option value="developing">Developing</option>
+                  <option value="mastered">Mastered</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={updateNotes}
+                  onChange={(e) => setUpdateNotes(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="Add any observations or notes about this skill..."
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setIsUpdateModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitStatusUpdate}
+                disabled={isUpdating}
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {isUpdating ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

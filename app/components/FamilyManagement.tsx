@@ -45,22 +45,25 @@ export default function FamilyManagement() {
   // Fetch family members on initial load
   useEffect(() => {
     async function loadFamilyMembers() {
-      if (!currentUser?.familyId) {
-        setLoading(false);
-        return;
-      }
-      
       try {
-        const members = await getFamilyMembers();
-        setFamilyMembers(members);
-      } catch (err) {
-        console.error('Error loading family members:', err);
+        if (!currentUser) {
+          setLoading(false);
+          return;
+        }
+        
+        // Only attempt to load family members if we have a familyId
+        if (currentUser.familyId) {
+          const members = await getFamilyMembers();
+          setFamilyMembers(members || []);
+        }
+      } catch (error) {
+        console.error('Error loading family members:', error);
         setError('Failed to load family members');
       } finally {
         setLoading(false);
       }
     }
-    
+
     loadFamilyMembers();
   }, [currentUser, getFamilyMembers]);
   
@@ -111,7 +114,11 @@ export default function FamilyManagement() {
       setSuccess('Invitation created successfully!');
       setInviteEmail('');
     } catch (err: any) {
-      setError(`Failed to create invitation: ${err.message}`);
+      setError(err.message || 'Failed to create invitation. Please try again.');
+      // Set the URL if it exists in the error object
+      if (err.url) {
+        setInviteUrl(err.url);
+      }
     } finally {
       setIsInviting(false);
     }

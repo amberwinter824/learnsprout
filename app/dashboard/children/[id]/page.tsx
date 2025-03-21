@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { format, subMonths, startOfWeek as dateStartOfWeek } from 'date-fns';
@@ -27,8 +27,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ChildFamilyAccess from '@/app/components/ChildFamilyAccess';
-import MaterialsForecast from '@/app/components/parent/MaterialsForecast';
-import WeekAtAGlanceView from '@/app/components/parent/WeekAtAGlanceView';
+import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
+import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
+import { generateWeeklyPlan } from '@/lib/planGenerator';
+import { updateUserMaterial } from '@/lib/materialsService';
 
 // Define interfaces
 interface Child {
@@ -95,6 +97,8 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const materialsForecastRef = useRef<{ fetchMaterialsNeeded: () => void }>(null);
   
   // Fetch child data
   useEffect(() => {
@@ -519,6 +523,39 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
     router.push(`/dashboard/children/${childId}`);
   };
   
+  // Handle generate plan
+  const handleGeneratePlan = async (childId: string, weekStartDate?: Date) => {
+    if (!currentUser) return;
+    
+    try {
+      setIsGeneratingPlan(true);
+      await generateWeeklyPlan(childId, currentUser.uid, weekStartDate);
+      // Refresh the page to show the new plan
+      router.refresh();
+    } catch (error) {
+      console.error('Error generating plan:', error);
+      setError('Failed to generate plan');
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
+  
+  // Handle marking a material as owned
+  const handleMarkMaterialOwned = async (materialId: string) => {
+    if (!currentUser?.uid) return;
+    
+    try {
+      // Update in database
+      await updateUserMaterial(currentUser.uid, materialId, true);
+      
+      // Refresh the materials forecast
+      materialsForecastRef.current?.fetchMaterialsNeeded();
+    } catch (error) {
+      console.error('Error marking material as owned:', error);
+      setError('Failed to update material status');
+    }
+  };
+  
   if (loading || currentUser === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -718,55 +755,12 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content - Left and Center columns */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Quick Stats */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Progress Summary</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-blue-700">{activityStats.total}</div>
-                <div className="text-xs text-gray-600">Total Activities</div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-700">{activityStats.completed}</div>
-                <div className="text-xs text-gray-600">Completed</div>
-              </div>
-              <div className="bg-amber-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-amber-700">{activityStats.recent}</div>
-                <div className="text-xs text-gray-600">Last 30 Days</div>
-              </div>
-            </div>
-            
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link
-                href={`/dashboard/children/${childId}/progress`}
-                className="inline-flex justify-center items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <BarChart2 className="h-4 w-4 mr-2 text-emerald-500" />
-                View Detailed Progress
-              </Link>
-              <Link
-                href={`/dashboard/children/${childId}/weekly-plan`}
-                className="inline-flex justify-center items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <Calendar className="h-4 w-4 mr-2 text-emerald-500" />
-                Weekly Activity Plan
-              </Link>
-            </div>
-          </div>
-          
           {/* Weekly Plan */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Weekly Plan</h3>
-            <WeekAtAGlanceView 
-              childId={childId}
-              childName={child?.name || ''}
-            />
-          </div>
-          
-          {/* Materials Forecast */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <MaterialsForecast childId={childId} period={90} />
-          </div>
+          <WeeklyPlanWithDayFocus
+            selectedDate={new Date()}
+            selectedChildId={childId}
+            onGeneratePlan={handleGeneratePlan}
+          />
           
           {/* Activity Timeline */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -840,40 +834,53 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
         
         {/* Right column content */}
         <div className="space-y-6">
-          {/* Skills Summary */}
+          {/* Progress Summary */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Skills Summary</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {skillsStats.map(skill => (
-                <div key={skill.area} className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">{skill.areaLabel}</span>
-                  <span className="text-sm font-medium text-gray-700">{skill.mastered} mastered</span>
-                </div>
-              ))}
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Progress Summary</h2>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-blue-50 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-blue-700">{activityStats.total}</div>
+                <div className="text-xs text-gray-600">Total Activities</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-green-700">{activityStats.completed}</div>
+                <div className="text-xs text-gray-600">Completed</div>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-amber-700">{activityStats.recent}</div>
+                <div className="text-xs text-gray-600">Last 30 Days</div>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <Link
+                href={`/dashboard/children/${childId}/progress`}
+                className="inline-flex justify-center items-center w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <BarChart2 className="h-4 w-4 mr-2 text-emerald-500" />
+                View Detailed Progress
+              </Link>
             </div>
           </div>
           
-          {/* Recommended Activities */}
+          {/* Materials Forecast */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Recommended Activities</h2>
-            {recommendedActivities.length > 0 ? (
-              <div className="space-y-4">
-                {recommendedActivities.map(activity => (
-                  <div key={activity.id} className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">{activity.activityTitle || 'Activity'}</span>
-                    <span className="text-sm font-medium text-gray-700">{activity.priority ? `Priority: ${activity.priority}` : 'No priority'}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 mb-2">No recommended activities yet</p>
-                <p className="text-sm text-gray-500">
-                  Start tracking your child's progress to receive personalized activity recommendations
-                </p>
-              </div>
-            )}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-gray-900">Materials Needed</h2>
+              <button
+                onClick={() => materialsForecastRef.current?.fetchMaterialsNeeded()}
+                className="text-sm text-emerald-600 hover:text-emerald-700"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="space-y-2">
+              <AllChildrenMaterialsForecast
+                ref={materialsForecastRef}
+                selectedChildId={childId}
+                onMarkMaterialOwned={handleMarkMaterialOwned}
+              />
+            </div>
           </div>
         </div>
       </div>

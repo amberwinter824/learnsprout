@@ -24,6 +24,7 @@ import { collection, query, where, getDocs, getDoc, doc, orderBy, limit } from '
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
 import QuickObservationForm from './QuickObservationForm';
+import WeeklyPlanEmptyState from './WeeklyPlanEmptyState';
 import { getUserMaterials } from '@/lib/materialsService';
 
 // Define types
@@ -536,8 +537,15 @@ export default function WeeklyPlanWithDayFocus({
       setError(null);
       console.log("Starting plan generation for child:", selectedChild.id, "for week starting:", weekStartDate);
       
-      // Pass the current week's start date to the generation function
-      const result = await onGeneratePlan(selectedChild.id, weekStartDate);
+      // Add a minimum delay of 8 seconds to show the loading state
+      const delayPromise = new Promise(resolve => setTimeout(resolve, 8000));
+      
+      // Run plan generation and delay in parallel
+      const [result] = await Promise.all([
+        onGeneratePlan(selectedChild.id, weekStartDate),
+        delayPromise
+      ]);
+      
       console.log("Plan generated successfully:", result);
       
       // Set a success message
@@ -774,32 +782,12 @@ export default function WeeklyPlanWithDayFocus({
         
         {/* No weekly plan state */}
         {!weekHasPlan && selectedChild && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center mb-6">
-            <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-800 mb-2">No Weekly Plan Yet</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              {selectedChild.name} doesn't have activities planned for this week. Generate a personalized
-              weekly plan based on their age, interests, and development needs.
-            </p>
-            
-            <button
-              onClick={handleGeneratePlan}
-              disabled={isGeneratingPlan || !onGeneratePlan}
-              className="inline-flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
-            >
-              {isGeneratingPlan ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating Plan...
-                </>
-              ) : (
-                <>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Generate Weekly Plan
-                </>
-              )}
-            </button>
-          </div>
+          <WeeklyPlanEmptyState
+            childId={selectedChild.id}
+            childName={selectedChild.name}
+            onGeneratePlan={handleGeneratePlan}
+            isGenerating={isGeneratingPlan}
+          />
         )}
         
         {/* Selected day heading */}

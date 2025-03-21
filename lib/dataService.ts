@@ -191,11 +191,12 @@ import {
         }
       }
       
+      // Create the child document with optional familyId
       const childRef = await addDoc(collection(db, "children"), {
         ...childData,
         userId: userId,
         parentId: userId, // Keep for backward compatibility
-        familyId: familyId,
+        ...(familyId ? { familyId } : {}), // Only include familyId if it exists
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });

@@ -22,10 +22,11 @@ interface Material {
 
 interface AllChildrenMaterialsForecastProps {
   onMarkMaterialOwned: (materialId: string) => Promise<void>;
+  selectedChildId?: string;
 }
 
 const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => void }, AllChildrenMaterialsForecastProps>(
-  ({ onMarkMaterialOwned }, ref) => {
+  ({ onMarkMaterialOwned, selectedChildId }, ref) => {
     const { currentUser } = useAuth();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -101,6 +102,18 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
           return;
         }
 
+        // Filter children by selectedChildId if provided
+        const targetChildren = selectedChildId 
+          ? children.filter(child => child.id === selectedChildId)
+          : children;
+
+        if (targetChildren.length === 0) {
+          console.log('No matching children found');
+          setMaterialsNeeded([]);
+          setLoading(false);
+          return;
+        }
+
         // Get user's owned materials
         const userMaterialsRef = collection(db, 'userMaterials');
         const userMaterialsQuery = query(
@@ -122,6 +135,7 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
           query(
             collection(db, 'weeklyPlans'),
             where('userId', '==', currentUser.uid),
+            where('childId', 'in', targetChildren.map(child => child.id)),
             where('weekStarting', '>=', Timestamp.fromDate(today)),
             where('weekStarting', '<=', Timestamp.fromDate(forecastEndDate))
           )

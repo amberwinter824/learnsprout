@@ -123,12 +123,29 @@ import {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
     const inviteUrl = `${baseUrl}/signup?invite=${inviteCode}&email=${encodeURIComponent(recipientEmail)}`;
     
-    // Send the invitation email
+    // Send the invitation email using the API endpoint
     try {
-      await sendFamilyInvitationEmail(recipientEmail, inviteUrl, familyName, inviterName);
+      const response = await fetch('/api/family/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientEmail,
+          inviteUrl,
+          familyName,
+          inviterName
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send invitation email');
+      }
     } catch (error) {
       console.error('Error sending invitation email:', error);
-      // Don't throw here - we still want to return the URL even if email fails
+      // Still return the URL even if email fails
+      throw { message: 'Failed to send invitation email. Please try again or use the invitation link below.', url: inviteUrl };
     }
     
     return inviteUrl;

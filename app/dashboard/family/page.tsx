@@ -24,12 +24,18 @@ export default function FamilySettingsPage() {
     }
   }, [currentUser, loading, router]);
   
-  if (loading) {
+  // Only show loading state if we're still initializing auth
+  if (loading && !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
       </div>
     );
+  }
+
+  // If we're not loading and have no user, don't render anything (redirect will happen)
+  if (!loading && !currentUser) {
+    return null;
   }
   
   return (

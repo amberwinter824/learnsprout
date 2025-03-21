@@ -64,49 +64,36 @@ export default function Signup() {
     checkInvitation();
   }, [inviteCode, inviteEmail]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      return setError('Passwords do not match');
-    }
-    
+    setLoading(true);
+    setError('');
+
     try {
-      setError('');
-      setLoading(true);
-      
       // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
-      // Create user document
+
+      // Create user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
-        name,
         email,
+        name: '',
+        role: 'parent',
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        preferences: {
+          emailNotifications: true,
+          weeklyDigest: true,
+          activityPreferences: {
+            scheduleByDay: {},
+            activitiesPerDay: 3
+          }
+        }
       });
 
-      // If this was an invitation signup, accept the invitation
-      if (isInviteMode && inviteCode) {
-        await acceptFamilyInvitation(user.uid, inviteCode);
-      }
-      
-      router.push('/dashboard');
-    } catch (error: unknown) {
-      console.error("SIGNUP ERROR:", error);
-      
-      if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
-        if (error.code === 'auth/email-already-in-use') {
-          setError('This email is already registered. Please log in instead.');
-        } else if (error.code === 'auth/invalid-email') {
-          setError('Please enter a valid email address.');
-        } else if (error.code === 'auth/weak-password') {
-          setError('Password is too weak. Please use at least 6 characters.');
-        } else {
-          setError(`Failed to create account: ${error.message}`);
-        }
-      }
+      // Redirect to onboarding page
+      router.push('/dashboard/onboarding');
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }

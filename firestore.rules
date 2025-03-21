@@ -2,7 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+    // ===== Basic Helper Functions =====
     function isSignedIn() {
       return request.auth != null;
     }
@@ -11,103 +11,396 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
+    // ===== Role-based Access Control =====
+    function hasRole(role) {
+      return isSignedIn() && 
+             ((request.auth.token.role == role) || 
+              (role == 'parent' && request.auth.token.role == 'educator') ||
+              (role == 'parent' && request.auth.token.role == 'specialist') ||
+              (request.auth.token.role == 'admin'));
+    }
+    
+    // ===== Family-related Helper Functions =====
+    function isFamilyMember(userId) {
+      return isSignedIn() && (
+        // User is accessing their own document
+        request.auth.uid == userId ||
+        // User is in the same family as the target user
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         exists(/databases/$(database)/documents/users/$(userId)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == 
+         get(/databases/$(database)/documents/users/$(userId)).data.familyId)
+      );
+    }
+    
+    function getFamilyForChild(childId) {
+      return get(/databases/$(database)/documents/children/$(childId)).data.familyId;
+    }
+    
+    function hasFamilyAccess(childId) {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/children/$(childId)) &&
+             (get(/databases/$(database)/documents/children/$(childId)).data.familyId != null) &&
+             isFamilyMember(getFamilyForChild(childId));
+    }
+    
+    // ===== Traditional Parent-Child Access Helper Functions =====
     function hasUserAccess(data) {
-      return isSignedIn() && (data.userId == request.auth.uid || data.parentId == request.auth.uid);
+      return isSignedIn() && 
+             (data.userId == request.auth.uid || 
+              data.parentId == request.auth.uid ||
+              hasRole('educator') || 
+              hasRole('admin'));
     }
     
     function hasChildAccess(childId) {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/children/$(childId)) && 
-             get(/databases/$(database)/documents/children/$(childId)).data.userId == request.auth.uid;
+             (get(/databases/$(database)/documents/children/$(childId)).data.userId == request.auth.uid ||
+              hasFamilyAccess(childId) ||
+              hasRole('educator') || 
+              hasRole('admin'));
     }
     
     function isChildData(data) {
       return data.keys().hasAll(['childId']) && hasChildAccess(data.childId);
     }
     
-    // Collections
+    // ===== Default Deny =====
     match /{collection}/{document=**} {
-      allow read, write: if false; // Default deny
+      allow read, write: if false; 
     }
     
+    // ===== User Rules =====
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isSignedIn() && (
+        // User is accessing their own document
+        request.auth.uid == userId ||
+        // User is in the same family as the target user
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId != null &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == 
+         resource.data.familyId) ||
+        hasRole('admin')
+      );
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) || hasRole('admin');
       allow delete: if false;
     }
     
+    // ===== Family Rules =====
+    match /families/{familyId} {
+      allow read: if isSignedIn() && (
+        // User is a member of the family
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId ||
+        hasRole('admin')
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        // User is a member of the family
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId ||
+        hasRole('admin')
+      );
+      allow delete: if false;
+    }
+    
+    // ===== Family Invitations Rules =====
+    match /familyInvitations/{invitationId} {
+      allow read: if isSignedIn() && (
+        // User is the recipient of the invitation
+        resource.data.recipientEmail == request.auth.token.email ||
+        // User is a member of the family
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == resource.data.familyId) ||
+        hasRole('admin')
+      );
+      allow create: if isSignedIn() && (
+        // User is a member of the family
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        exists(/databases/$(database)/documents/families/$(request.resource.data.familyId)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == request.resource.data.familyId
+      );
+      allow update: if isSignedIn() && (
+        // User is the recipient of the invitation
+        resource.data.recipientEmail == request.auth.token.email ||
+        hasRole('admin')
+      );
+      allow delete: if isSignedIn() && (
+        // User is the recipient of the invitation
+        resource.data.recipientEmail == request.auth.token.email ||
+        // User is a member of the family
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == resource.data.familyId) ||
+        hasRole('admin')
+      );
+    }
+    
+    // ===== Children Rules =====
     match /children/{childId} {
-      allow read, write: if isSignedIn() && hasUserAccess(resource.data);
+      allow read: if isSignedIn() && (
+        resource == null || 
+        hasUserAccess(resource.data) ||
+        hasFamilyAccess(childId)
+      );
+      
+      allow create: if isSignedIn() && (
+        request.resource.data.userId == request.auth.uid || 
+        request.resource.data.parentId == request.auth.uid ||
+        hasRole('admin')
+      );
+      
+      allow update: if isSignedIn() && (
+        hasUserAccess(resource.data) ||
+        hasFamilyAccess(childId)
+      );
+      
+      allow delete: if isSignedIn() && (
+        hasUserAccess(resource.data) || 
+        hasFamilyAccess(childId) ||
+        hasRole('admin')
+      );
     }
     
-    // Child skills tracking
+    // ===== Child Skills Rules =====
     match /childSkills/{skillId} {
-      allow read: if isSignedIn() && isChildData(resource.data);
-      allow create: if isSignedIn() && isChildData(request.resource.data);
-      allow update: if isSignedIn() && isChildData(resource.data) && isChildData(request.resource.data);
-      allow delete: if isSignedIn() && isChildData(resource.data);
+      allow read: if isSignedIn() && (
+        resource == null || 
+        isChildData(resource.data) || 
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow create: if isSignedIn() && (
+        isChildData(request.resource.data) || 
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow update: if isSignedIn() && (
+        (isChildData(resource.data) && isChildData(request.resource.data)) || 
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow delete: if isSignedIn() && (
+        isChildData(resource.data) || 
+        hasRole('admin')
+      );
     }
     
-    // Read-only collections for developmental skills and activities
+    // ===== Developmental Skills Rules =====
     match /developmentalSkills/{skillId} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow write: if hasRole('admin');
     }
     
+    // ===== Activities Rules =====
     match /activities/{activityId} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow write: if hasRole('educator') || hasRole('admin'); 
     }
     
-    // Materials collection - read-only for authenticated users
+    // ===== Weekly Plans Rules =====
+    match /weeklyPlans/{planId} {
+      allow read: if isSignedIn() && (
+        resource == null || 
+        isChildData(resource.data) || 
+        resource.data.userId == request.auth.uid ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow create: if isSignedIn() && (
+        isChildData(request.resource.data) || 
+        request.resource.data.userId == request.auth.uid ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow update: if isSignedIn() && (
+        (isChildData(resource.data) && isChildData(request.resource.data)) || 
+        resource.data.userId == request.auth.uid ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow delete: if isSignedIn() && (
+        isChildData(resource.data) || 
+        resource.data.userId == request.auth.uid ||
+        hasRole('admin')
+      );
+    }
+    
+    // ===== Progress Records Rules =====
+    match /progressRecords/{recordId} {
+      allow read: if isSignedIn() && (
+        resource == null || 
+        isChildData(resource.data) || 
+        hasFamilyAccess(resource.data.childId) ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow create: if isSignedIn() && (
+        isChildData(request.resource.data) || 
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow update: if isSignedIn() && (
+        (isChildData(resource.data) && isChildData(request.resource.data)) || 
+        hasFamilyAccess(resource.data.childId) ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow delete: if isSignedIn() && (
+        isChildData(resource.data) || 
+        hasRole('admin')
+      );
+    }
+    
+    // ===== Activity Suggestions Rules =====
+    match /activitySuggestions/{suggestionId} {
+      allow read: if isSignedIn() && (
+        resource == null || 
+        isChildData(resource.data) || 
+        hasFamilyAccess(resource.data.childId) ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow create: if hasRole('educator') || hasRole('admin');
+      
+      allow update: if isSignedIn() && (
+        (isChildData(resource.data) && 
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['status', 'weeklyPlanId'])) || 
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow delete: if hasRole('admin');
+    }
+    
+    // ===== Recommendation Logs Rules =====
+    match /recommendationLogs/{logId} {
+      allow read: if isSignedIn() && (
+        resource == null || 
+        isChildData(resource.data) || 
+        hasFamilyAccess(resource.data.childId) ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow create: if hasRole('educator') || hasRole('admin');
+      
+      allow update: if isSignedIn() && (
+        (isChildData(resource.data) && 
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['outcome', 'parentFeedback'])) || 
+        hasRole('admin')
+      );
+      
+      allow delete: if hasRole('admin');
+    }
+    
+    // ===== Institutions Rules =====
+    match /institutions/{institutionId} {
+      allow read: if isSignedIn();
+      allow create: if hasRole('admin');
+      allow update: if hasRole('admin') || 
+        (resource.data.administratorIds.hasAny([request.auth.uid]));
+      allow delete: if hasRole('admin');
+    }
+    
+    // ===== Classrooms Rules =====
+    match /classrooms/{classroomId} {
+      allow read: if isSignedIn();
+      allow create: if hasRole('admin') || hasRole('educator');
+      allow update: if hasRole('admin') || 
+        (resource.data.educatorIds.hasAny([request.auth.uid]));
+      allow delete: if hasRole('admin');
+    }
+    
+    // ===== Classroom-Child Relationships Rules =====
+    match /classroomChildren/{relationId} {
+      allow read: if isSignedIn();
+      allow create: if hasRole('educator') || hasRole('admin');
+      allow update: if hasRole('educator') || hasRole('admin');
+      allow delete: if hasRole('educator') || hasRole('admin');
+    }
+    
+    // ===== Planned Activities Rules =====
+    match /plannedActivities/{activityId} {
+      allow read: if isSignedIn() && (
+        resource == null || 
+        isChildData(resource.data) || 
+        hasFamilyAccess(resource.data.childId) ||
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow create: if isSignedIn() && (
+        isChildData(request.resource.data) || 
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow update: if isSignedIn() && (
+        (isChildData(resource.data) && isChildData(request.resource.data)) || 
+        hasRole('educator') || 
+        hasRole('admin')
+      );
+      
+      allow delete: if isSignedIn() && (
+        isChildData(resource.data) || 
+        hasRole('admin')
+      );
+    }
+    
+    // ===== Messages Rules =====
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && 
+        (resource.data.recipientIds.hasAny([request.auth.uid]) || 
+         resource.data.senderId == request.auth.uid || 
+         hasRole('admin'));
+                    
+      allow create: if isSignedIn();
+      
+      allow update: if isSignedIn() && 
+        (resource.data.recipientIds.hasAny([request.auth.uid]) || 
+         resource.data.senderId == request.auth.uid || 
+         hasRole('admin'));
+                      
+      allow delete: if hasRole('admin') || resource.data.senderId == request.auth.uid;
+    }
+    
+    // ===== Materials Rules =====
     match /materials/{materialId} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow create, update: if hasRole('admin');
+      allow delete: if hasRole('admin');
     }
     
-    // Weekly plans collection
-    match /weeklyPlans/{planId} {
-      allow read: if isSignedIn() && isChildData(resource.data);
-      allow create: if isSignedIn() && isChildData(request.resource.data);
-      allow update: if isSignedIn() && isChildData(resource.data) && isChildData(request.resource.data);
-      allow delete: if isSignedIn() && isChildData(resource.data);
-    }
-    
-    // Progress records
-    match /progressRecords/{recordId} {
-      allow read: if isSignedIn() && isChildData(resource.data);
-      allow create: if isSignedIn() && isChildData(request.resource.data);
-      allow update: if isSignedIn() && isChildData(resource.data) && isChildData(request.resource.data);
-      allow delete: if isSignedIn() && isChildData(resource.data);
-    }
-    
-    // Activity suggestions
-    match /activitySuggestions/{suggestionId} {
-      allow read: if isSignedIn() && isChildData(resource.data);
-      allow create: if false; // Only system-generated
-      allow update: if isSignedIn() && isChildData(resource.data) && 
-                      request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['status', 'weeklyPlanId']);
-      allow delete: if false; // Preserve suggestion history
-    }
-    
-    // Recommendation logs - system-managed with limited updates
-    match /recommendationLogs/{logId} {
-      allow read: if isSignedIn() && isChildData(resource.data);
-      allow create: if false; // Only system-generated
-      allow update: if isSignedIn() && isChildData(resource.data) && 
-                      request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['outcome', 'parentFeedback']);
-      allow delete: if false; // Preserve recommendation history
-    }
-    
-    // User materials collection
-    match /userMaterials/{materialId} {
-      allow read: if isSignedIn() && hasUserAccess(resource.data);
-      allow create: if isSignedIn() && hasUserAccess(request.resource.data);
-      allow update: if isSignedIn() && hasUserAccess(resource.data) && hasUserAccess(request.resource.data);
-      allow delete: if isSignedIn() && hasUserAccess(resource.data);
+    // ===== User Materials Rules =====
+    match /userMaterials/{userMaterialId} {
+      allow read: if isSignedIn() && 
+        (resource.data.userId == request.auth.uid ||
+         hasRole('admin'));
+      
+      allow create: if isSignedIn() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      allow update: if isSignedIn() && 
+        resource.data.userId == request.auth.uid;
+      
+      allow delete: if isSignedIn() && 
+        resource.data.userId == request.auth.uid;
     }
   }
 }
