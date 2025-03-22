@@ -278,4 +278,3 @@ export default function AddChildPage() {
     </div>
   );
 }
-}
