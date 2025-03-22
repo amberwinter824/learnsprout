@@ -35,7 +35,7 @@ export default function OnboardingWizard() {
       description: 'Create a profile for your child to start tracking their development and activities.',
       icon: <Users className="h-8 w-8 text-emerald-500" />,
       action: 'Add Child',
-      actionLink: '/dashboard/children/add',
+      actionLink: '/dashboard/children/add?onboarding=true',
       completed: false
     },
     {

@@ -160,9 +160,11 @@ export default function AddChildPage() {
         active: true
       });
       
-      // Check if we're in the onboarding flow by looking at the referrer
-      const referrer = document.referrer;
-      if (referrer.includes('/dashboard/onboarding')) {
+      // Check if we're in the onboarding flow by looking at the URL parameters
+      const searchParams = new URLSearchParams(window.location.search);
+      const isOnboarding = searchParams.get('onboarding') === 'true';
+      
+      if (isOnboarding) {
         // If we're in onboarding, continue to the next step
         router.push('/dashboard/onboarding');
       } else {
