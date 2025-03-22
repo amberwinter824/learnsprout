@@ -13,6 +13,8 @@ import {
   getAgeAppropriateInterests,
   getAllAgeGroups
 } from '@/lib/ageUtils';
+import { query, collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function AddChildPage() {
   const { currentUser } = useAuth();
@@ -149,6 +151,14 @@ export default function AddChildPage() {
       setError('');
       setLoading(true);
 
+      // Check if this is the user's first child
+      const childrenQuery = query(
+        collection(db, 'children'),
+        where('userId', '==', currentUser.uid)
+      );
+      const childrenSnapshot = await getDocs(childrenQuery);
+      const isFirstChild = childrenSnapshot.empty;
+
       // Create the child in Firestore using the currentUser.uid
       console.log("Creating child with parent ID:", currentUser.uid);
       const childId = await createChild(currentUser.uid, {
@@ -160,16 +170,12 @@ export default function AddChildPage() {
         active: true
       });
       
-      // Check if we're in the onboarding flow by looking at the URL parameters
-      const searchParams = new URLSearchParams(window.location.search);
-      const isOnboarding = searchParams.get('onboarding') === 'true';
-      
-      if (isOnboarding) {
-        // If we're in onboarding, continue to the next step
-        router.push('/dashboard/onboarding');
+      // Only redirect to settings if this is the first child
+      if (isFirstChild) {
+        router.push('/dashboard/settings?setup=complete');
       } else {
-        // Otherwise, go to the child's dashboard
-        router.push(`/dashboard/children/${childId}`);
+        // For subsequent children, redirect to the children list
+        router.push('/dashboard/children');
       }
     } catch (error) {
       console.error("Error adding child:", error);

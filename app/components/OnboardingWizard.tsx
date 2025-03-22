@@ -35,7 +35,7 @@ export default function OnboardingWizard() {
       description: 'Create a profile for your child to start tracking their development and activities.',
       icon: <Users className="h-8 w-8 text-emerald-500" />,
       action: 'Add Child',
-      actionLink: '/dashboard/children/add?onboarding=true',
+      actionLink: '/dashboard/children/add',
       completed: false
     },
     {
@@ -83,12 +83,7 @@ export default function OnboardingWizard() {
           return step;
       }
     }));
-
-    // If all steps are completed, redirect to dashboard
-    if (hasChildren && hasSchedule && hasFamily) {
-      router.push('/dashboard');
-    }
-  }, [currentUser, router]);
+  }, [currentUser]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -100,13 +95,6 @@ export default function OnboardingWizard() {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
     }
-  };
-
-  const handleComplete = () => {
-    // Mark all steps as completed
-    setSteps(prev => prev.map(step => ({ ...step, completed: true })));
-    // Redirect to dashboard
-    router.push('/dashboard');
   };
 
   if (!currentUser) {
@@ -194,13 +182,13 @@ export default function OnboardingWizard() {
               </Link>
             )}
 
-            {currentStep === steps.length - 1 && steps.every(step => step.completed) && (
-              <button
-                onClick={handleComplete}
+            {currentStep === steps.length - 1 && (
+              <Link
+                href="/dashboard"
                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
               >
-                Complete Setup
-              </button>
+                Go to Dashboard
+              </Link>
             )}
           </div>
         </div>
