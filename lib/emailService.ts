@@ -25,7 +25,7 @@ export async function sendFamilyInvitationEmail(
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <div style="text-align: center; margin-bottom: 30px;">
-            <img src="https://learnsprout.vercel.app/sprout-logo.png" alt="Learn Sprout Logo" style="height: 40px; margin-bottom: 20px;">
+            <img src="https://learnsprout.vercel.app/icons/icon-192x192.png" alt="Learn Sprout Logo" style="height: 40px; margin-bottom: 20px;">
             <h1 style="color: #059669; margin: 0; font-size: 24px;">Join ${familyName} on Learn Sprout</h1>
           </div>
           

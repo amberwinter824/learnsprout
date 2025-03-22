@@ -289,10 +289,10 @@ export default function Dashboard() {
                   Get started by adding your first child to begin creating personalized activity plans.
                 </p>
                 <Link
-                  href="/dashboard/children/new"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700"
+                  href="/dashboard/children/add"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
                 >
-                  Add Your First Child
+                  Add Child Profile
                 </Link>
               </div>
             ) : (

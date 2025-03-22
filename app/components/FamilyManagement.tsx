@@ -332,38 +332,16 @@ export default function FamilyManagement() {
             {/* Join Family Form */}
             <div className="border rounded-md p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Join a Family</h3>
-              <form onSubmit={handleJoinFamily}>
-                <div className="mb-3">
-                  <label htmlFor="joinCode" className="block text-xs font-medium text-gray-700 mb-1">
-                    Invitation Code
-                  </label>
-                  <input
-                    type="text"
-                    id="joinCode"
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value)}
-                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                    placeholder="Enter the invitation code"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isJoining}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
-                >
-                  {isJoining ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                      Joining...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Join Family
-                    </>
-                  )}
-                </button>
-              </form>
+              <div className="text-sm text-gray-600 mb-4">
+                <p>To join a family, you need an invitation link from a family member.</p>
+                <p className="mt-2">The invitation link will be sent to your email address when a family member invites you.</p>
+                <p className="mt-2">If you've received an invitation email, click the link in the email to join the family.</p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-md">
+                <p className="text-sm text-blue-700">
+                  <strong>No invitation yet?</strong> Ask a family member to invite you through the "Invite Family Member" section.
+                </p>
+              </div>
             </div>
           </div>
         )}

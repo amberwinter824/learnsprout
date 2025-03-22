@@ -342,6 +342,41 @@ import {
           // Continue with direct children only
         }
       }
+
+      // Finally, get children where the user is in the accessList
+      const accessListQuery = query(
+        collection(db, "children"),
+        where("accessList", "array-contains", userId),
+        orderBy("name", "asc")
+      );
+
+      try {
+        const accessListSnapshot = await getDocs(accessListQuery);
+        console.log(`Found ${accessListSnapshot.docs.length} children through access list`);
+        
+        accessListSnapshot.forEach(doc => {
+          const data = doc.data();
+          // Only add if not already in the list
+          if (!children.some(child => child.id === doc.id)) {
+            children.push({
+              id: doc.id,
+              name: data.name || 'Unnamed Child',
+              userId: data.userId,
+              ageGroup: data.ageGroup || '',
+              birthDate: data.birthDate || null,
+              birthDateString: data.birthDateString || '',
+              active: data.active !== false,
+              interests: data.interests || [],
+              notes: data.notes || '',
+              familyId: data.familyId || null,
+              ...data
+            });
+          }
+        });
+      } catch (accessListError) {
+        console.error(`Error fetching children through access list:`, accessListError);
+        // Continue with existing children
+      }
       
       console.log(`Found ${children.length} total children for user ID: ${userId}`);
       return children;

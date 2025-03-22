@@ -41,7 +41,9 @@ service cloud.firestore {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/children/$(childId)) &&
              (get(/databases/$(database)/documents/children/$(childId)).data.familyId != null) &&
-             isFamilyMember(getFamilyForChild(childId));
+             (isFamilyMember(getFamilyForChild(childId)) ||
+              (get(/databases/$(database)/documents/children/$(childId)).data.accessList != null &&
+               request.auth.uid in get(/databases/$(database)/documents/children/$(childId)).data.accessList));
     }
     
     // ===== Traditional Parent-Child Access Helper Functions =====
@@ -108,11 +110,17 @@ service cloud.firestore {
     
     // ===== Family Invitations Rules =====
     match /familyInvitations/{invitationId} {
-      allow read: if isSignedIn() && (
+      allow read: if (
+        // Allow reading by invite code (for signup)
+        request.query.limit == 1 &&
+        request.query.filters.size() == 2 &&
+        request.query.filters[0].field == 'inviteCode' &&
+        request.query.filters[1].field == 'status' &&
+        request.query.filters[1].value == 'pending' ||
         // User is the recipient of the invitation
-        resource.data.recipientEmail == request.auth.token.email ||
+        (isSignedIn() && resource.data.recipientEmail == request.auth.token.email) ||
         // User is a member of the family
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == resource.data.familyId) ||
         hasRole('admin')
