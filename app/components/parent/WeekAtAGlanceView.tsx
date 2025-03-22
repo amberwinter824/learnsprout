@@ -123,12 +123,12 @@ export default function WeekAtAGlanceView({
 
   // Fetch user preferences
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.uid) return;
     
     async function fetchPreferences() {
       try {
         // Get user preferences
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userDoc = await getDoc(doc(db, 'users', (currentUser as any).uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const activityPreferences = userData?.preferences?.activityPreferences;
