@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Sprout } from 'lucide-react';
@@ -78,6 +78,11 @@ export default function Signup() {
     try {
       // Create the user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update the user's display name in Firebase Auth
+      await updateProfile(userCredential.user, {
+        displayName: name
+      });
       
       // Create the user document
       await setDoc(doc(db, 'users', userCredential.user.uid), {
