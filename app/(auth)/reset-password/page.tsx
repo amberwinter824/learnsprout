@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sprout } from 'lucide-react';
@@ -12,7 +12,7 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const { resetPassword } = useAuth();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     try {
@@ -21,8 +21,8 @@ const ResetPassword = () => {
       setLoading(true);
       await resetPassword(email);
       setMessage('Check your email for password reset instructions');
-    } catch (error) {
-      setError('Failed to reset password: ' + error.message);
+    } catch (error: any) {
+      setError('Failed to reset password: ' + (error?.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
