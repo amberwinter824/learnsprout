@@ -66,34 +66,41 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setLoading(true);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Create user account
+      // Create the user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      
+      // Create the user document
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        name,
         email,
-        name: '',
-        role: 'parent',
         createdAt: serverTimestamp(),
-        preferences: {
-          emailNotifications: true,
-          weeklyDigest: true,
-          activityPreferences: {
-            scheduleByDay: {},
-            activitiesPerDay: 3
-          }
-        }
+        updatedAt: serverTimestamp()
       });
 
-      // Redirect to onboarding page
-      router.push('/dashboard/onboarding');
+      // If this is an invite signup, handle the family invitation
+      if (isInviteMode && inviteDetails) {
+        try {
+          await acceptFamilyInvitation(userCredential.user.uid, inviteCode!);
+        } catch (inviteError: any) {
+          console.error('Error accepting family invitation:', inviteError);
+          // Don't throw here - we still want the account to be created
+        }
+      }
+
+      router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error during signup:', err);
+      setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }

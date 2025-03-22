@@ -107,6 +107,19 @@ import {
     const familyName = familyDoc.data().name;
     const inviterName = userDoc.data().displayName || userDoc.data().email;
     
+    // Check if there's already a pending invitation for this email
+    const existingInvitesQuery = query(
+      collection(db, 'familyInvitations'),
+      where('recipientEmail', '==', recipientEmail),
+      where('familyId', '==', familyId),
+      where('status', '==', 'pending')
+    );
+    
+    const existingInvites = await getDocs(existingInvitesQuery);
+    if (!existingInvites.empty) {
+      throw new Error('An invitation has already been sent to this email address');
+    }
+    
     // Store the invitation in a new collection
     const inviteRef = doc(collection(db, 'familyInvitations'));
     await setDoc(inviteRef, {

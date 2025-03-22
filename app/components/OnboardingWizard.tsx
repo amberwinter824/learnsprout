@@ -63,27 +63,32 @@ export default function OnboardingWizard() {
     if (!currentUser) return;
 
     // Check if user has any children
-    const hasChildren = currentUser.childrenAccess && currentUser.childrenAccess.length > 0;
+    const hasChildren = Boolean(currentUser.childrenAccess && currentUser.childrenAccess.length > 0);
     
     // Check if user has set schedule preferences
-    const hasSchedule = currentUser.preferences?.activityPreferences?.scheduleByDay;
+    const hasSchedule = Boolean(currentUser.preferences?.activityPreferences?.scheduleByDay);
     
     // Check if user has family members
-    const hasFamily = currentUser.familyId;
+    const hasFamily = Boolean(currentUser.familyId);
 
     setSteps(prev => prev.map(step => {
       switch (step.id) {
         case 'add-child':
-          return { ...step, completed: Boolean(hasChildren) };
+          return { ...step, completed: hasChildren };
         case 'schedule':
-          return { ...step, completed: Boolean(hasSchedule) };
+          return { ...step, completed: hasSchedule };
         case 'family':
-          return { ...step, completed: Boolean(hasFamily) };
+          return { ...step, completed: hasFamily };
         default:
           return step;
       }
     }));
-  }, [currentUser]);
+
+    // If all steps are completed, redirect to dashboard
+    if (hasChildren && hasSchedule && hasFamily) {
+      router.push('/dashboard');
+    }
+  }, [currentUser, router]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {

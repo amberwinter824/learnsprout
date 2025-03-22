@@ -13,7 +13,8 @@ import {
     orderBy, 
     serverTimestamp,
     DocumentData,
-    Timestamp 
+    Timestamp,
+    arrayUnion
   } from 'firebase/firestore';
   import { db } from './firebase';
   import offlineStorage from './offlineStorage';
@@ -205,6 +206,13 @@ import {
       if (familyId) {
         await addChildToFamily(familyId, childRef.id);
       }
+
+      // Update the user's childrenAccess array
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        childrenAccess: arrayUnion(childRef.id),
+        updatedAt: serverTimestamp()
+      });
       
       console.log("Child created with ID:", childRef.id);
       return childRef.id;
