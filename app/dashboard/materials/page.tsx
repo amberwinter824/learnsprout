@@ -33,6 +33,11 @@ export default function MaterialsInventory() {
         setLoading(true);
         setError(null);
 
+        if (!currentUser?.uid) {
+          setError('User not authenticated');
+          return;
+        }
+
         // Get all materials
         const materialsRef = collection(db, 'materials');
         const materialsSnapshot = await getDocs(materialsRef);
