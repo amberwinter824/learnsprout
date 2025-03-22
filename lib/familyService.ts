@@ -201,6 +201,28 @@ import {
         familyRole: 'member',
         updatedAt: serverTimestamp()
       });
+
+      // Get all children in the family
+      const childrenQuery = query(
+        collection(db, 'children'),
+        where('familyId', '==', familyId)
+      );
+      const childrenSnapshot = await getDocs(childrenQuery);
+      
+      // Update each child's document to include the new user in their access list
+      const updatePromises = childrenSnapshot.docs.map(async (childDoc) => {
+        const childData = childDoc.data();
+        const accessList = childData.accessList || [];
+        if (!accessList.includes(userId)) {
+          await updateDoc(doc(db, 'children', childDoc.id), {
+            accessList: arrayUnion(userId),
+            updatedAt: serverTimestamp()
+          });
+        }
+      });
+      
+      // Wait for all child updates to complete
+      await Promise.all(updatePromises);
       
       // Mark invitation as accepted
       await updateDoc(doc(db, 'familyInvitations', inviteDoc.id), {

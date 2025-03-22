@@ -160,7 +160,15 @@ export default function AddChildPage() {
         active: true
       });
       
-      router.push(`/dashboard/children/${childId}`);
+      // Check if we're in the onboarding flow by looking at the referrer
+      const referrer = document.referrer;
+      if (referrer.includes('/dashboard/onboarding')) {
+        // If we're in onboarding, continue to the next step
+        router.push('/dashboard/onboarding');
+      } else {
+        // Otherwise, go to the child's dashboard
+        router.push(`/dashboard/children/${childId}`);
+      }
     } catch (error) {
       console.error("Error adding child:", error);
       setError('Failed to add child: ' + error.message);
