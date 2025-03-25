@@ -10,12 +10,14 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If user has completed onboarding (has children and schedule preferences), redirect to dashboard
+    // If user has completed onboarding, redirect to dashboard
     if (currentUser) {
       const hasChildren = currentUser.childrenAccess && currentUser.childrenAccess.length > 0;
       const hasSchedule = currentUser.preferences?.activityPreferences?.scheduleByDay;
+      const isOnboardingCompleted = currentUser.onboardingCompleted;
       
-      if (hasChildren && hasSchedule) {
+      // Redirect if onboarding is marked as completed OR if they have both children and schedule preferences
+      if (isOnboardingCompleted || (hasChildren && hasSchedule)) {
         router.push('/dashboard');
       }
     }

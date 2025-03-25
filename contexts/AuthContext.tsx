@@ -35,6 +35,7 @@ export interface UserData {
   associatedRoles?: string[]; // All roles assigned to this user
   activeRole?: string; // Currently active role
   associatedInstitutions?: string[];
+  onboardingCompleted?: boolean; // Flag to track onboarding completion
   preferences?: {
     activeRole?: string;
     emailNotifications?: boolean;
@@ -263,6 +264,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         associatedRoles: [role], // Array of all roles assigned to this user
         activeRole: role, // Currently active role
         associatedInstitutions: [], // Initialize empty array for institutions
+        onboardingCompleted: false, // Initialize onboarding as not completed
         preferences: {
           activeRole: role,
           emailNotifications: true,

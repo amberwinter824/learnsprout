@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Save, User, Bell, Shield, Moon, Smartphone, Calendar, Plus, Minus, Users } from 'lucide-react';
+import { Loader2, Save, User, Bell, Shield, Moon, Smartphone, Calendar, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -97,6 +97,9 @@ export default function UserSettingsPage() {
         // Continue with other updates even if auth update fails
       }
       
+      // Check if schedule preferences are set
+      const hasSchedulePreferences = Object.values(scheduleByDay).some(count => count > 0);
+      
       // Update user data in Firestore
       const userRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userRef, {
@@ -104,7 +107,8 @@ export default function UserSettingsPage() {
         email,
         photoURL,
         notificationsEnabled,
-        scheduleByDay,
+        'preferences.activityPreferences.scheduleByDay': scheduleByDay,
+        onboardingCompleted: hasSchedulePreferences, // Set onboarding as completed if schedule is set
         updatedAt: serverTimestamp()
       });
       
@@ -298,50 +302,6 @@ export default function UserSettingsPage() {
               </button>
               <p className="text-xs text-gray-500 mt-1">
                 This will clear all cached data and log you out
-              </p>
-            </div>
-          </div>
-          
-          <div className="pt-4 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center mb-4">
-              <Users className="h-5 w-5 mr-2 text-emerald-500" />
-              Family Sharing
-            </h3>
-            
-            <div className="mb-4">
-              {currentUser?.familyId ? (
-                <div>
-                  <div className="flex items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700 mr-2">
-                      Family: {currentUser.familyName || 'Your Family'}
-                    </span>
-                    <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                      {currentUser.familyRole === 'owner' ? 'Owner' : 'Member'}
-                    </span>
-                  </div>
-                  
-                  <Link 
-                    href="/dashboard/family" 
-                    className="inline-flex items-center px-4 py-2 border border-emerald-300 rounded-md text-emerald-700 bg-white hover:bg-emerald-50"
-                  >
-                    Manage Family
-                  </Link>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm text-gray-700 mb-2">
-                    You're not part of a family yet
-                  </p>
-                  <Link 
-                    href="/dashboard/family" 
-                    className="inline-flex items-center px-4 py-2 border border-emerald-300 rounded-md text-emerald-700 bg-white hover:bg-emerald-50"
-                  >
-                    Manage Family
-                  </Link>
-                </div>
-              )}
-              <p className="text-xs text-gray-500 mt-2">
-                Share access to your children's activities with family members or caregivers
               </p>
             </div>
           </div>

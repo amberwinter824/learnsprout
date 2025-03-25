@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { 
   Users, 
   Calendar, 
-  Home, 
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
@@ -46,15 +45,6 @@ export default function OnboardingWizard() {
       action: 'Set Schedule',
       actionLink: '/dashboard/settings',
       completed: false
-    },
-    {
-      id: 'family',
-      title: 'Invite Family Members',
-      description: 'Share access with other caregivers like grandparents or nannies to help track your child\'s progress.',
-      icon: <Home className="h-8 w-8 text-emerald-500" />,
-      action: 'Manage Family',
-      actionLink: '/dashboard/family',
-      completed: false
     }
   ]);
 
@@ -67,9 +57,6 @@ export default function OnboardingWizard() {
     
     // Check if user has set schedule preferences
     const hasSchedule = Boolean(currentUser.preferences?.activityPreferences?.scheduleByDay);
-    
-    // Check if user has family members
-    const hasFamily = Boolean(currentUser.familyId);
 
     setSteps(prev => prev.map(step => {
       switch (step.id) {
@@ -77,8 +64,6 @@ export default function OnboardingWizard() {
           return { ...step, completed: hasChildren };
         case 'schedule':
           return { ...step, completed: hasSchedule };
-        case 'family':
-          return { ...step, completed: hasFamily };
         default:
           return step;
       }
