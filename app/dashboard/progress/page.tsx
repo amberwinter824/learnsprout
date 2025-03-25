@@ -113,21 +113,43 @@ export default function ProgressDashboardPage() {
         setLoading(true);
         
         // Fetch all children for the current user
-        const childrenQuery = query(
+        console.log('Attempting to fetch children with user ID:', currentUser?.uid);
+        
+        // Create queries for both userId and parentId
+        const userIdQuery = query(
           collection(db, 'children'),
-          where('parentId', '==', currentUser?.uid),
-          where('active', '==', true)
+          where('userId', '==', currentUser?.uid)
         );
         
-        console.log('Fetching children for user ID:', currentUser?.uid);
+        const parentIdQuery = query(
+          collection(db, 'children'),
+          where('parentId', '==', currentUser?.uid)
+        );
         
-        const childrenSnapshot = await getDocs(childrenQuery);
+        // Execute both queries
+        const [userIdSnapshot, parentIdSnapshot] = await Promise.all([
+          getDocs(userIdQuery),
+          getDocs(parentIdQuery)
+        ]);
+        
+        // Combine and deduplicate results
         const childrenData: Child[] = [];
-        childrenSnapshot.forEach(doc => {
-          childrenData.push({ id: doc.id, ...doc.data() } as Child);
+        const seenIds = new Set();
+        
+        // Process results from both queries
+        [userIdSnapshot, parentIdSnapshot].forEach(snapshot => {
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            // Include if active is true or undefined
+            if (!seenIds.has(doc.id) && (data.active === undefined || data.active === true)) {
+              seenIds.add(doc.id);
+              childrenData.push({ id: doc.id, ...data } as Child);
+            }
+          });
         });
         
         console.log('Found children:', childrenData.length);
+        console.log('Children data:', childrenData);
         
         setChildren(childrenData);
         
