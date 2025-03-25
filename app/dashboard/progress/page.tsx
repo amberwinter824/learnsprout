@@ -114,7 +114,7 @@ export default function ProgressDashboardPage() {
         // Fetch all children for the current user
         const childrenQuery = query(
           collection(db, 'children'),
-          where('userId', '==', currentUser?.uid || ''),
+          where('parentId', '==', currentUser?.uid || ''),
           where('active', '==', true)
         );
         

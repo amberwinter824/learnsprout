@@ -32,7 +32,8 @@ export default function UserSettingsPage() {
   // Load user data when component mounts
   useEffect(() => {
     if (currentUser) {
-      setName(currentUser.displayName || '');
+      // Try to get name from displayName first, then from name field, then empty string
+      setName(currentUser.displayName || currentUser.name || '');
       setEmail(currentUser.email || '');
       
       // Load preferences from localStorage
@@ -187,12 +188,19 @@ export default function UserSettingsPage() {
           <div className="pt-4 border-t border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 flex items-center mb-4">
               <Calendar className="h-5 w-5 mr-2 text-emerald-500" />
-              Preferred Schedule
+              Schedule Preferences
             </h3>
             
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Why set a schedule?</h4>
+              <p className="text-sm text-gray-600">
+                Setting your preferred number of activities per day helps us create personalized weekly plans that match your family's routine. This ensures you receive the right amount of activities when you're ready to engage with your child, making learning a natural part of your daily life.
+              </p>
+            </div>
+
             <div className="space-y-3">
               <p className="text-sm font-medium text-gray-700 mb-2">
-                Activities Per Day
+                Choose how many activities you'd like for each day
               </p>
               {weekdays.map(day => (
                 <div key={day.id} className="flex items-center justify-between">
