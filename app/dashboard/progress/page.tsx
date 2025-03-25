@@ -102,7 +102,8 @@ export default function ProgressDashboardPage() {
   
   // Fetch all data
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !currentUser.uid) {
+      console.error('No user ID available');
       setLoading(false);
       return;
     }
@@ -114,15 +115,19 @@ export default function ProgressDashboardPage() {
         // Fetch all children for the current user
         const childrenQuery = query(
           collection(db, 'children'),
-          where('parentId', '==', currentUser?.uid || ''),
+          where('parentId', '==', currentUser?.uid),
           where('active', '==', true)
         );
+        
+        console.log('Fetching children for user ID:', currentUser?.uid);
         
         const childrenSnapshot = await getDocs(childrenQuery);
         const childrenData: Child[] = [];
         childrenSnapshot.forEach(doc => {
           childrenData.push({ id: doc.id, ...doc.data() } as Child);
         });
+        
+        console.log('Found children:', childrenData.length);
         
         setChildren(childrenData);
         
