@@ -101,17 +101,23 @@ export default function UserSettingsPage() {
       // Check if schedule preferences are set
       const hasSchedulePreferences = Object.values(scheduleByDay).some(count => count > 0);
       
-      // Update user data in Firestore
-      const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        name,
-        email,
-        photoURL,
-        notificationsEnabled,
-        'preferences.activityPreferences.scheduleByDay': scheduleByDay,
-        onboardingCompleted: hasSchedulePreferences, // Set onboarding as completed if schedule is set
-        updatedAt: serverTimestamp()
+      // Update preferences using the auth context
+      await updateUserPreferences({
+        ...currentUser.preferences,
+        activityPreferences: {
+          ...currentUser.preferences?.activityPreferences,
+          scheduleByDay
+        }
       });
+      
+      // Update onboarding status if schedule preferences are set
+      if (hasSchedulePreferences) {
+        const userRef = doc(db, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          onboardingCompleted: true,
+          updatedAt: serverTimestamp()
+        });
+      }
       
       // Update local storage preferences
       localStorage.setItem('notifications-enabled', notificationsEnabled.toString());

@@ -332,6 +332,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setCurrentUser({ 
         ...userCredential.user, 
         ...userData,
+        displayName: userCredential.user.displayName || userData?.name,
         activeRole: userActiveRole
       } as (User & UserData));
       
@@ -524,18 +525,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const userRef = doc(db, 'users', currentUser.uid);
       
-      // Update Firestore with the new preferences
-      await updateDoc(userRef, {
-        'preferences': preferences,
+      // Create an update object that preserves existing preferences
+      const updateData: any = {
         updatedAt: serverTimestamp()
-      });
+      };
+
+      // Handle nested preferences properly
+      if (preferences) {
+        Object.entries(preferences).forEach(([key, value]) => {
+          if (typeof value === 'object' && value !== null) {
+            // For nested objects like activityPreferences, update each field individually
+            Object.entries(value).forEach(([nestedKey, nestedValue]) => {
+              updateData[`preferences.${key}.${nestedKey}`] = nestedValue;
+            });
+          } else {
+            updateData[`preferences.${key}`] = value;
+          }
+        });
+      }
+      
+      // Update Firestore with the new preferences
+      await updateDoc(userRef, updateData);
       
       // Update local state
       setCurrentUser(prev => {
         if (!prev) return null;
         return { 
           ...prev, 
-          preferences
+          preferences: {
+            ...prev.preferences,
+            ...preferences
+          }
         } as (User & UserData);
       });
       
@@ -734,8 +754,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setActiveRole(userActiveRole);
             
             setCurrentUser({ 
-              ...user, 
               ...userData,
+              ...user,
+              displayName: user.displayName || userData?.name,
               activeRole: userActiveRole
             } as (User & UserData));
             
