@@ -42,6 +42,13 @@ interface Activity {
   timeSlot?: string;
   order?: number;
   lastObservedDate?: Date | any;
+  lastObservation?: {
+    engagementLevel?: string;
+    interestLevel?: string;
+    completionDifficulty?: string;
+    notes?: string;
+    skillsDemonstrated?: string[];
+  };
   materialsNeeded?: string[];
 }
 
@@ -317,6 +324,7 @@ export default function WeeklyPlanWithDayFocus({
                 try {
                   // Check if there are observations for this activity
                   let lastObservedDate = null;
+                  let lastObservation: Activity['lastObservation'] = {};
                   if (activity.observationIds && activity.observationIds.length > 0) {
                     lastObservedDate = activity.lastObservedDate || null;
                   } else {
@@ -340,6 +348,14 @@ export default function WeeklyPlanWithDayFocus({
                           
                         if (sortedObservations.length > 0) {
                           lastObservedDate = sortedObservations[0].date;
+                          // Store the last observation details
+                          lastObservation = {
+                            engagementLevel: sortedObservations[0].engagementLevel,
+                            interestLevel: sortedObservations[0].interestLevel,
+                            completionDifficulty: sortedObservations[0].completionDifficulty,
+                            notes: sortedObservations[0].notes,
+                            skillsDemonstrated: sortedObservations[0].skillsDemonstrated
+                          };
                         }
                       }
                     } catch (observationError) {
@@ -367,7 +383,8 @@ export default function WeeklyPlanWithDayFocus({
                       status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
                       timeSlot: activity.timeSlot || '',
                       order: activity.order || 0,
-                      lastObservedDate
+                      lastObservedDate,
+                      lastObservation
                     };
                   }
                   
@@ -381,7 +398,8 @@ export default function WeeklyPlanWithDayFocus({
                     status: activity.status || 'suggested',
                     timeSlot: activity.timeSlot || '',
                     order: activity.order || 0,
-                    lastObservedDate
+                    lastObservedDate: null,
+                    lastObservation: null
                   };
                 } catch (error) {
                   console.error(`Error fetching activity ${activity.activityId}:`, error);
@@ -392,7 +410,9 @@ export default function WeeklyPlanWithDayFocus({
                     childName: selectedChild.name,
                     title: 'Error Loading Activity',
                     status: activity.status || 'suggested',
-                    order: activity.order || 0
+                    order: activity.order || 0,
+                    lastObservedDate: null,
+                    lastObservation: null
                   };
                 }
               })
@@ -616,6 +636,54 @@ export default function WeeklyPlanWithDayFocus({
     });
   };
   
+  // Add this new component near the top of the file, after the imports:
+  const ObservationTooltip = ({ observation }: { observation: Activity['lastObservation'] }) => {
+    if (!observation) return null;
+
+    return (
+      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 max-w-xs">
+        <div className="space-y-2">
+          {observation.engagementLevel && (
+            <div className="flex items-center text-sm">
+              <span className="font-medium text-gray-700">Engagement:</span>
+              <span className="ml-2 capitalize text-gray-600">{observation.engagementLevel}</span>
+            </div>
+          )}
+          {observation.interestLevel && (
+            <div className="flex items-center text-sm">
+              <span className="font-medium text-gray-700">Interest:</span>
+              <span className="ml-2 capitalize text-gray-600">{observation.interestLevel}</span>
+            </div>
+          )}
+          {observation.completionDifficulty && (
+            <div className="flex items-center text-sm">
+              <span className="font-medium text-gray-700">Difficulty:</span>
+              <span className="ml-2 capitalize text-gray-600">{observation.completionDifficulty}</span>
+            </div>
+          )}
+          {observation.notes && (
+            <div className="text-sm">
+              <span className="font-medium text-gray-700">Notes:</span>
+              <p className="mt-1 text-gray-600 line-clamp-2">{observation.notes}</p>
+            </div>
+          )}
+          {observation.skillsDemonstrated && observation.skillsDemonstrated.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium text-gray-700">Skills:</span>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {observation.skillsDemonstrated.map((skill, index) => (
+                  <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
   // Loading state
   if (loading) {
     return (
@@ -828,14 +896,21 @@ export default function WeeklyPlanWithDayFocus({
                           )}
                         </div>
                         {activity.status === 'completed' && (
-                          <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {activity.lastObservedDate ? (
-                              <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
-                            ) : (
-                              <>Observed</>
+                          <div className="relative group">
+                            <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs cursor-help">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {activity.lastObservedDate ? (
+                                <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
+                              ) : (
+                                <>Observed</>
+                              )}
+                            </span>
+                            {activity.lastObservation && (
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                                <ObservationTooltip observation={activity.lastObservation} />
+                              </div>
                             )}
-                          </span>
+                          </div>
                         )}
                       </div>
                       
