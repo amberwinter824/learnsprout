@@ -76,7 +76,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
           return;
         }
 
-        // Get skill documents
+        // Get skill documents from the 'skills' collection
         const skillPromises = activityData.skillsAddressed.map(
           (skillId: string) => getDoc(doc(db, 'skills', skillId))
         );
@@ -152,7 +152,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
   const updateChildSkills = async (skillUpdates: Array<{skillId: string, status: string}>) => {
     try {
       for (const { skillId, status } of skillUpdates) {
-        // Check if skill record exists
+        // Check if skill record exists in the 'childSkills' collection
         const skillQuery = query(
           collection(db, 'childSkills'),
           where('childId', '==', childId),
@@ -196,6 +196,81 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
     }
   };
   
+  // Add function to update weekly plan status
+  const updateWeeklyPlanStatus = async () => {
+    try {
+      // First check if we have weeklyPlanId and dayOfWeek from props
+      if (weeklyPlanId && dayOfWeek) {
+        const planRef = doc(db, 'weeklyPlans', weeklyPlanId);
+        const planDoc = await getDoc(planRef);
+        
+        if (planDoc.exists()) {
+          const planData = planDoc.data();
+          const dayKey = dayOfWeek.toLowerCase();
+          
+          if (planData[dayKey]) {
+            const dayActivities = [...planData[dayKey]];
+            
+            // Find the activity and update its status
+            const activityIndex = dayActivities.findIndex(a => a.activityId === activityId);
+            if (activityIndex !== -1) {
+              dayActivities[activityIndex] = {
+                ...dayActivities[activityIndex],
+                status: 'completed'
+              };
+              
+              // Update the plan
+              await updateDoc(planRef, {
+                [dayKey]: dayActivities,
+                updatedAt: serverTimestamp()
+              });
+              
+              console.log(`Updated activity status in weekly plan ${weeklyPlanId}`);
+            }
+          }
+        }
+      } 
+      // If we don't have weeklyPlanId and dayOfWeek from props, try to extract from activity.id
+      else if (activityId) {
+        // Extract planId from activity.id (assuming format: planId_dayOfWeek_activityId)
+        const activityIdParts = activityId.split('_');
+        if (activityIdParts && activityIdParts.length >= 3) {
+          const planId = activityIdParts[0];
+          const dayOfWeek = activityIdParts[1];
+          
+          // Update the plan
+          const planRef = doc(db, 'weeklyPlans', planId);
+          const planDoc = await getDoc(planRef);
+          
+          if (planDoc.exists()) {
+            const planData = planDoc.data();
+            const dayKey = dayOfWeek.toLowerCase();
+            const dayActivities = planData[dayKey] || [];
+            
+            // Find and update the activity status
+            const updatedActivities = dayActivities.map((act: any) => {
+              if (act.activityId === activityId) {
+                return { ...act, status: 'completed' };
+              }
+              return act;
+            });
+            
+            // Update the plan document
+            await updateDoc(planRef, {
+              [dayKey]: updatedActivities,
+              updatedAt: serverTimestamp()
+            });
+            
+            console.log(`Updated activity status in weekly plan ${planId}`);
+          }
+        }
+      }
+    } catch (planError) {
+      console.error('Error updating weekly plan:', planError);
+      // Don't throw the error - we want the observation to be saved even if plan update fails
+    }
+  };
+  
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
@@ -224,7 +299,8 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
         completionDifficulty: difficulty,
         notes: note,
         photoUrls: photoUrl ? [photoUrl] : [],
-        skillsDemonstrated: skillUpdates,
+        skillsDemonstrated: skillUpdates.map(update => update.skillId),
+        skillObservations: selectedSkills,
         // Environment context fields
         environmentContext: 'home', // Default for quick observations
         observationType: 'general',
@@ -243,87 +319,31 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
       // Update child skills
       await updateChildSkills(skillUpdates);
       
-      console.log('Observation saved with ID:', docRef.id);
+      // Update weekly plan status
+      await updateWeeklyPlanStatus();
       
-      // Try to update the weekly plan
-      try {
-        // First check if we have weeklyPlanId and dayOfWeek from props
-        if (weeklyPlanId && dayOfWeek) {
-          const planRef = doc(db, 'weeklyPlans', weeklyPlanId);
-          const planDoc = await getDoc(planRef);
-          
-          if (planDoc.exists()) {
-            const planData = planDoc.data();
-            const dayKey = dayOfWeek.toLowerCase();
-            
-            if (planData[dayKey]) {
-              const dayActivities = [...planData[dayKey]];
-              
-              // Find the activity and update its status
-              const activityIndex = dayActivities.findIndex(a => a.activityId === activityId);
-              if (activityIndex !== -1) {
-                dayActivities[activityIndex] = {
-                  ...dayActivities[activityIndex],
-                  status: 'completed'
-                };
-                
-                // Update the plan
-                await updateDoc(planRef, {
-                  [dayKey]: dayActivities,
-                  updatedAt: serverTimestamp()
-                });
-                
-                console.log(`Updated activity status in weekly plan ${weeklyPlanId}`);
-              }
-            }
-          }
-        } 
-        // If we don't have weeklyPlanId and dayOfWeek from props, try to extract from activity.id
-        else {
-          // Extract planId from activity.id (assuming format: planId_dayOfWeek_activityId)
-          const activityIdParts = activityId?.split('_');
-          if (activityIdParts && activityIdParts.length >= 3) {
-            const planId = activityIdParts[0];
-            const dayOfWeek = activityIdParts[1];
-            
-            // Update the plan
-            const planRef = doc(db, 'weeklyPlans', planId);
-            const planDoc = await getDoc(planRef);
-            
-            if (planDoc.exists()) {
-              const planData = planDoc.data();
-              const dayKey = dayOfWeek.toLowerCase();
-              const dayActivities = planData[dayKey] || [];
-              
-              // Find and update the activity status
-              const updatedActivities = dayActivities.map((act: any) => {
-                if (act.activityId === activityId) {
-                  return { ...act, status: 'completed' };
-                }
-                return act;
-              });
-              
-              // Update the plan document
-              await updateDoc(planRef, {
-                [dayKey]: updatedActivities,
-                updatedAt: serverTimestamp()
-              });
-              
-              console.log(`Updated activity status in weekly plan ${planId}`);
-            }
-          }
-        }
-      } catch (planError) {
-        console.error('Error updating weekly plan:', planError);
-        // Continue even if plan update fails - the observation was saved
-      }
+      console.log('Observation saved with ID:', docRef.id);
       
       // Call success callback
       if (onSuccess) {
         onSuccess();
       }
+      
+      // Reset form
+      setNote('');
+      setEngagement('medium');
+      setInterest('medium');
+      setDifficulty('appropriate');
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setSelectedSkills({});
+      
+      // Close form if provided
+      if (onClose) {
+        onClose();
+      }
     } catch (err) {
-      console.error('Error saving observation:', err);
+      console.error('Error submitting observation:', err);
       setError('Failed to save observation. Please try again.');
     } finally {
       setSubmitting(false);
