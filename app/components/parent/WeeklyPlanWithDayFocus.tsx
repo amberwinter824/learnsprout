@@ -646,22 +646,22 @@ export default function WeeklyPlanWithDayFocus({
       : [];
 
     return (
-      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 max-w-xs">
+      <div className="fixed transform -translate-y-full -translate-x-1/2 -mt-2 bg-white p-3 rounded-lg shadow-lg border border-gray-200 max-w-xs">
         <div className="space-y-2">
           {observation.engagementLevel && (
-            <div className="flex items-center text-sm">
+            <div className="flex items-center text-sm whitespace-nowrap">
               <span className="font-medium text-gray-700">Engagement:</span>
               <span className="ml-2 capitalize text-gray-600">{observation.engagementLevel}</span>
             </div>
           )}
           {observation.interestLevel && (
-            <div className="flex items-center text-sm">
+            <div className="flex items-center text-sm whitespace-nowrap">
               <span className="font-medium text-gray-700">Interest:</span>
               <span className="ml-2 capitalize text-gray-600">{observation.interestLevel}</span>
             </div>
           )}
           {observation.completionDifficulty && (
-            <div className="flex items-center text-sm">
+            <div className="flex items-center text-sm whitespace-nowrap">
               <span className="font-medium text-gray-700">Difficulty:</span>
               <span className="ml-2 capitalize text-gray-600">{observation.completionDifficulty}</span>
             </div>
@@ -669,7 +669,7 @@ export default function WeeklyPlanWithDayFocus({
           {observation.notes && (
             <div className="text-sm">
               <span className="font-medium text-gray-700">Notes:</span>
-              <p className="mt-1 text-gray-600 line-clamp-2">{observation.notes}</p>
+              <p className="mt-1 text-gray-600 line-clamp-2 max-w-[250px]">{observation.notes}</p>
             </div>
           )}
           {skills.length > 0 && (
@@ -677,13 +677,16 @@ export default function WeeklyPlanWithDayFocus({
               <span className="font-medium text-gray-700">Skills:</span>
               <div className="mt-1 flex flex-wrap gap-1">
                 {skills.map((skill, index) => (
-                  <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
+                  <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs whitespace-nowrap">
                     {typeof skill === 'string' ? skill : 'Unknown Skill'}
                   </span>
                 ))}
               </div>
             </div>
           )}
+        </div>
+        <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-full">
+          <div className="w-2 h-2 bg-white rotate-45 transform origin-center -mt-1 border-r border-b border-gray-200"></div>
         </div>
       </div>
     );
@@ -911,8 +914,10 @@ export default function WeeklyPlanWithDayFocus({
                               )}
                             </span>
                             {activity.lastObservation && (
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-                                <ObservationTooltip observation={activity.lastObservation} />
+                              <div className="absolute z-50 w-max max-w-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <div className="absolute -inset-2">
+                                  <ObservationTooltip observation={activity.lastObservation} />
+                                </div>
                               </div>
                             )}
                           </div>
