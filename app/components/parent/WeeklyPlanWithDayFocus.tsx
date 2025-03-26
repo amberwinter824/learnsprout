@@ -348,13 +348,33 @@ export default function WeeklyPlanWithDayFocus({
                           
                         if (sortedObservations.length > 0) {
                           lastObservedDate = sortedObservations[0].date;
+                          const latestObservation = sortedObservations[0];
+                          
+                          // Get skill details if available
+                          let skillNames: string[] = [];
+                          if (latestObservation.skillsDemonstrated?.length > 0) {
+                            try {
+                              const skillPromises = latestObservation.skillsDemonstrated.map(
+                                (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+                              );
+                              
+                              const skillDocs = await Promise.all(skillPromises);
+                              skillNames = skillDocs
+                                .filter(doc => doc.exists())
+                                .map(doc => doc.data().name || 'Unknown Skill');
+                            } catch (error) {
+                              console.error('Error fetching skill details:', error);
+                              skillNames = latestObservation.skillsDemonstrated;
+                            }
+                          }
+                          
                           // Store the last observation details
                           lastObservation = {
-                            engagementLevel: sortedObservations[0].engagementLevel,
-                            interestLevel: sortedObservations[0].interestLevel,
-                            completionDifficulty: sortedObservations[0].completionDifficulty,
-                            notes: sortedObservations[0].notes,
-                            skillsDemonstrated: sortedObservations[0].skillsDemonstrated
+                            engagementLevel: latestObservation.engagementLevel,
+                            interestLevel: latestObservation.interestLevel,
+                            completionDifficulty: latestObservation.completionDifficulty,
+                            notes: latestObservation.notes,
+                            skillsDemonstrated: skillNames
                           };
                         }
                       }

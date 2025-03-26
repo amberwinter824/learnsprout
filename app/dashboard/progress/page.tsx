@@ -190,23 +190,21 @@ export default function ProgressDashboardPage() {
           });
         });
         
-        setRecentProgress(progressData);
-        
-        // Fetch activity titles
-        const activityIds = Array.from(new Set(progressData.map(p => p.activityId)));
+        // Fetch activity titles one by one to avoid the 'in' query issue
         const activityTitles: Record<string, string> = {};
         
-        // This approach avoids too many parallel requests
-        if (activityIds.length > 0) {
-          const activityQuery = query(
-            collection(db, 'activities'),
-            where('__name__', 'in', activityIds.slice(0, 10)) // Firestore limit
-          );
+        for (const record of progressData) {
+          if (!record.activityId || activityTitles[record.activityId]) continue;
           
-          const activitySnapshot = await getDocs(activityQuery);
-          activitySnapshot.forEach(doc => {
-            activityTitles[doc.id] = doc.data().title || 'Unknown Activity';
-          });
+          try {
+            const activityDoc = await getDoc(doc(db, 'activities', record.activityId));
+            if (activityDoc.exists()) {
+              activityTitles[record.activityId] = activityDoc.data().title || 'Unknown Activity';
+            }
+          } catch (err) {
+            console.error(`Error fetching activity ${record.activityId}:`, err);
+            activityTitles[record.activityId] = 'Unknown Activity';
+          }
         }
         
         // Enrich progress data with activity titles
@@ -225,67 +223,64 @@ export default function ProgressDashboardPage() {
           orderBy('lastAssessed', 'desc'),
           limit(10)
         );
-        
-        const skillsSnapshot = await getDocs(skillsQuery);
-        const skillsData: ChildSkill[] = [];
-        
-        skillsSnapshot.forEach(doc => {
-          const data = doc.data();
-          skillsData.push({
-            id: doc.id,
-            childId: data.childId,
-            skillId: data.skillId,
-            status: data.status,
-            lastAssessed: data.lastAssessed
+
+        let skillsData: ChildSkill[] = [];
+        try {
+          const skillsSnapshot = await getDocs(skillsQuery);
+          skillsSnapshot.forEach(doc => {
+            const data = doc.data();
+            skillsData.push({
+              id: doc.id,
+              childId: data.childId,
+              skillId: data.skillId,
+              status: data.status,
+              lastAssessed: data.lastAssessed
+            });
           });
-        });
-        
-        // Fetch skill names
+        } catch (error) {
+          console.error('Error fetching skills:', error);
+          // Continue with empty skills data
+        }
+
+        // Fetch skill names in chunks
         const skillIds = Array.from(new Set(skillsData.map(s => s.skillId)));
         const skillNames: Record<string, string> = {};
-        
-        // Handle case where there are more than 10 skill IDs (Firestore limit)
-        if (skillIds.length > 0) {
-          // Process skill IDs in chunks of 10 (Firestore limit for 'in' queries)
+
+        try {
+          // Process skill IDs in chunks of 10
           for (let i = 0; i < skillIds.length; i += 10) {
             const chunk = skillIds.slice(i, i + 10);
-            const skillNamesQuery = query(
-              collection(db, 'developmentalSkills'),
-              where('__name__', 'in', chunk)
-            );
-            
-            const skillNamesSnapshot = await getDocs(skillNamesQuery);
-            skillNamesSnapshot.forEach(doc => {
-              skillNames[doc.id] = doc.data().name || `Skill ${doc.id.substring(0, 4)}`;
-            });
-          }
-        }
-        
-        // For any skill IDs that weren't found, try fetching them individually
-        for (const skillId of skillIds) {
-          if (!skillNames[skillId]) {
             try {
-              const skillDoc = await getDoc(doc(db, 'developmentalSkills', skillId));
-              if (skillDoc.exists()) {
-                skillNames[skillId] = skillDoc.data().name || `Skill ${skillId.substring(0, 6)}`;
-              } else {
-                // If skill document doesn't exist, use a more descriptive fallback
-                skillNames[skillId] = `Skill ${skillId.substring(0, 6)}`;
-              }
-            } catch (err) {
-              console.error(`Error fetching skill ${skillId}:`, err);
-              skillNames[skillId] = `Skill ${skillId.substring(0, 6)}`;
+              const skillNamesQuery = query(
+                collection(db, 'skills'),
+                where('__name__', 'in', chunk)
+              );
+              const skillNamesSnapshot = await getDocs(skillNamesQuery);
+              skillNamesSnapshot.forEach(doc => {
+                skillNames[doc.id] = doc.data().name || 'Unknown Skill';
+              });
+            } catch (chunkError) {
+              console.error('Error fetching skill names chunk:', chunkError);
+              // Set unknown skill names for this chunk
+              chunk.forEach(skillId => {
+                skillNames[skillId] = 'Unknown Skill';
+              });
             }
           }
+        } catch (error) {
+          console.error('Error processing skill chunks:', error);
+          // Set all skill names to unknown
+          skillIds.forEach(skillId => {
+            skillNames[skillId] = 'Unknown Skill';
+          });
         }
-        
-        // Enrich skill data with names and child names
+
+        // Enrich skills data with names
         const skillsWithNames = skillsData.map(skill => ({
           ...skill,
-          skillName: skillNames[skill.skillId] || 'Unknown Skill',
-          childName: childNameMap[skill.childId] || 'Unknown Child'
+          skillName: skillNames[skill.skillId] || 'Unknown Skill'
         }));
-        
+
         setRecentSkills(skillsWithNames);
         
         // Calculate progress summaries for each child

@@ -302,34 +302,6 @@ export default function ActivityDetailPage({ params }: PageParams) {
               </ul>
             </div>
           </div>
-          
-          {/* Related resources */}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 flex items-center">
-              <Book className="h-5 w-5 text-emerald-500 mr-2" />
-              <h2 className="text-lg font-medium text-gray-900">Related Resources</h2>
-            </div>
-            
-            <div className="p-6">
-              <ul className="space-y-3 text-gray-600">
-                {activity.relatedActivities && activity.relatedActivities.length > 0 ? (
-                  activity.relatedActivities.map(relatedId => (
-                    <li key={relatedId} className="flex items-start">
-                      <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                      <Link 
-                        href={`/dashboard/activities/${relatedId}${childId ? `?childId=${childId}` : ''}`}
-                        className="text-emerald-600 hover:underline"
-                      >
-                        Related Activity
-                      </Link>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-gray-500 italic">No related resources available</li>
-                )}
-              </ul>
-            </div>
-          </div>
         </div>
       </div>
     </div>
