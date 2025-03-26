@@ -262,6 +262,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Initialize with the first role as both the role and in the associatedRoles array
       await setDoc(doc(db, 'users', user.uid), {
         name,
+        displayName: name, // Store displayName in Firestore as well
         email,
         role, // Default role
         associatedRoles: [role], // Array of all roles assigned to this user
@@ -288,6 +289,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       const userData = { 
         name, 
+        displayName: name, // Include displayName in userData
         email, 
         role,
         associatedRoles: [role],
@@ -584,6 +586,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const newName = profileData.displayName || auth.currentUser.displayName || '';
       await updateDoc(userRef, {
         name: newName,
+        displayName: newName, // Also store displayName in Firestore for consistency
         updatedAt: serverTimestamp()
       });
       
@@ -592,7 +595,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (!prevUser) return prevUser;
         return {
           ...prevUser,
-          displayName: profileData.displayName || prevUser.displayName,
+          displayName: newName,
           name: newName,
           photoURL: profileData.photoURL || prevUser.photoURL
         };

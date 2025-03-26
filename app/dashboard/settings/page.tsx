@@ -32,8 +32,8 @@ export default function UserSettingsPage() {
   // Load user data when component mounts
   useEffect(() => {
     if (currentUser) {
-      // Try to get name from displayName first, then from name field, then empty string
-      setName(currentUser.displayName || currentUser.name || '');
+      // Use displayName as the single source of truth for the user's name
+      setName(currentUser.displayName || '');
       setEmail(currentUser.email || '');
       
       // Load preferences from localStorage

@@ -6,8 +6,8 @@ export default function Sidebar() {
   const { currentUser } = useAuth();
   const pathname = usePathname();
   
-  // Get the user's name or default to "User"
-  const userName = currentUser?.name || currentUser?.displayName || "User";
+  // Get the user's name from displayName
+  const userName = currentUser?.displayName || "User";
   
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
