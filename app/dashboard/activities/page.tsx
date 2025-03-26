@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { getAllActivities } from '@/lib/dataService';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserChildren } from '@/lib/dataService';
-import { Search, Filter, BookOpen, Clock, Users, ChevronRight } from 'lucide-react';
+import { Search, Filter, BookOpen, Clock, Users, ChevronRight, X } from 'lucide-react';
+import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
 
 interface Child {
   id: string;
@@ -43,6 +44,9 @@ export default function ActivitiesPage() {
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>('');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('');
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [showObservationForm, setShowObservationForm] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -147,6 +151,12 @@ export default function ActivitiesPage() {
     setFilterArea('');
     setFilterAgeGroup('');
     setFilterDifficulty('');
+  };
+
+  const handleObservationSuccess = () => {
+    setShowObservationForm(false);
+    setSelectedActivity(null);
+    setSelectedChild(null);
   };
 
   return (
@@ -310,10 +320,12 @@ export default function ActivitiesPage() {
                           onChange={(e) => {
                             if (e.target.value) {
                               const childId = e.target.value;
-                              window.location.href = `/dashboard/children/${childId}?activityId=${activity.id}&tab=progress`;
+                              setSelectedChild(childId);
+                              setSelectedActivity(activity);
+                              setShowObservationForm(true);
                             }
                           }}
-                          defaultValue=""
+                          value=""
                         >
                           <option value="" disabled>Add Observation</option>
                           {children.map(child => (
@@ -349,6 +361,39 @@ export default function ActivitiesPage() {
           </div>
         )}
       </div>
+
+      {/* Observation Form Modal */}
+      {showObservationForm && selectedActivity && selectedChild && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-medium text-gray-900">Add Observation for {selectedActivity.title}</h2>
+              <button
+                onClick={() => {
+                  setShowObservationForm(false);
+                  setSelectedActivity(null);
+                  setSelectedChild(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <QuickObservationForm
+                activityId={selectedActivity.id}
+                childId={selectedChild}
+                onSuccess={handleObservationSuccess}
+                onClose={() => {
+                  setShowObservationForm(false);
+                  setSelectedActivity(null);
+                  setSelectedChild(null);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

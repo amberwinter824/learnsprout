@@ -720,16 +720,6 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
           </div>
         </div>
         
-        {child && (
-          <div className="mt-4">
-            <ChildFamilyAccess 
-              childId={child.id} 
-              childName={child.name} 
-              familyId={child.familyId}
-            />
-          </div>
-        )}
-        
         {child.interests && child.interests.length > 0 && (
           <div className="mt-4">
             <h2 className="text-sm font-medium text-gray-500">Interests:</h2>
@@ -810,24 +800,15 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) :
                 <div className="text-center py-8">
                   <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500 mb-2">No activity records yet</p>
                   <p className="text-sm text-gray-500">
-                    Start tracking your child's progress by adding activity records
+                    Start tracking your child's progress by adding observations to activities
                   </p>
-                  <div className="mt-4">
-                    <Link
-                      href={`/dashboard/children/${childId}?showAddRecord=true`}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      Add First Record
-                    </Link>
-                  </div>
                 </div>
-              )}
+              }
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { addProgressRecord, getActivityProgress } from '../../lib/progressTracking';
@@ -67,7 +67,7 @@ export function ActivityObservationForm({
   const [previousObservations, setPreviousObservations] = useState<ProgressRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string | null>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const { currentUser } = useAuth();
   
@@ -86,7 +86,8 @@ export function ActivityObservationForm({
   const [visibilityType, setVisibilityType] = useState<"private" | "educators" | "all">("all");
   
   // Photo state
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [showCameraCapture, setShowCameraCapture] = useState<boolean>(false);
   
   // Fetch activity and related skills when component mounts
@@ -113,7 +114,7 @@ export function ActivityObservationForm({
         // Get related skills
         if (activityData.skillsAddressed?.length) {
           const skillPromises = activityData.skillsAddressed.map(
-            (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+            (skillId: string) => getDoc(doc(db, 'skills', skillId))
           );
 
           const skillDocs = await Promise.all(skillPromises);
@@ -156,100 +157,151 @@ export function ActivityObservationForm({
   // Add this function to handle photo capture
   const handlePhotoCapture = (url: string, file?: File) => {
     setPhotoUrl(url);
+    if (file) {
+      setPhotoFile(file);
+    }
     setShowCameraCapture(false);
   };
 
   // Add this function to clear the photo
   const handleClearPhoto = () => {
-    setPhotoUrl(null);
+    setPhotoUrl('');
+    setPhotoFile(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Add function to update child skills
+  const updateChildSkills = async (skillIds: string[]) => {
+    try {
+      for (const skillId of skillIds) {
+        // Check if skill record exists
+        const skillQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', '==', childId),
+          where('skillId', '==', skillId)
+        );
+        
+        const skillSnapshot = await getDocs(skillQuery);
+        
+        if (skillSnapshot.empty) {
+          // Create new skill record
+          await addDoc(collection(db, 'childSkills'), {
+            childId,
+            skillId,
+            status: 'emerging', // Start with emerging when first demonstrated
+            lastAssessed: new Date(),
+            notes: 'Skill first demonstrated in activity observation',
+            updatedAt: serverTimestamp()
+          });
+        } else {
+          // Update existing skill record
+          const skillDoc = skillSnapshot.docs[0];
+          const currentStatus = skillDoc.data().status;
+          
+          // Only update if the new status represents progress
+          const statusLevels = ['not_started', 'emerging', 'developing', 'mastered'];
+          const currentLevel = statusLevels.indexOf(currentStatus);
+          
+          // When demonstrated again, progress from emerging to developing
+          if (currentStatus === 'emerging') {
+            await updateDoc(doc(db, 'childSkills', skillDoc.id), {
+              status: 'developing',
+              lastAssessed: new Date(),
+              updatedAt: serverTimestamp()
+            });
+          }
+          // When demonstrated multiple times, consider mastery
+          else if (currentStatus === 'developing') {
+            // Check number of times demonstrated
+            const demonstrationsQuery = query(
+              collection(db, 'progressRecords'),
+              where('childId', '==', childId),
+              where('skillsDemonstrated', 'array-contains', skillId)
+            );
+            const demonstrationsSnapshot = await getDocs(demonstrationsQuery);
+            
+            if (demonstrationsSnapshot.size >= 3) {
+              await updateDoc(doc(db, 'childSkills', skillDoc.id), {
+                status: 'mastered',
+                lastAssessed: new Date(),
+                updatedAt: serverTimestamp()
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating child skills:', error);
+      throw error;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!currentUser || !childId || !activityId) {
-      setError('Missing required information');
-      return;
-    }
+    if (!activity || submitting) return;
     
     try {
       setSubmitting(true);
-      setError('');
+      setError(null);
       
-      // Translate visibility type to actual user IDs
-      let visibilityIds: string[] = [];
-      if (visibilityType === "private") {
-        // Only the current user can see it
-        visibilityIds = [currentUser.uid];
-      } else if (visibilityType === "educators") {
-        // Need to fetch educators related to this child
-        // For now, we'll set it to the current user + a placeholder for educators
-        visibilityIds = [currentUser.uid, "educators"];
-      } else {
-        // Everyone can see it - including all educators and parents
-        visibilityIds = ["all"];
+      // Upload photo if one was provided
+      let uploadedPhotoUrl: string | undefined;
+      if (photoFile) {
+        uploadedPhotoUrl = await uploadPhotoToStorage({
+          file: photoFile,
+          folder: 'observations',
+          childId
+        });
       }
       
-      // Prepare the progress record data
-      const progressData = {
+      // Create observation data object
+      const observationData = {
+        childId,
         activityId,
         date: new Date(),
-        completionStatus,
+        completionStatus: 'completed',
         engagementLevel,
         interestLevel,
         completionDifficulty,
         notes,
+        photoUrls: uploadedPhotoUrl ? [uploadedPhotoUrl] : [],
         skillsDemonstrated: selectedSkills,
-        skillObservations,
-        // Include new environment context fields
-        environmentContext,
-        observationType,
-        visibility: visibilityIds,
-        // Keep existing fields
-        weeklyPlanId,
-        dayOfWeek,
-        photoUrl: photoUrl || null,
+        skillObservations: skillObservations,
+        weeklyPlanId: weeklyPlanId || null,
+        dayOfWeek: dayOfWeek || null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       };
       
-      // Add the progress record
-      await addProgressRecord(childId, currentUser.uid, progressData);
+      // Add to Firestore
+      const progressRef = collection(db, 'progressRecords');
+      await addDoc(progressRef, observationData);
       
-      // Get updated observations
-      const updatedObservations = await getActivityProgress(childId, activityId);
-      setPreviousObservations(updatedObservations);
-      
-      // Trigger custom event to refresh the weekly plan
-      const event = new CustomEvent('activity-status-changed');
-      window.dispatchEvent(event);
-      
-      // Call the success callback if provided
-      if (onSuccess) {
-        onSuccess();
+      // Update child skills
+      if (selectedSkills.length > 0) {
+        await updateChildSkills(selectedSkills);
       }
       
-      // Reset the form (except skills)
-      setCompletionStatus('completed');
+      // Reset form
       setEngagementLevel('medium');
       setInterestLevel('medium');
       setCompletionDifficulty('appropriate');
       setNotes('');
+      setPhotoFile(null);
+      setSelectedSkills([]);
       setSkillObservations({});
-      setEnvironmentContext("home");
-      setObservationType("general");
-      setVisibilityType("all");
-      handleClearPhoto();
       
-      // Show success message
-      setSuccessMessage('Observation recorded successfully!');
-      
-      // You can optionally close the form after success
-      if (onClose) {
-        setTimeout(() => onClose(), 1500);
-      } else {
-        setTimeout(() => setSuccessMessage(''), 5000);
+      // Call success callback
+      if (onSuccess) {
+        onSuccess();
       }
-    } catch (err: any) {
-      console.error('Error adding observation:', err);
+      
+      // Close form
+      if (onClose) {
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error submitting observation:', err);
       setError('Failed to save observation. Please try again.');
     } finally {
       setSubmitting(false);

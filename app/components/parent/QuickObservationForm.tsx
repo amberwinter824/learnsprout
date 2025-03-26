@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Camera, Smile, Frown, Meh, CheckCircle, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { addDoc, collection, doc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, serverTimestamp, getDoc, updateDoc, getDocs, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 
@@ -78,7 +78,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
 
         // Get skill documents
         const skillPromises = activityData.skillsAddressed.map(
-          (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+          (skillId: string) => getDoc(doc(db, 'skills', skillId))
         );
 
         const skillDocs = await Promise.all(skillPromises);
@@ -148,6 +148,54 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
     }
   };
   
+  // Add function to update child skills
+  const updateChildSkills = async (skillUpdates: Array<{skillId: string, status: string}>) => {
+    try {
+      for (const { skillId, status } of skillUpdates) {
+        // Check if skill record exists
+        const skillQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', '==', childId),
+          where('skillId', '==', skillId)
+        );
+        
+        const skillSnapshot = await getDocs(skillQuery);
+        
+        if (skillSnapshot.empty) {
+          // Create new skill record
+          await addDoc(collection(db, 'childSkills'), {
+            childId,
+            skillId,
+            status,
+            lastAssessed: new Date(),
+            notes: 'Skill demonstrated in activity observation',
+            updatedAt: serverTimestamp()
+          });
+        } else {
+          // Update existing skill record
+          const skillDoc = skillSnapshot.docs[0];
+          const currentStatus = skillDoc.data().status;
+          
+          // Only update if the new status represents progress
+          const statusLevels = ['not_started', 'emerging', 'developing', 'mastered'];
+          const currentLevel = statusLevels.indexOf(currentStatus);
+          const newLevel = statusLevels.indexOf(status);
+          
+          if (newLevel > currentLevel) {
+            await updateDoc(doc(db, 'childSkills', skillDoc.id), {
+              status,
+              lastAssessed: new Date(),
+              updatedAt: serverTimestamp()
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating child skills:', error);
+      throw error;
+    }
+  };
+  
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
@@ -158,6 +206,12 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
       if (photoFile) {
         photoUrl = await uploadPhoto(photoFile);
       }
+      
+      // Prepare skill updates
+      const skillUpdates = Object.entries(selectedSkills).map(([skillId, status]) => ({
+        skillId,
+        status
+      }));
       
       // Create observation data object
       const observationData = {
@@ -170,11 +224,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
         completionDifficulty: difficulty,
         notes: note,
         photoUrls: photoUrl ? [photoUrl] : [],
-        skillsDemonstrated: Object.entries(selectedSkills).map(([skillId, status]) => ({
-          skillId,
-          status,
-          date: new Date()
-        })),
+        skillsDemonstrated: skillUpdates,
         // Environment context fields
         environmentContext: 'home', // Default for quick observations
         observationType: 'general',
@@ -189,6 +239,9 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
       // Add to Firestore
       const progressRef = collection(db, 'progressRecords');
       const docRef = await addDoc(progressRef, observationData);
+      
+      // Update child skills
+      await updateChildSkills(skillUpdates);
       
       console.log('Observation saved with ID:', docRef.id);
       
