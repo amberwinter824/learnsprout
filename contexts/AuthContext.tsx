@@ -256,6 +256,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+      // Set displayName in Firebase Auth
+      await updateProfile(user, { displayName: name });
+      
       // Initialize with the first role as both the role and in the associatedRoles array
       await setDoc(doc(db, 'users', user.uid), {
         name,
@@ -573,7 +576,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
     
     try {
+      // Update Firebase Auth profile
       await updateProfile(auth.currentUser, profileData);
+      
+      // Update Firestore user document
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const newName = profileData.displayName || auth.currentUser.displayName || '';
+      await updateDoc(userRef, {
+        name: newName,
+        updatedAt: serverTimestamp()
+      });
       
       // Update the currentUser state to reflect changes
       setCurrentUser(prevUser => {
@@ -581,6 +593,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return {
           ...prevUser,
           displayName: profileData.displayName || prevUser.displayName,
+          name: newName,
           photoURL: profileData.photoURL || prevUser.photoURL
         };
       });

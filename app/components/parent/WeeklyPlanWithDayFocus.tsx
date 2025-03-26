@@ -576,12 +576,14 @@ export default function WeeklyPlanWithDayFocus({
   };
   
   // Handle successful observation submission
-  const handleObservationSuccess = () => {
+  const handleObservationSuccess = async () => {
     setShowActivityForm(false);
     setSelectedActivity(null);
     
-    // In a real implementation, you would update the local state or refresh the data
-    // For now, we'll just reset the form
+    // Refresh the activities data
+    if (selectedChild) {
+      await fetchWeekActivitiesRef();
+    }
   };
   
   // Get activity count for a day
