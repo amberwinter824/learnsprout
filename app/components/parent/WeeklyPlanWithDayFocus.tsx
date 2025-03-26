@@ -640,6 +640,11 @@ export default function WeeklyPlanWithDayFocus({
   const ObservationTooltip = ({ observation }: { observation: Activity['lastObservation'] }) => {
     if (!observation) return null;
 
+    // Ensure skillsDemonstrated is an array of strings
+    const skills = Array.isArray(observation.skillsDemonstrated) 
+      ? observation.skillsDemonstrated 
+      : [];
+
     return (
       <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 max-w-xs">
         <div className="space-y-2">
@@ -667,13 +672,13 @@ export default function WeeklyPlanWithDayFocus({
               <p className="mt-1 text-gray-600 line-clamp-2">{observation.notes}</p>
             </div>
           )}
-          {observation.skillsDemonstrated && observation.skillsDemonstrated.length > 0 && (
+          {skills.length > 0 && (
             <div className="text-sm">
               <span className="font-medium text-gray-700">Skills:</span>
               <div className="mt-1 flex flex-wrap gap-1">
-                {observation.skillsDemonstrated.map((skill, index) => (
+                {skills.map((skill, index) => (
                   <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
-                    {skill}
+                    {typeof skill === 'string' ? skill : 'Unknown Skill'}
                   </span>
                 ))}
               </div>
