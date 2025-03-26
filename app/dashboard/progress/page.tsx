@@ -252,7 +252,7 @@ export default function ProgressDashboardPage() {
             const chunk = skillIds.slice(i, i + 10);
             try {
               const skillNamesQuery = query(
-                collection(db, 'skills'),
+                collection(db, 'developmentalSkills'),
                 where('__name__', 'in', chunk)
               );
               const skillNamesSnapshot = await getDocs(skillNamesQuery);

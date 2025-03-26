@@ -13,6 +13,8 @@ interface Skill {
   name: string;
   description: string;
   area: string;
+  ageRanges: string[];
+  prerequisites: string[];
   status?: 'not_started' | 'emerging' | 'developing' | 'mastered';
 }
 
@@ -56,42 +58,48 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
   // Fetch activity skills when component mounts
   useEffect(() => {
     async function fetchActivitySkills() {
-      if (!activityId) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        // Get activity document
-        const activityDoc = await getDoc(doc(db, 'activities', activityId));
-        if (!activityDoc.exists()) {
-          console.error('Activity not found');
-          setLoading(false);
-          return;
-        }
+        if (activityId) {
+          // Get activity document
+          const activityDoc = await getDoc(doc(db, 'activities', activityId));
+          if (!activityDoc.exists()) {
+            console.error('Activity not found');
+            setLoading(false);
+            return;
+          }
 
-        const activityData = activityDoc.data();
-        if (!activityData.skillsAddressed?.length) {
-          setLoading(false);
-          return;
-        }
+          const activityData = activityDoc.data();
+          if (!activityData.skillsAddressed?.length) {
+            setLoading(false);
+            return;
+          }
 
-        // Get skill documents from the 'skills' collection
-        const skillPromises = activityData.skillsAddressed.map(
-          (skillId: string) => getDoc(doc(db, 'skills', skillId))
-        );
+          // Get skill documents from the 'developmentalSkills' collection
+          const skillPromises = activityData.skillsAddressed.map(
+            (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+          );
 
-        const skillDocs = await Promise.all(skillPromises);
-        const skills = skillDocs
-          .filter(doc => doc.exists())
-          .map(doc => ({
+          const skillDocs = await Promise.all(skillPromises);
+          const skills = skillDocs
+            .filter(doc => doc.exists())
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            } as Skill));
+
+          setActivitySkills(skills);
+        } else {
+          // If no activityId, fetch all available skills
+          const skillsRef = collection(db, 'developmentalSkills');
+          const skillsSnapshot = await getDocs(skillsRef);
+          const skills = skillsSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           } as Skill));
-
-        setActivitySkills(skills);
+          setActivitySkills(skills);
+        }
       } catch (err) {
-        console.error('Error fetching activity skills:', err);
+        console.error('Error fetching skills:', err);
       } finally {
         setLoading(false);
       }
