@@ -14,7 +14,11 @@ import {
   ShieldCheck,
   Home,
   LogOut,
-  Package
+  Package,
+  Building2,
+  BookOpen,
+  BarChart2,
+  Shield
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -35,68 +39,102 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <RoleProtectedRoute requiredRole="admin">
       <div className="min-h-screen flex bg-gray-100">
         {/* Sidebar */}
-        <div className="w-64 bg-blue-900 text-white flex flex-col">
-          {/* Admin navigation items */}
-          <div className="p-4 bg-blue-800">
+        <div className="w-64 bg-blue-900 text-white">
+          <div className="p-4">
             <div className="flex items-center space-x-2">
-              <ShieldCheck className="h-8 w-8 text-white" />
-              <span className="text-xl font-bold text-white">Learn Sprout</span>
+              <Shield className="h-6 w-6" />
+              <h1 className="text-xl font-semibold">Learn Sprout</h1>
             </div>
-            <div className="mt-1 text-sm text-blue-200">Admin Portal</div>
+            <p className="text-sm text-blue-200 mt-1">Admin Portal</p>
           </div>
-          
-          {/* Navigation */}
-          <nav className="flex-1 pt-4">
-            <ul className="space-y-1 px-2">
+          <nav className="mt-4">
+            <ul className="space-y-1">
               <li>
-                <Link 
-                  href="/admin/dashboard" 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive('/admin/dashboard')}`}
+                <Link
+                  href="/admin"
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium ${
+                    pathname === '/admin'
+                      ? 'bg-blue-800 text-white'
+                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
+                  }`}
                 >
                   <Home className="h-5 w-5 mr-3" />
                   Dashboard
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/admin/users" 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive('/admin/users')}`}
+                <Link
+                  href="/admin/users"
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium ${
+                    pathname.startsWith('/admin/users')
+                      ? 'bg-blue-800 text-white'
+                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
+                  }`}
                 >
                   <Users className="h-5 w-5 mr-3" />
                   User Management
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/admin/institutions" 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive('/admin/institutions')}`}
+                <Link
+                  href="/admin/institutions"
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium ${
+                    pathname.startsWith('/admin/institutions')
+                      ? 'bg-blue-800 text-white'
+                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
+                  }`}
                 >
-                  <School className="h-5 w-5 mr-3" />
+                  <Building2 className="h-5 w-5 mr-3" />
                   Institutions
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/admin/materials" 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive('/admin/materials')}`}
+                <Link
+                  href="/admin/materials"
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium ${
+                    pathname.startsWith('/admin/materials')
+                      ? 'bg-blue-800 text-white'
+                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
+                  }`}
                 >
                   <Package className="h-5 w-5 mr-3" />
                   Materials
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/admin/analytics" 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive('/admin/analytics')}`}
+                <Link
+                  href="/admin/activities"
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium ${
+                    pathname.startsWith('/admin/activities')
+                      ? 'bg-blue-800 text-white'
+                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
+                  }`}
                 >
-                  <BarChart className="h-5 w-5 mr-3" />
+                  <BookOpen className="h-5 w-5 mr-3" />
+                  Activities
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/admin/analytics"
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium ${
+                    pathname.startsWith('/admin/analytics')
+                      ? 'bg-blue-800 text-white'
+                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
+                  }`}
+                >
+                  <BarChart2 className="h-5 w-5 mr-3" />
                   Analytics
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/admin/settings" 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive('/admin/settings')}`}
+                <Link
+                  href="/admin/settings"
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium ${
+                    pathname.startsWith('/admin/settings')
+                      ? 'bg-blue-800 text-white'
+                      : 'text-blue-100 hover:bg-blue-800 hover:text-white'
+                  }`}
                 >
                   <Settings className="h-5 w-5 mr-3" />
                   Settings
@@ -104,18 +142,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </li>
             </ul>
           </nav>
-
-          {/* User info and logout */}
-          <div className="p-4 bg-blue-800 mt-auto">
-            <div className="text-sm text-blue-100 mb-2">{currentUser?.email}</div>
-            <button
-              onClick={() => logout()}
-              className="flex items-center text-blue-200 hover:text-white transition-colors w-full"
-            >
-              <LogOut className="h-5 w-5 mr-3" />
-              Logout
-            </button>
-          </div>
         </div>
         
         {/* Main content */}
