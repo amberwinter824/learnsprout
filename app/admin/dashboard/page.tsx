@@ -16,7 +16,8 @@ import {
   Shield,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  School
 } from 'lucide-react';
 
 interface DashboardData {
@@ -71,16 +72,6 @@ export default function AdminDashboard() {
         const childrenSnapshot = await getDocs(collection(db, 'children'));
         const totalChildren = childrenSnapshot.size;
 
-        // Get weekly active users
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const weeklyActiveQuery = query(
-          collection(db, 'users'),
-          where('lastLogin', '>=', oneWeekAgo)
-        );
-        const weeklyActiveSnapshot = await getDocs(weeklyActiveQuery);
-        const weeklyActiveUsers = weeklyActiveSnapshot.size;
-
         // Get total observations
         const observationsSnapshot = await getDocs(collection(db, 'observations'));
         const totalObservations = observationsSnapshot.size;
@@ -107,7 +98,7 @@ export default function AdminDashboard() {
         setDashboardData({
           totalUsers,
           totalChildren,
-          weeklyActiveUsers,
+          weeklyActiveUsers: 0,
           totalObservations,
           usersByRole,
           recentLogins,
@@ -190,7 +181,7 @@ export default function AdminDashboard() {
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
-              <UserPlus className="h-8 w-8 text-green-500 mr-3" />
+              <School className="h-8 w-8 text-green-500 mr-3" />
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Total Children</h3>
                 <p className="text-2xl font-semibold text-gray-900">{dashboardData?.totalChildren}</p>
@@ -202,8 +193,8 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <Activity className="h-8 w-8 text-purple-500 mr-3" />
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Weekly Active Users</h3>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardData?.weeklyActiveUsers}</p>
+                <h3 className="text-sm font-medium text-gray-500">Total Observations</h3>
+                <p className="text-2xl font-semibold text-gray-900">{dashboardData?.totalObservations}</p>
               </div>
             </div>
           </div>
