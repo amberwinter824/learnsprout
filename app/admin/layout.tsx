@@ -12,7 +12,8 @@ import {
   Settings, 
   BarChart, 
   ShieldCheck,
-  Home
+  Home,
+  LogOut
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -21,26 +22,26 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   
   const isActive = (path: string) => {
     return pathname?.startsWith(path) 
-      ? 'bg-blue-700 text-white' 
-      : 'text-blue-100 hover:bg-blue-600 hover:text-white';
+      ? 'bg-gray-800 text-white' 
+      : 'text-gray-300 hover:bg-gray-700 hover:text-white';
   };
   
   return (
     <RoleProtectedRoute requiredRole="admin">
-      <div className="min-h-screen flex">
+      <div className="min-h-screen flex bg-gray-100">
         {/* Sidebar */}
-        <div className="w-64 bg-blue-800 text-white flex flex-col">
+        <div className="w-64 bg-gray-900 text-white flex flex-col">
           {/* Admin navigation items */}
-          <div className="p-4 bg-blue-900">
+          <div className="p-4 bg-gray-800">
             <div className="flex items-center space-x-2">
-              <ShieldCheck className="h-8 w-8 text-blue-300" />
+              <ShieldCheck className="h-8 w-8 text-gray-300" />
               <span className="text-xl font-bold">Learn Sprout</span>
             </div>
-            <div className="mt-1 text-xs text-blue-300">Admin Portal</div>
+            <div className="mt-1 text-xs text-gray-400">Admin Portal</div>
           </div>
           
           {/* Navigation */}
@@ -82,12 +83,33 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   Analytics
                 </Link>
               </li>
+              <li>
+                <Link 
+                  href="/admin/settings" 
+                  className={`flex items-center px-4 py-3 ${isActive('/admin/settings')}`}
+                >
+                  <Settings className="h-5 w-5 mr-3" />
+                  Settings
+                </Link>
+              </li>
             </ul>
           </nav>
+
+          {/* User info and logout */}
+          <div className="p-4 bg-gray-800">
+            <div className="text-sm text-gray-300 mb-2">{currentUser?.email}</div>
+            <button
+              onClick={() => logout()}
+              className="flex items-center text-gray-300 hover:text-white w-full"
+            >
+              <LogOut className="h-5 w-5 mr-3" />
+              Logout
+            </button>
+          </div>
         </div>
         
         {/* Main content */}
-        <div className="flex-1 bg-gray-100 min-h-screen">
+        <div className="flex-1">
           {children}
         </div>
       </div>
