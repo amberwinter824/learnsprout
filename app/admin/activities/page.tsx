@@ -10,7 +10,8 @@ import {
   doc, 
   updateDoc,
   query,
-  orderBy
+  orderBy,
+  serverTimestamp
 } from 'firebase/firestore';
 import { 
   Plus, 
@@ -26,24 +27,28 @@ import {
 
 interface Activity {
   id?: string;
-  name: string;
-  description: string;
-  category: string;
-  ageRange: string;
-  duration: string;
-  objectives: string[];
-  materials?: string[]; // Array of material IDs needed for this activity
+  title: string;
+  description?: string;
+  instructions?: string;
+  ageRanges: string[];
+  area: string;
+  materialsNeeded?: string[];
+  duration?: number;
+  difficulty: string;
+  status: string;
+  imageUrl?: string;
+  environmentType: "home" | "classroom" | "bridge";
+  classroomExtension: boolean;
+  homeReinforcement: boolean;
+  prerequisites?: string[];
+  nextSteps?: string[];
+  relatedActivities?: string[];
+  skillsAddressed: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface Material {
-  id: string;
-  name: string;
-  category: string;
-}
-
-const CATEGORIES = [
+const AREAS = [
   { id: 'practical_life', name: 'Practical Life' },
   { id: 'sensorial', name: 'Sensorial' },
   { id: 'language', name: 'Language' },
@@ -54,37 +59,51 @@ const CATEGORIES = [
 ];
 
 const AGE_RANGES = [
-  '0-12 months',
-  '1-2 years',
-  '2-3 years',
-  '3-4 years',
-  '4-5 years',
-  '5-6 years'
+  '0-1',
+  '1-2',
+  '2-3',
+  '3-4',
+  '4-5',
+  '5-6'
 ];
 
-const DURATIONS = [
-  '5-10 minutes',
-  '10-15 minutes',
-  '15-20 minutes',
-  '20-30 minutes',
-  '30+ minutes'
+const DIFFICULTIES = [
+  'beginner',
+  'intermediate',
+  'advanced'
+];
+
+const ENVIRONMENT_TYPES = [
+  { id: 'home', name: 'Home' },
+  { id: 'classroom', name: 'Classroom' },
+  { id: 'bridge', name: 'Bridge' }
 ];
 
 export default function ActivitiesAdminPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<Activity>({
-    name: '',
+    title: '',
     description: '',
-    category: '',
-    ageRange: '',
-    duration: '',
-    objectives: [''],
-    materials: []
+    instructions: '',
+    ageRanges: [],
+    area: '',
+    materialsNeeded: [],
+    duration: 15,
+    difficulty: 'beginner',
+    status: 'active',
+    imageUrl: '',
+    environmentType: 'classroom',
+    classroomExtension: false,
+    homeReinforcement: true,
+    prerequisites: [],
+    nextSteps: [],
+    relatedActivities: [],
+    skillsAddressed: []
   });
 
   useEffect(() => {
@@ -102,7 +121,7 @@ export default function ActivitiesAdminPage() {
       const materialsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Material[];
+      }));
       setMaterials(materialsData);
     } catch (err) {
       console.error('Error fetching materials:', err);
@@ -115,7 +134,7 @@ export default function ActivitiesAdminPage() {
       setLoading(true);
       const activitiesQuery = query(
         collection(db, 'activities'),
-        orderBy('name', 'asc')
+        orderBy('title', 'asc')
       );
       const snapshot = await getDocs(activitiesQuery);
       const activitiesData = snapshot.docs.map(doc => ({
@@ -136,33 +155,37 @@ export default function ActivitiesAdminPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Filter out empty objectives
-      const cleanedFormData = {
-        ...formData,
-        objectives: formData.objectives.filter(obj => obj.trim() !== '')
-      };
-
       if (editingActivity) {
         await updateDoc(doc(db, 'activities', editingActivity.id!), {
-          ...cleanedFormData,
-          updatedAt: new Date()
+          ...formData,
+          updatedAt: serverTimestamp()
         });
       } else {
         await addDoc(collection(db, 'activities'), {
-          ...cleanedFormData,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          ...formData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
         });
       }
       
       setFormData({
-        name: '',
+        title: '',
         description: '',
-        category: '',
-        ageRange: '',
-        duration: '',
-        objectives: [''],
-        materials: []
+        instructions: '',
+        ageRanges: [],
+        area: '',
+        materialsNeeded: [],
+        duration: 15,
+        difficulty: 'beginner',
+        status: 'active',
+        imageUrl: '',
+        environmentType: 'classroom',
+        classroomExtension: false,
+        homeReinforcement: true,
+        prerequisites: [],
+        nextSteps: [],
+        relatedActivities: [],
+        skillsAddressed: []
       });
       setEditingActivity(null);
       setShowForm(false);
@@ -175,11 +198,7 @@ export default function ActivitiesAdminPage() {
 
   const handleEdit = (activity: Activity) => {
     setEditingActivity(activity);
-    setFormData({
-      ...activity,
-      objectives: activity.objectives || [''],
-      materials: activity.materials || []
-    });
+    setFormData(activity);
     setShowForm(true);
   };
 
@@ -199,41 +218,38 @@ export default function ActivitiesAdminPage() {
     setEditingActivity(null);
     setShowForm(false);
     setFormData({
-      name: '',
+      title: '',
       description: '',
-      category: '',
-      ageRange: '',
-      duration: '',
-      objectives: [''],
-      materials: []
+      instructions: '',
+      ageRanges: [],
+      area: '',
+      materialsNeeded: [],
+      duration: 15,
+      difficulty: 'beginner',
+      status: 'active',
+      imageUrl: '',
+      environmentType: 'classroom',
+      classroomExtension: false,
+      homeReinforcement: true,
+      prerequisites: [],
+      nextSteps: [],
+      relatedActivities: [],
+      skillsAddressed: []
     });
-  };
-
-  const addObjective = () => {
-    setFormData(prev => ({
-      ...prev,
-      objectives: [...prev.objectives, '']
-    }));
-  };
-
-  const removeObjective = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      objectives: prev.objectives.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateObjective = (index: number, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      objectives: prev.objectives.map((obj, i) => i === index ? value : obj)
-    }));
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        {error}
       </div>
     );
   }
@@ -277,15 +293,15 @@ export default function ActivitiesAdminPage() {
               
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Activity Name
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                    Activity Title
                   </label>
                   <input
                     type="text"
-                    id="name"
+                    id="title"
                     required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
@@ -304,97 +320,144 @@ export default function ActivitiesAdminPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                      Category
-                    </label>
-                    <select
-                      id="category"
-                      required
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    >
-                      <option value="">Select a category</option>
-                      {CATEGORIES.map(category => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="ageRange" className="block text-sm font-medium text-gray-700">
-                      Age Range
-                    </label>
-                    <select
-                      id="ageRange"
-                      required
-                      value={formData.ageRange}
-                      onChange={(e) => setFormData({ ...formData, ageRange: e.target.value })}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    >
-                      <option value="">Select age range</option>
-                      {AGE_RANGES.map(range => (
-                        <option key={range} value={range}>
-                          {range}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label htmlFor="instructions" className="block text-sm font-medium text-gray-700">
+                    Instructions
+                  </label>
+                  <textarea
+                    id="instructions"
+                    rows={3}
+                    value={formData.instructions}
+                    onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
 
-                <div>
-                  <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
-                    Duration
-                  </label>
-                  <select
-                    id="duration"
-                    required
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    <option value="">Select duration</option>
-                    {DURATIONS.map(duration => (
-                      <option key={duration} value={duration}>
-                        {duration}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="area" className="block text-sm font-medium text-gray-700">
+                      Area
+                    </label>
+                    <select
+                      id="area"
+                      required
+                      value={formData.area}
+                      onChange={(e) => setFormData({ ...formData, area: e.target.value })}
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      <option value="">Select an area</option>
+                      {AREAS.map(area => (
+                        <option key={area.id} value={area.id}>
+                          {area.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700">
+                      Difficulty
+                    </label>
+                    <select
+                      id="difficulty"
+                      required
+                      value={formData.difficulty}
+                      onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      {DIFFICULTIES.map(difficulty => (
+                        <option key={difficulty} value={difficulty}>
+                          {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Learning Objectives
+                    Age Ranges
                   </label>
-                  {formData.objectives.map((objective, index) => (
-                    <div key={index} className="flex mb-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {AGE_RANGES.map(range => (
+                      <label key={range} className="inline-flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.ageRanges.includes(range)}
+                          onChange={(e) => {
+                            const newRanges = e.target.checked
+                              ? [...formData.ageRanges, range]
+                              : formData.ageRanges.filter(r => r !== range);
+                            setFormData({ ...formData, ageRanges: newRanges });
+                          }}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-600">{range} years</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+                      Duration (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      id="duration"
+                      min="5"
+                      step="5"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="environmentType" className="block text-sm font-medium text-gray-700">
+                      Environment Type
+                    </label>
+                    <select
+                      id="environmentType"
+                      required
+                      value={formData.environmentType}
+                      onChange={(e) => setFormData({ ...formData, environmentType: e.target.value as "home" | "classroom" | "bridge" })}
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      {ENVIRONMENT_TYPES.map(type => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center">
                       <input
-                        type="text"
-                        value={objective}
-                        onChange={(e) => updateObjective(index, e.target.value)}
-                        placeholder="Enter a learning objective"
-                        className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        type="checkbox"
+                        checked={formData.classroomExtension}
+                        onChange={(e) => setFormData({ ...formData, classroomExtension: e.target.checked })}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <button
-                        type="button"
-                        onClick={() => removeObjective(index)}
-                        className="ml-2 text-red-600 hover:text-red-800"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addObjective}
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    + Add Objective
-                  </button>
+                      <span className="ml-2 text-sm text-gray-600">Classroom Extension</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.homeReinforcement}
+                        onChange={(e) => setFormData({ ...formData, homeReinforcement: e.target.checked })}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-600">Home Reinforcement</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
@@ -404,10 +467,10 @@ export default function ActivitiesAdminPage() {
                   <select
                     id="materials"
                     multiple
-                    value={formData.materials}
+                    value={formData.materialsNeeded}
                     onChange={(e) => {
                       const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                      setFormData({ ...formData, materials: selectedOptions });
+                      setFormData({ ...formData, materialsNeeded: selectedOptions });
                     }}
                     className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     size={4}
@@ -450,39 +513,41 @@ export default function ActivitiesAdminPage() {
               <div key={activity.id} className="p-6 hover:bg-gray-50">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900">{activity.name}</h3>
+                    <h3 className="text-lg font-medium text-gray-900">{activity.title}</h3>
                     <p className="mt-1 text-sm text-gray-500">{activity.description}</p>
                     
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         <Tag className="h-3 w-3 mr-1" />
-                        {CATEGORIES.find(c => c.id === activity.category)?.name}
+                        {AREAS.find(a => a.id === activity.area)?.name}
                       </span>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {activity.ageRange}
+                        {activity.ageRanges.join(', ')} years
                       </span>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                         <Clock className="h-3 w-3 mr-1" />
-                        {activity.duration}
+                        {activity.duration} minutes
+                      </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        {activity.difficulty}
+                      </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        {ENVIRONMENT_TYPES.find(t => t.id === activity.environmentType)?.name}
                       </span>
                     </div>
 
-                    {activity.objectives && activity.objectives.length > 0 && (
+                    {activity.instructions && (
                       <div className="mt-4">
-                        <h4 className="text-sm font-medium text-gray-700">Learning Objectives:</h4>
-                        <ul className="mt-2 list-disc list-inside text-sm text-gray-600">
-                          {activity.objectives.map((objective, index) => (
-                            <li key={index}>{objective}</li>
-                          ))}
-                        </ul>
+                        <h4 className="text-sm font-medium text-gray-700">Instructions:</h4>
+                        <p className="mt-1 text-sm text-gray-600">{activity.instructions}</p>
                       </div>
                     )}
 
-                    {activity.materials && activity.materials.length > 0 && (
+                    {activity.materialsNeeded && activity.materialsNeeded.length > 0 && (
                       <div className="mt-4">
                         <h4 className="text-sm font-medium text-gray-700">Required Materials:</h4>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {activity.materials.map(materialId => {
+                          {activity.materialsNeeded.map(materialId => {
                             const material = materials.find(m => m.id === materialId);
                             return material ? (
                               <span key={materialId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">

@@ -51,9 +51,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <ul className="space-y-1">
               <li>
                 <Link
-                  href="/admin"
+                  href="/admin/dashboard"
                   className={`flex items-center px-4 py-2.5 text-sm font-medium ${
-                    pathname === '/admin'
+                    pathname === '/admin/dashboard' || pathname === '/admin'
                       ? 'bg-blue-800 text-white'
                       : 'text-blue-100 hover:bg-blue-800 hover:text-white'
                   }`}
