@@ -284,6 +284,15 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
       setSubmitting(true);
       setError(null);
       
+      // Get the child document to get the parentId
+      const childDoc = await getDoc(doc(db, 'children', childId));
+      if (!childDoc.exists()) {
+        throw new Error('Child not found');
+      }
+      
+      const childData = childDoc.data();
+      const parentId = childData.parentId || childData.userId;
+      
       // Upload photo if one was provided
       let photoUrl: string | undefined;
       if (photoFile) {
@@ -299,6 +308,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
       // Create observation data object
       const observationData = {
         childId,
+        parentId, // Add the parentId
         activityId: activityId || 'general_observation',
         date: new Date(),
         completionStatus: 'completed',

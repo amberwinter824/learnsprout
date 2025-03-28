@@ -2,6 +2,73 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Allow admin full access to all collections
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Existing rules for other users
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /children/{childId} {
+      allow read: if request.auth != null && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if request.auth != null && (
+        request.resource.data.parentId == request.auth.uid ||
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+      allow update: if request.auth != null && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if request.auth != null && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    match /observations/{observationId} {
+      allow read: if request.auth != null && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if request.auth != null && (
+        request.resource.data.parentId == request.auth.uid ||
+        request.resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+      allow update: if request.auth != null && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if request.auth != null && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.educatorId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
     // ===== Basic Helper Functions =====
     function isSignedIn() {
       return request.auth != null;
@@ -68,28 +135,6 @@ service cloud.firestore {
       return data.keys().hasAll(['childId']) && hasChildAccess(data.childId);
     }
     
-    // ===== Default Deny =====
-    match /{collection}/{document=**} {
-      allow read, write: if false; 
-    }
-    
-    // ===== User Rules =====
-    match /users/{userId} {
-      allow read: if isSignedIn() && (
-        // User is accessing their own document
-        request.auth.uid == userId ||
-        // User is in the same family as the target user
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId != null &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == 
-         resource.data.familyId) ||
-        hasRole('admin')
-      );
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || hasRole('admin');
-      allow delete: if false;
-    }
-    
     // ===== Family Rules =====
     match /families/{familyId} {
       allow read: if isSignedIn() && (
@@ -143,32 +188,6 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == resource.data.familyId) ||
-        hasRole('admin')
-      );
-    }
-    
-    // ===== Children Rules =====
-    match /children/{childId} {
-      allow read: if isSignedIn() && (
-        resource == null || 
-        hasUserAccess(resource.data) ||
-        hasFamilyAccess(childId)
-      );
-      
-      allow create: if isSignedIn() && (
-        request.resource.data.userId == request.auth.uid || 
-        request.resource.data.parentId == request.auth.uid ||
-        hasRole('admin')
-      );
-      
-      allow update: if isSignedIn() && (
-        hasUserAccess(resource.data) ||
-        hasFamilyAccess(childId)
-      );
-      
-      allow delete: if isSignedIn() && (
-        hasUserAccess(resource.data) || 
-        hasFamilyAccess(childId) ||
         hasRole('admin')
       );
     }
