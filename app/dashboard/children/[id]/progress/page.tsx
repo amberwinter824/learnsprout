@@ -409,9 +409,11 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
           skill.skillId === selectedSkill.skillId
             ? { 
                 ...skill, 
+                id: skillRef.id,
                 status: updateStatus,
                 notes: updateNotes,
-                lastAssessed: Timestamp.now()
+                lastAssessed: Timestamp.now(),
+                updatedAt: Timestamp.now()
               }
             : skill
         )

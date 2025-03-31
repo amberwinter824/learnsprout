@@ -72,7 +72,7 @@ export default function RootLayout({
         </Providers>
         
         {/* Service Worker Registration Script */}
-        <Script src="/register-sw.js" strategy="lazyOnload" />
+        <Script src="/register-sw.js" strategy="afterInteractive" />
       </body>
     </html>
   );

@@ -38,17 +38,22 @@ export default function InstallPWA() {
         (window.navigator as any).standalone || 
         document.referrer.includes('android-app://');
       
-      setIsStandalone(isInStandaloneMode());
+      const standalone = isInStandaloneMode();
+      console.log('PWA Debug - Standalone mode:', standalone);
+      setIsStandalone(standalone);
       
       // Detect iOS devices
       const isIOSDevice = () => {
         return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       };
       
-      setIsIOS(isIOSDevice());
+      const ios = isIOSDevice();
+      console.log('PWA Debug - iOS device:', ios);
+      setIsIOS(ios);
       
       // Check if user has previously dismissed or installed
       const pwaBannerInteracted = localStorage.getItem('pwa-banner-interacted');
+      console.log('PWA Debug - Banner interacted:', pwaBannerInteracted);
       if (pwaBannerInteracted === 'true') {
         setHasInteracted(true);
       }
@@ -58,12 +63,14 @@ export default function InstallPWA() {
   // Listen for the beforeinstallprompt event to detect installability
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
+      console.log('PWA Debug - beforeinstallprompt event fired');
       // Prevent the default browser install prompt
       e.preventDefault();
       // Store the event for later use
       setInstallPrompt(e);
       // Check if we should show the banner
       const pwaBannerInteracted = localStorage.getItem('pwa-banner-interacted') === 'true';
+      console.log('PWA Debug - Should show banner:', !pwaBannerInteracted && !isStandalone);
       if (!pwaBannerInteracted && !isStandalone) {
         setShowBanner(true);
       }
@@ -73,6 +80,7 @@ export default function InstallPWA() {
     
     // Listen for app installed event
     window.addEventListener('appinstalled', () => {
+      console.log('PWA Debug - App installed event fired');
       setIsInstalled(true);
       setShowBanner(false);
       localStorage.setItem('pwa-installed', 'true');
@@ -93,7 +101,15 @@ export default function InstallPWA() {
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
+    console.log('PWA Debug - Banner state:', {
+      installPrompt: !!installPrompt,
+      hasInteracted,
+      isStandalone,
+      isIOS
+    });
+    
     if (installPrompt && !hasInteracted && !isStandalone) {
+      console.log('PWA Debug - Setting timer for non-iOS banner');
       timer = setTimeout(() => {
         setShowBanner(true);
       }, 3000);
@@ -101,6 +117,7 @@ export default function InstallPWA() {
     
     // Special case for iOS which doesn't support beforeinstallprompt
     if (isIOS && !hasInteracted && !isStandalone) {
+      console.log('PWA Debug - Setting timer for iOS banner');
       timer = setTimeout(() => {
         setShowBanner(true);
       }, 3000);

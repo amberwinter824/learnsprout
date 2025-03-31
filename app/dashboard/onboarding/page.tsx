@@ -16,6 +16,10 @@ export default function OnboardingPage() {
       const hasSchedule = currentUser.preferences?.activityPreferences?.scheduleByDay;
       const isOnboardingCompleted = currentUser.onboardingCompleted;
       
+      // Reset PWA banner state when starting onboarding
+      localStorage.removeItem('pwa-banner-interacted');
+      localStorage.removeItem('pwa-installed');
+      
       // Redirect if onboarding is marked as completed OR if they have both children and schedule preferences
       if (isOnboardingCompleted || (hasChildren && hasSchedule)) {
         router.push('/dashboard');
