@@ -374,10 +374,23 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
     try {
       setIsUpdating(true);
       
-      // Create a new childSkill document if it doesn't exist
-      const skillRef = selectedSkill.id 
-        ? doc(db, 'childSkills', selectedSkill.id)
-        : doc(collection(db, 'childSkills'));
+      // Find the existing skill document
+      const skillQuery = query(
+        collection(db, 'childSkills'),
+        where('childId', '==', childId),
+        where('skillId', '==', selectedSkill.skillId)
+      );
+      
+      const skillSnapshot = await getDocs(skillQuery);
+      
+      let skillRef;
+      if (skillSnapshot.empty) {
+        // Create new document if it doesn't exist
+        skillRef = doc(collection(db, 'childSkills'));
+      } else {
+        // Use existing document
+        skillRef = skillSnapshot.docs[0].ref;
+      }
 
       const updateData = {
         childId,
@@ -388,11 +401,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
         updatedAt: Timestamp.now()
       };
 
-      if (selectedSkill.id) {
-        await updateDoc(skillRef, updateData);
-      } else {
-        await setDoc(skillRef, updateData);
-      }
+      await setDoc(skillRef, updateData);
 
       // Update local state - only update the specific skill
       setSkills(prevSkills => 
