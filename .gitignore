@@ -47,3 +47,6 @@ config/service-account.json
 # Credentials and secrets
 *credentials*.json
 *serviceAccount*.json
+
+# Google Cloud SDK
+/google-cloud-sdk/
