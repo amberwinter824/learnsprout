@@ -147,10 +147,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Main content */}
         <div className="flex-1 overflow-auto">
           <div className="p-4 bg-white border-b">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="text-sm text-gray-600">
                 Logged in as: {currentUser?.email}
               </div>
+              <button
+                onClick={logout}
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              >
+                <LogOut className="h-5 w-5 mr-2" />
+                Logout
+              </button>
             </div>
           </div>
           {children}

@@ -5,6 +5,7 @@ import "./globals.css";
 import Providers from "./providers";
 import PWASetup from "./pwaSetup";
 import OfflineNotifications from "./components/OfflineNotifications";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import Script from "next/script"; // Import the Script component from Next.js
 
 const inter = Inter({ subsets: ["latin"] });
@@ -67,10 +68,11 @@ export default function RootLayout({
           <div className="min-h-screen bg-gray-50">
             {children}
           </div>
+          <PWAInstallPrompt />
         </Providers>
         
         {/* Service Worker Registration Script */}
-        <Script src="/register-sw.js" strategy="lazyOnload" />
+        <Script src="/register-sw.js" strategy="afterInteractive" />
       </body>
     </html>
   );
