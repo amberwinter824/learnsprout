@@ -478,11 +478,13 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               recentMilestones={skills
                 .filter(s => s.status !== 'not_started' && s.lastAssessed)
                 .map(skill => ({
+                  id: skill.id,
+                  skillId: skill.skillId,
                   skillName: skill.name,
-                  status: skill.status as 'emerging' | 'developing' | 'mastered',
-                  date: skill.lastAssessed?.toDate() || new Date()
+                  status: skill.status as 'mastered' | 'developing' | 'emerging',
+                  lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
                 }))
-                .sort((a, b) => b.date.getTime() - a.date.getTime())
+                .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
                 .slice(0, 5)
               }
               showProgressLinks={false}

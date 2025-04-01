@@ -349,11 +349,13 @@ export default function Dashboard() {
                   const childSkills = recentSkills
                     .filter(skill => skill.childId === child.id)
                     .map(skill => ({
+                      id: skill.id,
+                      skillId: skill.skillId,
                       skillName: skill.skillName || 'Skill',
-                      status: skill.status as 'emerging' | 'developing' | 'mastered',
-                      date: skill.lastAssessed ? skill.lastAssessed.toDate() : new Date()
+                      status: skill.status as 'mastered' | 'developing' | 'emerging',
+                      lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
                     }))
-                    .sort((a, b) => b.date.getTime() - a.date.getTime())
+                    .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
                     .slice(0, 5);
 
                   return (
