@@ -436,17 +436,32 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   // Map skill areas to their corresponding domains
   const mapAreaToDomain = (area: string) => {
     const domainMap: Record<string, string> = {
+      // Physical Development
       'motor': 'physical',
       'fine_motor': 'physical',
       'gross_motor': 'physical',
-      'practical_life': 'physical', // Many practical life skills involve physical development
-      'sensorial': 'sensory',
-      'language': 'language',
-      'cognitive': 'cognitive',
+      'hand_eye_coordination': 'physical',
+      'coordination': 'physical',
+      
+      // Social-Emotional Development
       'social': 'social_emotional',
       'emotional': 'social_emotional',
       'social_emotional': 'social_emotional',
-      'adaptive': 'adaptive'
+      'social_awareness': 'social_emotional',
+      'emotional_regulation': 'social_emotional',
+      'relationship_building': 'social_emotional',
+      
+      // Adaptive Development
+      'adaptive': 'adaptive',
+      'self_care': 'adaptive',
+      'daily_living': 'adaptive',
+      'independence': 'adaptive',
+      'practical_life': 'adaptive', // Many practical life skills are adaptive
+      
+      // Other Domains
+      'sensorial': 'sensory',
+      'language': 'language',
+      'cognitive': 'cognitive'
     };
     return domainMap[area] || area;
   };
