@@ -12,32 +12,46 @@ import {
   Loader2,
   User,
   Package,
-  ArrowUpRight
+  ArrowUpRight,
+  Users,
+  Award,
+  Book,
+  Calendar,
+  Filter,
+  ChevronRight,
+  Clock,
+  CheckCircle,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
 import AllChildrenWeeklyView from '@/app/components/parent/AllChildrenWeeklyView';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
 import { ErrorBoundary } from 'react-error-boundary';
-import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc, setDoc } from 'firebase/firestore';
+import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc, setDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import ProgressCelebration from '@/components/parent/ProgressCelebration';
+import { Timestamp } from 'firebase/firestore';
 
 interface ChildSkill {
   id: string;
   childId: string;
   skillId: string;
+  skillName?: string;
   status: 'not_started' | 'emerging' | 'developing' | 'mastered';
-  lastAssessed?: any;
-  notes?: string;
+  lastAssessed?: Timestamp;
 }
 
 interface Child {
   id: string;
-  name?: string;
+  name: string;
+  birthDate?: any;
   ageGroup?: string;
-  userId?: string;
-  skillProgress: {
+  interests?: string[];
+  active?: boolean;
+  skillProgress?: {
     emerging: number;
     developing: number;
     mastered: number;
@@ -65,6 +79,7 @@ export default function Dashboard() {
   );
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
+  const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
   const materialsForecastRef = useRef<{ fetchMaterialsNeeded: () => void }>(null);
   
   // Update URL when parameters change
@@ -83,56 +98,48 @@ export default function Dashboard() {
     router.replace(`/dashboard?${params.toString()}`, { scroll: false });
   }, [router]);
   
-  // Fetch children data and their skill progress
+  // Fetch children and their skills
   useEffect(() => {
-    async function fetchChildren() {
-      if (!currentUser) return;
-      
+    async function fetchData() {
       try {
-        const childrenSnapshot = await getDocs(
-          query(collection(db, 'children'), where('userId', '==', currentUser.uid))
+        // Fetch children
+        const childrenQuery = query(
+          collection(db, 'children'),
+          where('userId', '==', currentUser?.uid)
         );
-        
-        const childrenData = await Promise.all(childrenSnapshot.docs.map(async (doc) => {
-          const childData = { id: doc.id, ...doc.data() } as Child;
-          
-          // Fetch child's skills
-          const skillsSnapshot = await getDocs(
-            query(collection(db, 'childSkills'), where('childId', '==', doc.id))
-          );
-          
-          const skills = skillsSnapshot.docs.map(skillDoc => ({
-            id: skillDoc.id,
-            ...skillDoc.data()
-          })) as ChildSkill[];
-          
-          // Calculate skill progress statistics
-          const skillProgress = {
-            emerging: skills.filter(s => s.status === 'emerging').length,
-            developing: skills.filter(s => s.status === 'developing').length,
-            mastered: skills.filter(s => s.status === 'mastered').length
-          };
-          
-          return {
-            ...childData,
-            skillProgress
-          };
-        }));
-        
+        const childrenSnapshot = await getDocs(childrenQuery);
+        const childrenData = childrenSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Child[];
         setChildren(childrenData);
-        
-        // If no child is selected and we have children, select the first one
-        if (!selectedChildId && childrenData.length > 0) {
-          setSelectedChildId(childrenData[0].id);
-          updateUrlParams(selectedDate, childrenData[0].id);
+
+        // Fetch recent skills
+        if (childrenData.length > 0) {
+          const childIds = childrenData.map(child => child.id);
+          const skillsQuery = query(
+            collection(db, 'childSkills'),
+            where('childId', 'in', childIds),
+            where('status', 'in', ['mastered', 'developing', 'emerging']),
+            orderBy('lastAssessed', 'desc'),
+            limit(10)
+          );
+          const skillsSnapshot = await getDocs(skillsQuery);
+          const skillsData = skillsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as ChildSkill[];
+          setRecentSkills(skillsData);
         }
       } catch (error) {
-        console.error('Error fetching children:', error);
+        console.error('Error fetching data:', error);
       }
     }
-    
-    fetchChildren();
-  }, [currentUser, selectedChildId, selectedDate, updateUrlParams]);
+
+    if (currentUser?.uid) {
+      fetchData();
+    }
+  }, [currentUser]);
   
   // Handle date selection
   const handleDateSelect = useCallback((date: Date) => {
@@ -309,38 +316,28 @@ export default function Dashboard() {
             {/* Progress Overview */}
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Children's Progress</h2>
-              <div className="space-y-4">
-                {children.map((child) => (
-                  <div key={child.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{child.name}</h3>
-                        <p className="text-sm text-gray-500">{child.ageGroup}</p>
-                      </div>
-                      <Link
-                        href={`/dashboard/children/${child.id}/progress`}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-emerald-700 bg-emerald-100 hover:bg-emerald-200"
-                      >
-                        View Progress
-                        <ArrowUpRight className="ml-1 h-3 w-3" />
-                      </Link>
-                    </div>
-                    <div className="mt-3 grid grid-cols-3 gap-3">
-                      <div className="bg-amber-50 rounded-lg p-2 text-center">
-                        <div className="text-sm font-medium text-amber-700">{child.skillProgress?.emerging || 0}</div>
-                        <div className="text-xs text-amber-600">Emerging</div>
-                      </div>
-                      <div className="bg-blue-50 rounded-lg p-2 text-center">
-                        <div className="text-sm font-medium text-blue-700">{child.skillProgress?.developing || 0}</div>
-                        <div className="text-xs text-blue-600">Developing</div>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-2 text-center">
-                        <div className="text-sm font-medium text-green-700">{child.skillProgress?.mastered || 0}</div>
-                        <div className="text-xs text-green-600">Mastered</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-6">
+                {children.map((child) => {
+                  // Find recent milestones for this child
+                  const childSkills = recentSkills
+                    .filter(skill => skill.childId === child.id)
+                    .map(skill => ({
+                      skillName: skill.skillName || 'Skill',
+                      status: skill.status as 'emerging' | 'developing' | 'mastered',
+                      date: skill.lastAssessed ? skill.lastAssessed.toDate() : new Date()
+                    }))
+                    .sort((a, b) => b.date.getTime() - a.date.getTime())
+                    .slice(0, 5);
+
+                  return (
+                    <ProgressCelebration
+                      key={child.id}
+                      childId={child.id}
+                      childName={child.name}
+                      recentMilestones={childSkills}
+                    />
+                  );
+                })}
               </div>
             </div>
             

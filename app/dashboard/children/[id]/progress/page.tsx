@@ -23,6 +23,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
+import ProgressCelebration from '@/components/parent/ProgressCelebration';
 
 // Define interfaces
 interface ChildData {
@@ -69,7 +70,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   const [error, setError] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'activities'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'details'>('overview');
   const [timeRange, setTimeRange] = useState<'all' | 'month' | 'quarter'>('all');
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -468,6 +469,24 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Progress Tracking</h1>
           </div>
+
+          {/* Progress Celebration */}
+          <div className="mb-8">
+            <ProgressCelebration
+              childId={childId}
+              childName={child?.name || ''}
+              recentMilestones={skills
+                .filter(s => s.status !== 'not_started' && s.lastAssessed)
+                .map(skill => ({
+                  skillName: skill.name,
+                  status: skill.status as 'emerging' | 'developing' | 'mastered',
+                  date: skill.lastAssessed?.toDate() || new Date()
+                }))
+                .sort((a, b) => b.date.getTime() - a.date.getTime())
+                .slice(0, 5)
+              }
+            />
+          </div>
           
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 mb-6">
@@ -480,27 +499,17 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 }`}
                 onClick={() => setActiveTab('overview')}
               >
-                Overview
+                Progress Overview
               </button>
               <button
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'skills' 
+                  activeTab === 'details' 
                     ? 'border-emerald-500 text-emerald-600' 
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
-                onClick={() => setActiveTab('skills')}
+                onClick={() => setActiveTab('details')}
               >
-                Skill Development
-              </button>
-              <button
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'activities' 
-                    ? 'border-emerald-500 text-emerald-600' 
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-                onClick={() => setActiveTab('activities')}
-              >
-                Activities
+                Detailed Records
               </button>
             </nav>
           </div>
@@ -654,7 +663,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                         {progressRecords.length > 5 && (
                           <div className="text-center">
                             <button
-                              onClick={() => setActiveTab('activities')}
+                              onClick={() => setActiveTab('details')}
                               className="text-sm text-emerald-600 hover:text-emerald-700"
                             >
                               View all {progressRecords.length} activities
@@ -727,7 +736,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                         
                         <div className="text-center">
                           <button
-                            onClick={() => setActiveTab('skills')}
+                            onClick={() => setActiveTab('details')}
                             className="text-sm text-emerald-600 hover:text-emerald-700"
                           >
                             View all skills
@@ -745,8 +754,8 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
             </div>
           )}
           
-          {/* Skills Tab */}
-          {activeTab === 'skills' && (
+          {/* Details Tab */}
+          {activeTab === 'details' && (
             <div className="space-y-6">
               {/* Developmental Domains Link */}
               <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -883,13 +892,9 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                   </table>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Activities Tab */}
-          {activeTab === 'activities' && (
-            <div>
-              <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
+
+              {/* Activity History */}
+              <div className="bg-white shadow rounded-lg overflow-hidden">
                 <div className="px-4 py-5 border-b border-gray-200 flex flex-wrap gap-4 items-center justify-between">
                   <h2 className="text-lg font-medium text-gray-900">Activity History</h2>
                   
