@@ -20,7 +20,11 @@ import {
   Clock,
   Award,
   Info,
-  BookOpen
+  BookOpen,
+  Flower2,
+  Sprout,
+  Leaf,
+  CircleDot
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
@@ -349,13 +353,15 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'mastered': 
-        return <CheckCircle2 className="h-4 w-4 mr-1" />;
+        return <Flower2 className="h-4 w-4 mr-1" />;
       case 'developing': 
-        return <Activity className="h-4 w-4 mr-1" />;
+        return <Sprout className="h-4 w-4 mr-1" />;
       case 'emerging': 
-        return <TrendingUp className="h-4 w-4 mr-1" />;
+        return <Leaf className="h-4 w-4 mr-1" />;
+      case 'not_started':
+        return <CircleDot className="h-4 w-4 mr-1" />;
       default: 
-        return null;
+        return <CircleDot className="h-4 w-4 mr-1" />;
     }
   };
   
@@ -511,8 +517,8 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Progress Tracking</h1>
           </div>
 
-          {/* Progress Celebration */}
-          <div className="mb-8">
+          {/* Progress Celebration and Growth Stages */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <ProgressCelebration
               childId={childId}
               childName={child?.name || ''}
@@ -530,6 +536,49 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               }
               showProgressLinks={false}
             />
+            
+            {/* Growth Stages Explanation */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Understanding Growth Stages</h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-green-500">
+                    <Flower2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Mastered</h3>
+                    <p className="text-sm text-gray-500">Fully bloomed and thriving independently</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-blue-500">
+                    <Sprout className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Developing</h3>
+                    <p className="text-sm text-gray-500">Growing steadily with support</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-amber-500">
+                    <Leaf className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Emerging</h3>
+                    <p className="text-sm text-gray-500">First leaves appearing</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-gray-400">
+                    <CircleDot className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Not Started</h3>
+                    <p className="text-sm text-gray-500">Seed ready to be planted</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           
           {/* Tab Navigation */}
