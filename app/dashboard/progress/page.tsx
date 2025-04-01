@@ -228,58 +228,56 @@ export default function ProgressDashboardPage() {
         let skillsData: ChildSkill[] = [];
         try {
           const skillsSnapshot = await getDocs(skillsQuery);
-          skillsSnapshot.forEach(doc => {
-            const data = doc.data();
-            skillsData.push({
-              id: doc.id,
-              childId: data.childId,
-              skillId: data.skillId,
-              status: data.status,
-              lastAssessed: data.lastAssessed
-            });
-          });
+          skillsData = skillsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            childId: doc.data().childId,
+            skillId: doc.data().skillId,
+            status: doc.data().status,
+            lastAssessed: doc.data().lastAssessed
+          }));
         } catch (error) {
           console.error('Error fetching skills:', error);
           // Continue with empty skills data
         }
 
-        // Fetch skill names in chunks
-        const skillIds = Array.from(new Set(skillsData.map(s => s.skillId)));
+        // Fetch skill names all at once
+        const skillIds = Array.from(new Set(skillsData.map(s => s.skillId))).filter(Boolean);
         const skillNames: Record<string, string> = {};
 
-        try {
-          // Process skill IDs in chunks of 10
-          for (let i = 0; i < skillIds.length; i += 10) {
-            const chunk = skillIds.slice(i, i + 10);
+        if (skillIds.length > 0) {
+          try {
+            // Fetch all skills in one query if possible
+            const skillNamesQuery = query(
+              collection(db, 'developmentalSkills'),
+              where('__name__', 'in', skillIds)
+            );
+            
             try {
-              const skillNamesQuery = query(
-                collection(db, 'developmentalSkills'),
-                where('__name__', 'in', chunk)
-              );
               const skillNamesSnapshot = await getDocs(skillNamesQuery);
               skillNamesSnapshot.forEach(doc => {
                 skillNames[doc.id] = doc.data().name || 'Unknown Skill';
               });
-            } catch (chunkError) {
-              console.error('Error fetching skill names chunk:', chunkError);
-              // Set unknown skill names for this chunk
-              chunk.forEach(skillId => {
-                skillNames[skillId] = 'Unknown Skill';
+            } catch (error) {
+              console.error('Error fetching skill names:', error);
+              // Set default names if query fails
+              skillIds.forEach(skillId => {
+                if (skillId) skillNames[skillId] = 'Unknown Skill';
               });
             }
+          } catch (error) {
+            console.error('Error with skill names query:', error);
+            // Set default names
+            skillIds.forEach(skillId => {
+              if (skillId) skillNames[skillId] = 'Unknown Skill';
+            });
           }
-        } catch (error) {
-          console.error('Error processing skill chunks:', error);
-          // Set all skill names to unknown
-          skillIds.forEach(skillId => {
-            skillNames[skillId] = 'Unknown Skill';
-          });
         }
 
         // Enrich skills data with names
         const skillsWithNames = skillsData.map(skill => ({
           ...skill,
-          skillName: skillNames[skill.skillId] || 'Unknown Skill'
+          skillName: skill.skillId && skillNames[skill.skillId] ? skillNames[skill.skillId] : 'Unknown Skill'
         }));
 
         setRecentSkills(skillsWithNames);
@@ -287,32 +285,71 @@ export default function ProgressDashboardPage() {
         // Calculate progress summaries for each child
         const summaries: ProgressSummary[] = [];
         
+        // Fetch all progress records in one query
+        const allProgressQuery = query(
+          collection(db, 'progressRecords'),
+          where('childId', 'in', childIds)
+        );
+        
+        const allProgressSnapshot = await getDocs(allProgressQuery);
+        const allProgress: Record<string, ProgressRecord[]> = {};
+        
+        // Initialize arrays for each child
+        childIds.forEach(id => {
+          allProgress[id] = [];
+        });
+        
+        // Group progress records by child
+        allProgressSnapshot.forEach(doc => {
+          const data = doc.data() as Omit<ProgressRecord, 'id'>;
+          if (data.childId && allProgress[data.childId]) {
+            allProgress[data.childId].push({
+              id: doc.id,
+              childId: data.childId,
+              activityId: data.activityId,
+              activityTitle: data.activityTitle,
+              completionStatus: data.completionStatus,
+              date: data.date,
+              engagementLevel: data.engagementLevel,
+              notes: data.notes,
+              skillsDemonstrated: data.skillsDemonstrated
+            });
+          }
+        });
+        
+        // Fetch all skills in one query
+        const allSkillsQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', 'in', childIds)
+        );
+        
+        const allSkillsSnapshot = await getDocs(allSkillsQuery);
+        const allSkills: Record<string, ChildSkill[]> = {};
+        
+        // Initialize arrays for each child
+        childIds.forEach(id => {
+          allSkills[id] = [];
+        });
+        
+        // Group skills by child
+        allSkillsSnapshot.forEach(doc => {
+          const data = doc.data() as Omit<ChildSkill, 'id'>;
+          if (data.childId && allSkills[data.childId]) {
+            allSkills[data.childId].push({
+              id: doc.id,
+              childId: data.childId,
+              skillId: data.skillId,
+              skillName: data.skillName,
+              status: data.status,
+              lastAssessed: data.lastAssessed
+            });
+          }
+        });
+        
+        // Calculate summaries for each child
         for (const child of childrenData) {
-          // Get all progress records for this child
-          const childProgressQuery = query(
-            collection(db, 'progressRecords'),
-            where('childId', '==', child.id)
-          );
-          
-          const childProgressSnapshot = await getDocs(childProgressQuery);
-          const childProgress: ProgressRecord[] = [];
-          
-          childProgressSnapshot.forEach(doc => {
-            childProgress.push({ id: doc.id, ...doc.data() } as ProgressRecord);
-          });
-          
-          // Get all skills for this child
-          const childSkillsQuery = query(
-            collection(db, 'childSkills'),
-            where('childId', '==', child.id)
-          );
-          
-          const childSkillsSnapshot = await getDocs(childSkillsQuery);
-          const childSkills: ChildSkill[] = [];
-          
-          childSkillsSnapshot.forEach(doc => {
-            childSkills.push({ id: doc.id, ...doc.data() } as ChildSkill);
-          });
+          const childProgress = allProgress[child.id] || [];
+          const childSkills = allSkills[child.id] || [];
           
           // Calculate summary statistics
           const totalActivities = childProgress.length;

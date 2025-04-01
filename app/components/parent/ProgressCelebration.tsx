@@ -101,10 +101,10 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
         {showProgressLinks && (
           <div className="flex gap-4 mt-4">
             <Link
-              href={`/dashboard/children/${childId}/activities`}
+              href={`/dashboard/children/${childId}/progress`}
               className="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
             >
-              Find Activities
+              View Progress
             </Link>
           </div>
         )}
