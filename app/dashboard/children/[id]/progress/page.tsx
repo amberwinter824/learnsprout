@@ -433,6 +433,32 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
     }
   };
   
+  // Map skill areas to their corresponding domains
+  const mapAreaToDomain = (area: string) => {
+    const domainMap: Record<string, string> = {
+      'motor': 'physical',
+      'fine_motor': 'physical',
+      'gross_motor': 'physical',
+      'practical_life': 'physical', // Many practical life skills involve physical development
+      'sensorial': 'sensory',
+      'language': 'language',
+      'cognitive': 'cognitive',
+      'social': 'social_emotional',
+      'emotional': 'social_emotional',
+      'social_emotional': 'social_emotional',
+      'adaptive': 'adaptive'
+    };
+    return domainMap[area] || area;
+  };
+
+  // Filter and transform skills for each domain
+  const getSkillsByDomain = (domain: string) => {
+    return skills.filter(skill => {
+      const mappedDomain = mapAreaToDomain(skill.area);
+      return mappedDomain === domain;
+    });
+  };
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -783,9 +809,8 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
 
               {/* Skills Journey Map */}
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory', 'play'].map((area) => {
-                  const areaSkills = skills
-                    .filter(skill => skill.area === area)
+                {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory'].map((domain) => {
+                  const domainSkills = getSkillsByDomain(domain)
                     .map(skill => ({
                       id: skill.id,
                       skillId: skill.id,
@@ -797,14 +822,14 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                     }));
                   
                   return (
-                    <div key={area} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div key={domain} className="bg-white rounded-lg shadow-sm overflow-hidden">
                       <div className="px-4 py-3 border-b border-gray-200">
-                        <h3 className="text-lg font-medium text-gray-900">{getAreaLabel(area)}</h3>
+                        <h3 className="text-lg font-medium text-gray-900">{getAreaLabel(domain)}</h3>
                       </div>
                       <div className="p-4">
                         <SkillsJourneyMap
-                          skills={areaSkills}
-                          area={area}
+                          skills={domainSkills}
+                          area={domain}
                           onUpdateSkill={handleUpdateSkillStatus}
                         />
                       </div>
@@ -832,7 +857,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">All Areas</option>
-                    {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory', 'play'].map((area) => (
+                    {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory'].map((area) => (
                       <option key={area} value={area}>
                         {getAreaLabel(area)}
                       </option>
