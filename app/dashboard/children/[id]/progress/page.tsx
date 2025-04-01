@@ -485,6 +485,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 .sort((a, b) => b.date.getTime() - a.date.getTime())
                 .slice(0, 5)
               }
+              showProgressLinks={false}
             />
           </div>
           

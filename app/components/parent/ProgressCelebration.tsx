@@ -1,119 +1,116 @@
-import React from 'react';
+import { FC } from 'react';
 import Link from 'next/link';
-import { Award, Sparkles, TrendingUp } from 'lucide-react';
+import { FaStar, FaArrowUp, FaSeedling } from 'react-icons/fa';
+
+interface Milestone {
+  id: string;
+  skillId: string;
+  skillName: string;
+  status: 'mastered' | 'developing' | 'emerging';
+  lastAssessed: string;
+}
 
 interface ProgressCelebrationProps {
   childId: string;
   childName: string;
-  recentMilestones: {
-    skillName: string;
-    status: 'emerging' | 'developing' | 'mastered';
-    date: Date;
-  }[];
+  recentMilestones: Milestone[];
+  showProgressLinks?: boolean;
 }
 
-export default function ProgressCelebration({
+const ProgressCelebration: FC<ProgressCelebrationProps> = ({
   childId,
   childName,
-  recentMilestones
-}: ProgressCelebrationProps) {
-  // Sort milestones by significance (mastered > developing > emerging)
+  recentMilestones,
+  showProgressLinks = true
+}) => {
   const sortedMilestones = [...recentMilestones].sort((a, b) => {
     const statusOrder = { mastered: 3, developing: 2, emerging: 1 };
     return statusOrder[b.status] - statusOrder[a.status];
   });
 
-  // Find the most significant milestone
-  const mostSignificantMilestone = sortedMilestones[0];
-
-  // Get appropriate message and icon based on status
-  const getStatusInfo = (status: 'emerging' | 'developing' | 'mastered') => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'mastered':
-        return {
-          message: 'has mastered',
-          icon: Award,
-          color: 'text-green-500'
-        };
+        return <FaStar className="text-yellow-400 inline-block" />;
       case 'developing':
-        return {
-          message: 'is developing',
-          icon: TrendingUp,
-          color: 'text-blue-500'
-        };
+        return <FaArrowUp className="text-blue-500 inline-block" />;
       case 'emerging':
-        return {
-          message: 'is showing interest in',
-          icon: Sparkles,
-          color: 'text-amber-500'
-        };
+        return <FaSeedling className="text-green-500 inline-block" />;
       default:
-        return {
-          message: 'is working on',
-          icon: TrendingUp,
-          color: 'text-gray-500'
-        };
+        return null;
     }
   };
 
-  const statusInfo = mostSignificantMilestone ? getStatusInfo(mostSignificantMilestone.status) : null;
+  const getStatusMessage = (status: string) => {
+    switch (status) {
+      case 'mastered':
+        return 'mastered';
+      case 'developing':
+        return 'is developing';
+      case 'emerging':
+        return 'is beginning to learn';
+      default:
+        return '';
+    }
+  };
+
+  if (!recentMilestones.length) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <p className="text-gray-600">
+          No recent progress to celebrate yet. Keep working with {childName}!
+        </p>
+        {showProgressLinks && (
+          <div className="mt-4">
+            <Link
+              href={`/dashboard/children/${childId}/activities`}
+              className="text-blue-600 hover:text-blue-800 font-medium mr-6"
+            >
+              Find Activities
+            </Link>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const mostSignificantMilestone = sortedMilestones[0];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-medium text-gray-900">{childName}</h3>
-          {mostSignificantMilestone && statusInfo && (
-            <div className="mt-2 flex items-center text-sm text-gray-600">
-              <statusInfo.icon className={`h-4 w-4 mr-1 ${statusInfo.color}`} />
-              <span>
-                {statusInfo.message} <span className="font-medium">{mostSignificantMilestone.skillName}</span>
-              </span>
-            </div>
-          )}
-        </div>
-        <Link
-          href={`/dashboard/children/${childId}/progress`}
-          className="text-sm text-emerald-600 hover:text-emerald-700"
-        >
-          View Progress
-        </Link>
-      </div>
-
-      {recentMilestones.length > 0 && (
-        <div className="mt-4">
-          <div className="text-xs font-medium text-gray-500 mb-2">Recent Milestones</div>
-          <div className="space-y-2">
-            {recentMilestones.map((milestone, index) => {
-              const info = getStatusInfo(milestone.status);
-              return (
-                <div key={index} className="flex items-center text-sm">
-                  <info.icon className={`h-4 w-4 mr-2 ${info.color}`} />
-                  <span className="text-gray-600">
-                    {milestone.skillName}
-                  </span>
-                </div>
-              );
-            })}
+    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="space-y-4">
+        <div className="flex items-start">
+          <div className="mr-3 mt-1">
+            {getStatusIcon(mostSignificantMilestone.status)}
+          </div>
+          <div>
+            <p className="text-gray-800">
+              <span className="font-medium">{childName}</span>{' '}
+              {getStatusMessage(mostSignificantMilestone.status)}{' '}
+              <span className="font-medium">{mostSignificantMilestone.skillName}</span>!
+            </p>
+            {sortedMilestones.length > 1 && (
+              <p className="text-gray-600 mt-2">
+                Plus {sortedMilestones.length - 1} more recent milestone
+                {sortedMilestones.length > 2 ? 's' : ''}!
+              </p>
+            )}
           </div>
         </div>
-      )}
 
-      <div className="mt-4 flex gap-2">
-        <Link
-          href={`/dashboard/activities?childId=${childId}`}
-          className="text-xs text-emerald-600 hover:text-emerald-700"
-        >
-          Find Activities
-        </Link>
-        <span className="text-gray-300">•</span>
-        <Link
-          href={`/dashboard/children/${childId}/progress`}
-          className="text-xs text-emerald-600 hover:text-emerald-700"
-        >
-          View Progress
-        </Link>
+        {showProgressLinks && (
+          <div className="flex gap-4 mt-4">
+            <Link
+              href={`/dashboard/children/${childId}/activities`}
+              className="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+            >
+              Find Activities
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
-} 
+};
+
+export default ProgressCelebration; 
