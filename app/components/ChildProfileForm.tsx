@@ -11,25 +11,100 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 // Define interests appropriate for all age ranges
 const INTEREST_OPTIONS = [
   // Infant interests (0-1)
-  { value: "music", label: "Music & Sounds", ageGroups: ["0-1", "1-2", "2-3", "3-4", "4-5", "5-6"] },
-  { value: "visual", label: "Visual Stimulation", ageGroups: ["0-1", "1-2"] },
-  { value: "touch", label: "Tactile Exploration", ageGroups: ["0-1", "1-2", "2-3"] },
+  { 
+    value: "music", 
+    label: "Music & Sounds", 
+    description: "Enjoys listening to music, making sounds, or playing with musical toys",
+    ageGroups: ["0-1", "1-2", "2-3", "3-4", "4-5", "5-6"] 
+  },
+  { 
+    value: "visual", 
+    label: "Visual Stimulation", 
+    description: "Fascinated by bright colors, patterns, or watching objects move",
+    ageGroups: ["0-1", "1-2"] 
+  },
+  { 
+    value: "touch", 
+    label: "Tactile Exploration", 
+    description: "Loves touching different textures, feeling objects, or exploring with hands",
+    ageGroups: ["0-1", "1-2", "2-3"] 
+  },
   
   // Toddler interests (1-3)
-  { value: "movement", label: "Movement & Motion", ageGroups: ["0-1", "1-2", "2-3", "3-4"] },
-  { value: "objects", label: "Object Permanence", ageGroups: ["0-1", "1-2"] },
-  { value: "stacking", label: "Stacking & Nesting", ageGroups: ["1-2", "2-3"] },
-  { value: "water", label: "Water Play", ageGroups: ["1-2", "2-3", "3-4", "4-5"] },
-  { value: "practical_life", label: "Practical Life Activities", ageGroups: ["1-2", "2-3", "3-4", "4-5", "5-6"] },
+  { 
+    value: "movement", 
+    label: "Movement & Motion", 
+    description: "Enjoys physical activities like crawling, walking, climbing, or dancing",
+    ageGroups: ["0-1", "1-2", "2-3", "3-4"] 
+  },
+  { 
+    value: "objects", 
+    label: "Object Permanence", 
+    description: "Shows understanding that objects still exist even when hidden (e.g., playing peek-a-boo, looking for hidden toys)",
+    ageGroups: ["0-1", "1-2"] 
+  },
+  { 
+    value: "stacking", 
+    label: "Stacking & Nesting", 
+    description: "Likes building towers, stacking blocks, or fitting objects inside each other",
+    ageGroups: ["1-2", "2-3"] 
+  },
+  { 
+    value: "water", 
+    label: "Water Play", 
+    description: "Enjoys playing with water, splashing, or water-based activities",
+    ageGroups: ["1-2", "2-3", "3-4", "4-5"] 
+  },
+  { 
+    value: "practical_life", 
+    label: "Practical Life Activities", 
+    description: "Interested in everyday tasks like pouring, sorting, or helping with simple chores",
+    ageGroups: ["1-2", "2-3", "3-4", "4-5", "5-6"] 
+  },
   
   // Preschool interests (3-6)
-  { value: "art", label: "Art & Creating", ageGroups: ["2-3", "3-4", "4-5", "5-6"] },
-  { value: "nature", label: "Nature & Animals", ageGroups: ["1-2", "2-3", "3-4", "4-5", "5-6"] },
-  { value: "numbers", label: "Numbers & Counting", ageGroups: ["2-3", "3-4", "4-5", "5-6"] },
-  { value: "letters", label: "Letters & Words", ageGroups: ["2-3", "3-4", "4-5", "5-6"] },
-  { value: "building", label: "Building & Construction", ageGroups: ["1-2", "2-3", "3-4", "4-5", "5-6"] },
-  { value: "pretend", label: "Pretend Play", ageGroups: ["2-3", "3-4", "4-5", "5-6"] },
-  { value: "sensory", label: "Sensory Exploration", ageGroups: ["0-1", "1-2", "2-3", "3-4", "4-5"] }
+  { 
+    value: "art", 
+    label: "Art & Creating", 
+    description: "Enjoys drawing, painting, or making crafts",
+    ageGroups: ["2-3", "3-4", "4-5", "5-6"] 
+  },
+  { 
+    value: "nature", 
+    label: "Nature & Animals", 
+    description: "Fascinated by plants, animals, or outdoor exploration",
+    ageGroups: ["1-2", "2-3", "3-4", "4-5", "5-6"] 
+  },
+  { 
+    value: "numbers", 
+    label: "Numbers & Counting", 
+    description: "Shows interest in counting, recognizing numbers, or basic math concepts",
+    ageGroups: ["2-3", "3-4", "4-5", "5-6"] 
+  },
+  { 
+    value: "letters", 
+    label: "Letters & Words", 
+    description: "Interested in letters, words, or early reading activities",
+    ageGroups: ["2-3", "3-4", "4-5", "5-6"] 
+  },
+  { 
+    value: "building", 
+    label: "Building & Construction", 
+    description: "Enjoys building with blocks, creating structures, or assembling things",
+    ageGroups: ["1-2", "2-3", "3-4", "4-5", "5-6"] 
+  },
+  { 
+    value: "pretend", 
+    label: "Pretend Play", 
+    description: "Loves imaginative play, role-playing, or make-believe activities",
+    ageGroups: ["2-3", "3-4", "4-5", "5-6"] 
+  },
+  { 
+    value: "sensory", 
+    label: "Sensory Exploration", 
+    description: "Enjoys activities that engage the senses (touch, smell, taste, sight, sound)",
+    ageGroups: ["0-1", "1-2", "2-3", "3-4", "4-5"] 
+  }
 ];
 
 // Define form validation rules
@@ -263,14 +338,14 @@ export default function ChildProfileForm({
               Interests
             </label>
             <p className="text-xs text-gray-500 mb-3">
-              Select all that apply. These help us suggest appropriate activities.
+              Select all that apply. These help us suggest appropriate activities. Each interest includes a description to help you understand what it means.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {filteredInterests.map((option) => (
                 <label 
                   key={option.value} 
                   className={`
-                    inline-flex items-center px-3 py-2 rounded border 
+                    inline-flex flex-col px-3 py-2 rounded border 
                     ${interests.includes(option.value) 
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
                       : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}
@@ -283,7 +358,8 @@ export default function ChildProfileForm({
                     onChange={() => toggleInterest(option.value)}
                     className="sr-only"
                   />
-                  <span>{option.label}</span>
+                  <span className="font-medium">{option.label}</span>
+                  <span className="text-xs mt-1 opacity-75">{option.description}</span>
                 </label>
               ))}
             </div>
