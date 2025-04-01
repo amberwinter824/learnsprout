@@ -25,6 +25,7 @@ import { updateLastGeneratedTimestamp } from '@/lib/weeklyPlanService';
 import ActivityDetailModal from '@/app/components/ActivityDetailModal';
 import { ActivityObservationForm } from '@/app/components/ActivityObservationForm';
 import ActivityCard from '@/app/components/ActivityCard';
+import QuickActivityFilter from '@/app/components/QuickActivityFilter';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -130,6 +131,7 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
   const [generatingPlan, setGeneratingPlan] = useState<boolean>(false);
   const [showAddObservation, setShowAddObservation] = useState<boolean>(false);
   const [selectedActivityForObservation, setSelectedActivityForObservation] = useState<SelectedActivityForObservation | null>(null);
+  const [showQuickActivities, setShowQuickActivities] = useState<boolean>(false);
 
   // Initialize days and time slots
   const daysArray: string[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -478,11 +480,17 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
     }
   }
 
-  // Filter activities based on search term
-  const filteredActivities = activities.filter(activity =>
-    activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (activity.description && activity.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter activities based on search term and quick activities filter
+  const filteredActivities = activities.filter(activity => {
+    const matchesSearch = activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (activity.description && activity.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    if (showQuickActivities) {
+      return matchesSearch && activity.duration && activity.duration <= 10;
+    }
+    
+    return matchesSearch;
+  });
 
   // Get area color class for an activity
   function getAreaColorClass(area?: string): string {
@@ -585,6 +593,14 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
         </div>
       </div>
       
+      {/* Quick Activities Filter */}
+      <div className="mb-6 flex justify-end">
+        <QuickActivityFilter
+          showQuickActivities={showQuickActivities}
+          onToggle={() => setShowQuickActivities(!showQuickActivities)}
+        />
+      </div>
+
       {/* Generate Plan button */}
       <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
         <div className="px-6 py-5 border-b border-gray-200 flex items-center">

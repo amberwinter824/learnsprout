@@ -96,15 +96,23 @@ export default function ActivityCard({
           <h4 className={`font-medium text-sm ${activity.status === 'completed' ? 'text-green-800' : 'text-gray-800'} line-clamp-2`}>
             {activityData?.title || 'Unknown Activity'}
           </h4>
-          <span className={`px-2 py-0.5 text-xs rounded-full flex items-center ${getStatusColor(activity.status)}`}>
-            {activity.status === 'completed' && <CheckCircle2 className="h-3 w-3 mr-1" />}
-            {activity.status}
-          </span>
+          <div className="flex items-center space-x-2">
+            {activityData?.duration && activityData.duration <= 10 && (
+              <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 flex items-center">
+                <Clock className="h-3 w-3 mr-1" />
+                Quick
+              </span>
+            )}
+            <span className={`px-2 py-0.5 text-xs rounded-full flex items-center ${getStatusColor(activity.status)}`}>
+              {activity.status === 'completed' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+              {activity.status}
+            </span>
+          </div>
         </div>
         
         <div className="flex items-center text-xs text-gray-500 mt-2 space-x-3">
           {activityData?.duration && (
-            <span className="flex items-center">
+            <span className="flex items-center font-medium">
               <Clock className="h-3 w-3 mr-1" />
               {activityData.duration} min
             </span>
