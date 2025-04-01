@@ -22,6 +22,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
+import ProgressCelebration from '@/components/parent/ProgressCelebration';
 
 // Define interfaces
 interface Child {
@@ -227,58 +228,56 @@ export default function ProgressDashboardPage() {
         let skillsData: ChildSkill[] = [];
         try {
           const skillsSnapshot = await getDocs(skillsQuery);
-          skillsSnapshot.forEach(doc => {
-            const data = doc.data();
-            skillsData.push({
-              id: doc.id,
-              childId: data.childId,
-              skillId: data.skillId,
-              status: data.status,
-              lastAssessed: data.lastAssessed
-            });
-          });
+          skillsData = skillsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            childId: doc.data().childId,
+            skillId: doc.data().skillId,
+            status: doc.data().status,
+            lastAssessed: doc.data().lastAssessed
+          }));
         } catch (error) {
           console.error('Error fetching skills:', error);
           // Continue with empty skills data
         }
 
-        // Fetch skill names in chunks
-        const skillIds = Array.from(new Set(skillsData.map(s => s.skillId)));
+        // Fetch skill names all at once
+        const skillIds = Array.from(new Set(skillsData.map(s => s.skillId))).filter(Boolean);
         const skillNames: Record<string, string> = {};
 
-        try {
-          // Process skill IDs in chunks of 10
-          for (let i = 0; i < skillIds.length; i += 10) {
-            const chunk = skillIds.slice(i, i + 10);
+        if (skillIds.length > 0) {
+          try {
+            // Fetch all skills in one query if possible
+            const skillNamesQuery = query(
+              collection(db, 'developmentalSkills'),
+              where('__name__', 'in', skillIds)
+            );
+            
             try {
-              const skillNamesQuery = query(
-                collection(db, 'developmentalSkills'),
-                where('__name__', 'in', chunk)
-              );
               const skillNamesSnapshot = await getDocs(skillNamesQuery);
               skillNamesSnapshot.forEach(doc => {
                 skillNames[doc.id] = doc.data().name || 'Unknown Skill';
               });
-            } catch (chunkError) {
-              console.error('Error fetching skill names chunk:', chunkError);
-              // Set unknown skill names for this chunk
-              chunk.forEach(skillId => {
-                skillNames[skillId] = 'Unknown Skill';
+            } catch (error) {
+              console.error('Error fetching skill names:', error);
+              // Set default names if query fails
+              skillIds.forEach(skillId => {
+                if (skillId) skillNames[skillId] = 'Unknown Skill';
               });
             }
+          } catch (error) {
+            console.error('Error with skill names query:', error);
+            // Set default names
+            skillIds.forEach(skillId => {
+              if (skillId) skillNames[skillId] = 'Unknown Skill';
+            });
           }
-        } catch (error) {
-          console.error('Error processing skill chunks:', error);
-          // Set all skill names to unknown
-          skillIds.forEach(skillId => {
-            skillNames[skillId] = 'Unknown Skill';
-          });
         }
 
         // Enrich skills data with names
         const skillsWithNames = skillsData.map(skill => ({
           ...skill,
-          skillName: skillNames[skill.skillId] || 'Unknown Skill'
+          skillName: skill.skillId && skillNames[skill.skillId] ? skillNames[skill.skillId] : 'Unknown Skill'
         }));
 
         setRecentSkills(skillsWithNames);
@@ -286,32 +285,71 @@ export default function ProgressDashboardPage() {
         // Calculate progress summaries for each child
         const summaries: ProgressSummary[] = [];
         
+        // Fetch all progress records in one query
+        const allProgressQuery = query(
+          collection(db, 'progressRecords'),
+          where('childId', 'in', childIds)
+        );
+        
+        const allProgressSnapshot = await getDocs(allProgressQuery);
+        const allProgress: Record<string, ProgressRecord[]> = {};
+        
+        // Initialize arrays for each child
+        childIds.forEach(id => {
+          allProgress[id] = [];
+        });
+        
+        // Group progress records by child
+        allProgressSnapshot.forEach(doc => {
+          const data = doc.data() as Omit<ProgressRecord, 'id'>;
+          if (data.childId && allProgress[data.childId]) {
+            allProgress[data.childId].push({
+              id: doc.id,
+              childId: data.childId,
+              activityId: data.activityId,
+              activityTitle: data.activityTitle,
+              completionStatus: data.completionStatus,
+              date: data.date,
+              engagementLevel: data.engagementLevel,
+              notes: data.notes,
+              skillsDemonstrated: data.skillsDemonstrated
+            });
+          }
+        });
+        
+        // Fetch all skills in one query
+        const allSkillsQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', 'in', childIds)
+        );
+        
+        const allSkillsSnapshot = await getDocs(allSkillsQuery);
+        const allSkills: Record<string, ChildSkill[]> = {};
+        
+        // Initialize arrays for each child
+        childIds.forEach(id => {
+          allSkills[id] = [];
+        });
+        
+        // Group skills by child
+        allSkillsSnapshot.forEach(doc => {
+          const data = doc.data() as Omit<ChildSkill, 'id'>;
+          if (data.childId && allSkills[data.childId]) {
+            allSkills[data.childId].push({
+              id: doc.id,
+              childId: data.childId,
+              skillId: data.skillId,
+              skillName: data.skillName,
+              status: data.status,
+              lastAssessed: data.lastAssessed
+            });
+          }
+        });
+        
+        // Calculate summaries for each child
         for (const child of childrenData) {
-          // Get all progress records for this child
-          const childProgressQuery = query(
-            collection(db, 'progressRecords'),
-            where('childId', '==', child.id)
-          );
-          
-          const childProgressSnapshot = await getDocs(childProgressQuery);
-          const childProgress: ProgressRecord[] = [];
-          
-          childProgressSnapshot.forEach(doc => {
-            childProgress.push({ id: doc.id, ...doc.data() } as ProgressRecord);
-          });
-          
-          // Get all skills for this child
-          const childSkillsQuery = query(
-            collection(db, 'childSkills'),
-            where('childId', '==', child.id)
-          );
-          
-          const childSkillsSnapshot = await getDocs(childSkillsQuery);
-          const childSkills: ChildSkill[] = [];
-          
-          childSkillsSnapshot.forEach(doc => {
-            childSkills.push({ id: doc.id, ...doc.data() } as ChildSkill);
-          });
+          const childProgress = allProgress[child.id] || [];
+          const childSkills = allSkills[child.id] || [];
           
           // Calculate summary statistics
           const totalActivities = childProgress.length;
@@ -561,250 +599,134 @@ export default function ProgressDashboardPage() {
           <div className="mb-8">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Progress Summary</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {progressSummaries
                 .filter(summary => selectedChild === null || summary.childId === selectedChild)
-                .map(summary => (
-                  <div key={summary.childId} className="bg-white shadow rounded-lg overflow-hidden">
-                    <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {summary.childName}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Last activity: {summary.lastActivity ? getRelativeTime(summary.lastActivity) : 'Never'}
-                      </p>
-                    </div>
+                .map(summary => {
+                  // Find the child data
+                  const child = children.find(c => c.id === summary.childId);
+                  
+                  // Find recent milestones for this child
+                  const childSkills = recentSkills
+                    .filter(skill => skill.childId === summary.childId)
+                    .map(skill => ({
+                      id: skill.id,
+                      skillId: skill.skillId,
+                      skillName: skill.skillName || 'Skill',
+                      status: skill.status as 'mastered' | 'developing' | 'emerging',
+                      lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
+                    }))
+                    .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
+                    .slice(0, 5);
                     
-                    <div className="px-4 py-5 sm:p-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-emerald-50 p-3 rounded-lg">
-                          <div className="text-lg font-bold text-emerald-700">{summary.completedActivities}</div>
-                          <div className="text-xs text-gray-500">Activities Completed</div>
-                        </div>
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <div className="text-lg font-bold text-blue-700">{summary.recentActivities}</div>
-                          <div className="text-xs text-gray-500">Recent Activities</div>
-                        </div>
-                        <div className="bg-green-50 p-3 rounded-lg">
-                          <div className="text-lg font-bold text-green-700">{summary.masteredSkills}</div>
-                          <div className="text-xs text-gray-500">Mastered Skills</div>
-                        </div>
-                        <div className="bg-amber-50 p-3 rounded-lg">
-                          <div className="text-lg font-bold text-amber-700">{summary.inProgressSkills}</div>
-                          <div className="text-xs text-gray-500">Skills in Progress</div>
-                        </div>
-                      </div>
-                      
-                      {/* Skill Progress Bar */}
-                      <div className="mt-6">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Skill Progress</span>
-                          <span>
-                            {summary.totalSkills > 0 
-                              ? `${Math.round((summary.masteredSkills / summary.totalSkills) * 100)}% Mastered` 
-                              : '0% Mastered'}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                          <div 
-                            className="bg-emerald-500 h-2.5" 
-                            style={{ 
-                              width: `${summary.totalSkills > 0 
-                                ? (summary.masteredSkills / summary.totalSkills) * 100 
-                                : 0}%` 
-                            }}
-                          ></div>
-                          <div 
-                            className="bg-amber-400 h-2.5" 
-                            style={{ 
-                              width: `${summary.totalSkills > 0 
-                                ? (summary.inProgressSkills / summary.totalSkills) * 100 
-                                : 0}%` 
-                            }}
-                          ></div>
-                        </div>
-                        <div className="flex text-xs text-gray-500 mt-1 justify-between">
-                          <span className="flex items-center">
-                            <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
-                            Mastered
-                          </span>
-                          <span className="flex items-center">
-                            <span className="w-2 h-2 bg-amber-400 rounded-full mr-1"></span>
-                            In Progress
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-6 text-right">
-                        <Link 
-                          href={`/dashboard/children/${summary.childId}/progress`}
-                          className="inline-flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-700"
-                        >
-                          View detailed progress
-                          <ChevronRight className="ml-1 h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  return (
+                    <ProgressCelebration
+                      key={summary.childId}
+                      childId={summary.childId}
+                      childName={summary.childName}
+                      recentMilestones={childSkills}
+                    />
+                  );
+                })}
             </div>
           </div>
           
           {/* Recent Activities */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
-                <Link 
-                  href="/dashboard/activities"
-                  className="text-sm text-emerald-600 hover:text-emerald-700 inline-flex items-center"
-                >
-                  Browse All
-                  <ArrowUpRight className="ml-1 h-3 w-3" />
-                </Link>
-              </div>
-              
-              <div className="px-4 py-5 sm:p-6">
-                {recentProgress.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentProgress
-                      .filter(record => selectedChild === null || record.childId === selectedChild)
-                      .slice(0, 5)
-                      .map(record => (
-                        <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                          <div className="flex justify-between">
-                            <h3 className="font-medium text-gray-900">{record.activityTitle || 'Activity'}</h3>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(record.completionStatus)}`}>
-                              {record.completionStatus.charAt(0).toUpperCase() + record.completionStatus.slice(1).replace('_', ' ')}
-                            </span>
-                          </div>
-                          
-                          <div className="mt-1 flex items-center">
-                            <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                              {children.find(c => c.id === record.childId)?.name || 'Unknown Child'}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-2 flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {formatDate(record.date)}
-                            </span>
-                          </div>
-                          
-                          {record.notes && (
-                            <p className="mt-2 text-sm text-gray-600 line-clamp-2">{record.notes}</p>
-                          )}
-                          
-                          <Link 
-                            href={`/dashboard/children/${record.childId}?record=${record.id}`}
-                            className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
-                          >
-                            View details
-                          </Link>
-                        </div>
-                      ))
-                    }
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Book className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No activity records found</p>
-                  </div>
-                )}
-              </div>
+          <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
+            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
             </div>
             
-            {/* Recent Skill Progress */}
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Recent Skill Development</h2>
-              </div>
-              
-              <div className="px-4 py-5 sm:p-6">
-                {recentSkills.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentSkills
-                      .filter(skill => selectedChild === null || skill.childId === selectedChild)
-                      .slice(0, 5)
-                      .map(skill => (
-                        <div key={skill.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                          <div className="flex justify-between">
-                            <h3 className="font-medium text-gray-900">{skill.skillName || 'Skill'}</h3>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${getSkillStatusColor(skill.status)}`}>
-                              {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
+            <div className="p-6">
+              {recentProgress.length > 0 ? (
+                <div className="space-y-4">
+                  {recentProgress
+                    .filter(record => selectedChild === null || record.childId === selectedChild)
+                    .slice(0, 3) // Show fewer items for less overwhelm
+                    .map(record => (
+                      <div key={record.id} className="flex items-start p-4 bg-gray-50 rounded-lg">
+                        <div className={`flex-shrink-0 w-2 h-2 mt-1.5 mr-2 rounded-full ${
+                          record.completionStatus === 'completed' ? 'bg-green-500' :
+                          record.completionStatus === 'in_progress' ? 'bg-blue-500' :
+                          'bg-gray-500'
+                        }`} />
+                        <div className="flex-grow">
+                          <h3 className="font-medium text-gray-900">{record.activityTitle || 'Activity'}</h3>
+                          <div className="flex items-center text-xs text-gray-500 mt-1">
+                            <span className="font-medium text-blue-700 mr-2">
+                              {children.find(c => c.id === record.childId)?.name}
                             </span>
+                            <span>{formatDate(record.date)}</span>
                           </div>
-                          
-                          <div className="mt-1 flex items-center">
-                            <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                              {children.find(c => c.id === skill.childId)?.name || 'Unknown Child'}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-2 flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {formatDate(skill.lastAssessed)}
-                            </span>
-                          </div>
-                          
-                          <Link 
-                            href={`/dashboard/children/${skill.childId}/progress`}
-                            className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
-                          >
-                            View skill progress
-                          </Link>
                         </div>
-                      ))
-                    }
+                      </div>
+                    ))
+                  }
+                  <div className="text-center mt-4">
+                    <button
+                      onClick={() => router.push(selectedChild ? `/dashboard/children/${selectedChild}` : '/dashboard/children')}
+                      className="text-sm text-emerald-600 hover:text-emerald-700"
+                    >
+                      View all activities
+                    </button>
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Award className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No skill progress recorded yet</p>
-                    <p className="text-sm text-gray-500 mt-2">Complete activities to develop new skills</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-gray-500">No recent activities found</p>
+                </div>
+              )}
             </div>
           </div>
           
-          {/* Progress Insights */}
-          <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
+          {/* Recent Skill Progress */}
+          <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Progress Insights</h2>
+              <h2 className="text-lg font-medium text-gray-900">Recent Skill Development</h2>
             </div>
             
             <div className="px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Activity Trends */}
-                <div className="p-4 border rounded-lg bg-blue-50">
-                  <h3 className="font-medium text-blue-800 mb-2">Activity Engagement</h3>
-                  <p className="text-sm text-blue-700 mb-4">
-                    {(() => {
-                      const filteredSummaries = progressSummaries.filter(
-                        s => selectedChild === null || s.childId === selectedChild
-                      );
-                      
-                      const totalRecent = filteredSummaries.reduce((sum, s) => sum + s.recentActivities, 0);
-                      const totalActivities = filteredSummaries.reduce((sum, s) => sum + s.totalActivities, 0);
-                      
-                      if (totalActivities === 0) {
-                        return "No activities have been completed yet";
-                      }
-                      
-                      if (totalRecent === 0) {
-                        return "No activities have been completed in the last 30 days";
-                      }
-                      
-                      const percentage = Math.round((totalRecent / totalActivities) * 100);
-                      
-                      if (percentage > 50) {
-                        return `Strong recent engagement with ${totalRecent} activities in the last 30 days`;
-                      } else if (percentage > 20) {
-                        return `Moderate engagement with ${totalRecent} activities in the last 30 days`;
-                      } else {
-                        return `Light recent activity with ${totalRecent} activities in the last 30 days`;
-                      }
-                    })()}
-                  </p>
+              {recentSkills.length > 0 ? (
+                <div className="space-y-4">
+                  {recentSkills
+                    .filter(skill => selectedChild === null || skill.childId === selectedChild)
+                    .slice(0, 5)
+                    .map(skill => (
+                      <div key={skill.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                        <div className="flex justify-between">
+                          <h3 className="font-medium text-gray-900">{skill.skillName || 'Skill'}</h3>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${getSkillStatusColor(skill.status)}`}>
+                            {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
+                          </span>
+                        </div>
+                        
+                        <div className="mt-1 flex items-center">
+                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                            {children.find(c => c.id === skill.childId)?.name || 'Unknown Child'}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-2 flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {formatDate(skill.lastAssessed)}
+                          </span>
+                        </div>
+                        
+                        <Link 
+                          href={`/dashboard/children/${skill.childId}/progress`}
+                          className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 inline-block"
+                        >
+                          View skill progress
+                        </Link>
+                      </div>
+                    ))
+                  }
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Award className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No skill progress recorded yet</p>
+                  <p className="text-sm text-gray-500 mt-2">Complete activities to develop new skills</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

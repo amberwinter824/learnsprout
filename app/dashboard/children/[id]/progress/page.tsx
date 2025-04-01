@@ -20,9 +20,14 @@ import {
   Clock,
   Award,
   Info,
-  BookOpen
+  BookOpen,
+  Flower2,
+  Sprout,
+  Leaf,
+  CircleDot
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
+import ProgressCelebration from '@/components/parent/ProgressCelebration';
 
 // Define interfaces
 interface ChildData {
@@ -69,7 +74,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   const [error, setError] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'activities'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'details'>('overview');
   const [timeRange, setTimeRange] = useState<'all' | 'month' | 'quarter'>('all');
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -348,13 +353,15 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'mastered': 
-        return <CheckCircle2 className="h-4 w-4 mr-1" />;
+        return <Flower2 className="h-4 w-4 mr-1" />;
       case 'developing': 
-        return <Activity className="h-4 w-4 mr-1" />;
+        return <Sprout className="h-4 w-4 mr-1" />;
       case 'emerging': 
-        return <TrendingUp className="h-4 w-4 mr-1" />;
+        return <Leaf className="h-4 w-4 mr-1" />;
+      case 'not_started':
+        return <CircleDot className="h-4 w-4 mr-1" />;
       default: 
-        return null;
+        return <CircleDot className="h-4 w-4 mr-1" />;
     }
   };
   
@@ -432,6 +439,47 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
     }
   };
   
+  // Map skill areas to their corresponding domains
+  const mapAreaToDomain = (area: string) => {
+    const domainMap: Record<string, string> = {
+      // Physical Development
+      'motor': 'physical',
+      'fine_motor': 'physical',
+      'gross_motor': 'physical',
+      'hand_eye_coordination': 'physical',
+      'coordination': 'physical',
+      
+      // Social-Emotional Development
+      'social': 'social_emotional',
+      'emotional': 'social_emotional',
+      'social_emotional': 'social_emotional',
+      'social_awareness': 'social_emotional',
+      'emotional_regulation': 'social_emotional',
+      'relationship_building': 'social_emotional',
+      
+      // Adaptive Development
+      'adaptive': 'adaptive',
+      'self_care': 'adaptive',
+      'daily_living': 'adaptive',
+      'independence': 'adaptive',
+      'practical_life': 'adaptive', // Many practical life skills are adaptive
+      
+      // Other Domains
+      'sensorial': 'sensory',
+      'language': 'language',
+      'cognitive': 'cognitive'
+    };
+    return domainMap[area] || area;
+  };
+
+  // Filter and transform skills for each domain
+  const getSkillsByDomain = (domain: string) => {
+    return skills.filter(skill => {
+      const mappedDomain = mapAreaToDomain(skill.area);
+      return mappedDomain === domain;
+    });
+  };
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -468,6 +516,70 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Progress Tracking</h1>
           </div>
+
+          {/* Progress Celebration and Growth Stages */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <ProgressCelebration
+              childId={childId}
+              childName={child?.name || ''}
+              recentMilestones={skills
+                .filter(s => s.status !== 'not_started' && s.lastAssessed)
+                .map(skill => ({
+                  id: skill.id,
+                  skillId: skill.skillId,
+                  skillName: skill.name,
+                  status: skill.status as 'mastered' | 'developing' | 'emerging',
+                  lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
+                }))
+                .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
+                .slice(0, 5)
+              }
+              showProgressLinks={false}
+            />
+            
+            {/* Growth Stages Explanation */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Understanding Growth Stages</h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-green-500">
+                    <Flower2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Mastered</h3>
+                    <p className="text-sm text-gray-500">Fully bloomed and thriving independently</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-blue-500">
+                    <Sprout className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Developing</h3>
+                    <p className="text-sm text-gray-500">Growing steadily with support</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-amber-500">
+                    <Leaf className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Emerging</h3>
+                    <p className="text-sm text-gray-500">First leaves appearing</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-gray-400">
+                    <CircleDot className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Not Started</h3>
+                    <p className="text-sm text-gray-500">Seed ready to be planted</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 mb-6">
@@ -480,27 +592,17 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 }`}
                 onClick={() => setActiveTab('overview')}
               >
-                Overview
+                Progress Overview
               </button>
               <button
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'skills' 
+                  activeTab === 'details' 
                     ? 'border-emerald-500 text-emerald-600' 
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
-                onClick={() => setActiveTab('skills')}
+                onClick={() => setActiveTab('details')}
               >
-                Skill Development
-              </button>
-              <button
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'activities' 
-                    ? 'border-emerald-500 text-emerald-600' 
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-                onClick={() => setActiveTab('activities')}
-              >
-                Activities
+                Detailed Records
               </button>
             </nav>
           </div>
@@ -654,7 +756,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                         {progressRecords.length > 5 && (
                           <div className="text-center">
                             <button
-                              onClick={() => setActiveTab('activities')}
+                              onClick={() => setActiveTab('details')}
                               className="text-sm text-emerald-600 hover:text-emerald-700"
                             >
                               View all {progressRecords.length} activities
@@ -727,7 +829,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                         
                         <div className="text-center">
                           <button
-                            onClick={() => setActiveTab('skills')}
+                            onClick={() => setActiveTab('details')}
                             className="text-sm text-emerald-600 hover:text-emerald-700"
                           >
                             View all skills
@@ -745,8 +847,8 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
             </div>
           )}
           
-          {/* Skills Tab */}
-          {activeTab === 'skills' && (
+          {/* Details Tab */}
+          {activeTab === 'details' && (
             <div className="space-y-6">
               {/* Developmental Domains Link */}
               <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -771,9 +873,8 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
 
               {/* Skills Journey Map */}
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory', 'play'].map((area) => {
-                  const areaSkills = skills
-                    .filter(skill => skill.area === area)
+                {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory'].map((domain) => {
+                  const domainSkills = getSkillsByDomain(domain)
                     .map(skill => ({
                       id: skill.id,
                       skillId: skill.id,
@@ -785,14 +886,14 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                     }));
                   
                   return (
-                    <div key={area} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div key={domain} className="bg-white rounded-lg shadow-sm overflow-hidden">
                       <div className="px-4 py-3 border-b border-gray-200">
-                        <h3 className="text-lg font-medium text-gray-900">{getAreaLabel(area)}</h3>
+                        <h3 className="text-lg font-medium text-gray-900">{getAreaLabel(domain)}</h3>
                       </div>
                       <div className="p-4">
                         <SkillsJourneyMap
-                          skills={areaSkills}
-                          area={area}
+                          skills={domainSkills}
+                          area={domain}
                           onUpdateSkill={handleUpdateSkillStatus}
                         />
                       </div>
@@ -820,7 +921,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">All Areas</option>
-                    {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory', 'play'].map((area) => (
+                    {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory'].map((area) => (
                       <option key={area} value={area}>
                         {getAreaLabel(area)}
                       </option>
@@ -883,13 +984,9 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                   </table>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Activities Tab */}
-          {activeTab === 'activities' && (
-            <div>
-              <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
+
+              {/* Activity History */}
+              <div className="bg-white shadow rounded-lg overflow-hidden">
                 <div className="px-4 py-5 border-b border-gray-200 flex flex-wrap gap-4 items-center justify-between">
                   <h2 className="text-lg font-medium text-gray-900">Activity History</h2>
                   

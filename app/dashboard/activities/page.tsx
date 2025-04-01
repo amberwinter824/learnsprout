@@ -44,6 +44,7 @@ export default function ActivitiesPage() {
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>('');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('');
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [showQuickActivities, setShowQuickActivities] = useState<boolean>(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [showObservationForm, setShowObservationForm] = useState<boolean>(false);
@@ -104,8 +105,13 @@ export default function ActivitiesPage() {
     const matchesDifficulty = filterDifficulty 
       ? activity.difficulty === filterDifficulty 
       : true;
+
+    // Quick activities filter
+    const matchesQuickFilter = showQuickActivities 
+      ? activity.duration && activity.duration <= 10
+      : true;
     
-    return matchesSearch && matchesArea && matchesAgeGroup && matchesDifficulty;
+    return matchesSearch && matchesArea && matchesAgeGroup && matchesDifficulty && matchesQuickFilter;
   });
 
   // Get unique areas, age groups, and difficulty levels for filters
@@ -185,13 +191,26 @@ export default function ActivitiesPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filters {showFilters ? '(Hide)' : '(Show)'}
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowQuickActivities(!showQuickActivities)}
+                className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium ${
+                  showQuickActivities
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                {showQuickActivities ? 'Show All Activities' : 'Quick Activities Only'}
+              </button>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filters {showFilters ? '(Hide)' : '(Show)'}
+              </button>
+            </div>
           </div>
 
           {showFilters && (
@@ -274,9 +293,17 @@ export default function ActivitiesPage() {
             {filteredActivities.map((activity) => (
               <div key={activity.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="p-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getAreaColor(activity.area)}`}>
-                    {formatAreaName(activity.area)}
-                  </span>
+                  <div className="flex justify-between items-start">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getAreaColor(activity.area)}`}>
+                      {formatAreaName(activity.area)}
+                    </span>
+                    {activity.duration && activity.duration <= 10 && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Quick
+                      </span>
+                    )}
+                  </div>
                   
                   <h3 className="mt-2 text-lg font-medium text-gray-900 line-clamp-1">
                     {activity.title}
@@ -297,7 +324,7 @@ export default function ActivitiesPage() {
                     )}
                     
                     {activity.duration && (
-                      <div className="flex items-center">
+                      <div className="flex items-center font-medium text-emerald-600">
                         <Clock className="h-4 w-4 mr-1" />
                         <span>{activity.duration} min</span>
                       </div>
