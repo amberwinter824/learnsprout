@@ -114,6 +114,13 @@ export default function Dashboard() {
         })) as Child[];
         setChildren(childrenData);
 
+        // Automatically select the first child if no child is selected
+        if (childrenData.length > 0 && !selectedChildId) {
+          const firstChild = childrenData[0];
+          setSelectedChildId(firstChild.id);
+          updateUrlParams(selectedDate, firstChild.id);
+        }
+
         // Fetch recent skills
         if (childrenData.length > 0) {
           const childIds = childrenData.map(child => child.id);
@@ -155,7 +162,7 @@ export default function Dashboard() {
     if (currentUser?.uid) {
       fetchData();
     }
-  }, [currentUser]);
+  }, [currentUser, selectedChildId, selectedDate, updateUrlParams]);
   
   // Handle date selection
   const handleDateSelect = useCallback((date: Date) => {
@@ -276,11 +283,15 @@ export default function Dashboard() {
             
             {/* Child selector */}
             {children.length > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <label htmlFor="child-selector" className="text-sm font-medium text-gray-700">
+                  Viewing:
+                </label>
                 <select
+                  id="child-selector"
                   value={selectedChildId || ''}
                   onChange={(e) => handleChildSelect(e.target.value)}
-                  className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                  className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base font-medium"
                 >
                   {children.map((child) => (
                     <option key={child.id} value={child.id}>

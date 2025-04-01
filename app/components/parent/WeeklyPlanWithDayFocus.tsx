@@ -149,12 +149,10 @@ export default function WeeklyPlanWithDayFocus({
         
         setAllChildren(children);
         
-        // Set selected child from prop or default to first child
+        // Set selected child from prop
         if (selectedChildId) {
           const selectedChild = children.find(child => child.id === selectedChildId) || null;
           setSelectedChild(selectedChild);
-        } else if (children.length === 1) {
-          setSelectedChild(children[0]);
         }
       } catch (error) {
         console.error('Error fetching children:', error);
@@ -517,12 +515,6 @@ export default function WeeklyPlanWithDayFocus({
     setSelectedDate(date);
   };
   
-  // Handle child selection
-  const handleChildSelect = (childId: string) => {
-    const child = allChildren.find(c => c.id === childId) || null;
-    setSelectedChild(child);
-  };
-  
   // Get activities for the selected day
   const getSelectedDayActivities = () => {
     const selectedDayOfWeek = format(selectedDate, 'EEEE').toLowerCase();
@@ -743,80 +735,42 @@ export default function WeeklyPlanWithDayFocus({
     );
   }
   
-  // Child selection required state
-  if (!selectedChild) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-        <h3 className="text-lg font-medium text-gray-700 mb-4">Select a child to view activities</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          {allChildren.map(child => (
-            <button
-              key={child.id}
-              onClick={() => handleChildSelect(child.id)}
-              className="p-4 border border-gray-200 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <div className="flex items-center">
-                <div className="h-8 w-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-medium">
-                  {child.name.charAt(0).toUpperCase()}
-                </div>
-                <span className="ml-3 font-medium">{child.name}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  
   // Determine if selected day is a rest day
   const selectedDayActivities = getSelectedDayActivities();
   const isSelectedDayRestDay = selectedDayActivities?.isRestDay || false;
   
   return (
     <div className="bg-white rounded-lg shadow-sm">
-      {/* Header with child selection and week navigation */}
-      <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <div className="flex items-center">
-          <Calendar className="h-5 w-5 text-emerald-500 mr-2" />
-          <h2 className="text-lg font-medium">
-            {selectedChild?.name || 'Activities'}
-          </h2>
-          
-          {selectedChild && allChildren.length > 1 && (
-            <select
-              value={selectedChild.id}
-              onChange={(e) => handleChildSelect(e.target.value)}
-              className="ml-3 text-sm border-gray-300 rounded-md"
-            >
-              {allChildren.map(child => (
-                <option key={child.id} value={child.id}>{child.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
-        
-        <div className="flex items-center">
-          <button
-            onClick={() => handleWeekChange('prev')}
-            className="p-1 rounded-full hover:bg-gray-100"
-            aria-label="Previous week"
-            type="button"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          
-          <div className="w-36 text-center mx-1 font-medium">
-            {format(weekStartDate, 'MMM d')} - {format(addDays(weekStartDate, 6), 'MMM d')}
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h2 className="text-lg font-medium text-gray-900">Weekly Plan</h2>
+            {selectedChild && (
+              <span className="text-sm text-gray-500">
+                for {selectedChild.name}
+              </span>
+            )}
           </div>
           
-          <button
-            onClick={() => handleWeekChange('next')}
-            className="p-1 rounded-full hover:bg-gray-100"
-            aria-label="Next week"
-            type="button"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          {/* Week navigation */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleWeekChange('prev')}
+              className="p-1 rounded-full hover:bg-gray-100"
+            >
+              <ChevronLeft className="h-5 w-5 text-gray-600" />
+            </button>
+            <span className="text-sm text-gray-600">
+              Week of {format(weekStartDate, 'MMM d')}
+            </span>
+            <button
+              onClick={() => handleWeekChange('next')}
+              className="p-1 rounded-full hover:bg-gray-100"
+            >
+              <ChevronRight className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
         </div>
       </div>
       
