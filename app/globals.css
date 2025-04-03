@@ -85,7 +85,10 @@ html body .shadow-sm *:not(button):not(a) {
 
 /* Exempt specific elements we don't want to change */
 html body a[href],
-html body button,
+html body button[class*="bg-blue"],
+html body button[class*="bg-emerald"],
+html body button[class*="bg-green"],
+html body button[class*="bg-red"],
 html body [class*="text-emerald"],
 html body [class*="text-blue"],
 html body [class*="text-red"],
@@ -94,6 +97,14 @@ html body [class*="bg-blue"] *,
 html body [class*="bg-green"] *,
 html body [class*="bg-red"] * {
   color: initial !important;
+}
+
+/* Ensure white text stays white on colored backgrounds */
+html body button[class*="bg-blue"],
+html body button[class*="bg-emerald"],
+html body button[class*="bg-green"],
+html body button[class*="bg-red"] {
+  color: white !important;
 }
 
 /* Ensure form inputs remain readable */
