@@ -1,12 +1,35 @@
 // adminInfantToddlerSeeder.cjs
 
 const admin = require('firebase-admin');
-const serviceAccount = require('./config/service-account.json');
+require('dotenv').config({ path: '.env.local' });
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// Verify environment variables are loaded
+const requiredEnvVars = [
+  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+  'FIREBASE_ADMIN_CLIENT_EMAIL',
+  'FIREBASE_ADMIN_PRIVATE_KEY'
+];
 
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingEnvVars.length > 0) {
+  console.error('Missing required environment variables:', missingEnvVars);
+  process.exit(1);
+}
+
+// Initialize Firebase Admin with environment variables
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+      // Handle the private key properly, ensuring newlines are preserved
+      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n')
+    })
+  });
+} catch (error) {
+  console.error('Error initializing Firebase Admin:', error);
+  process.exit(1);
+}
 
 const db = admin.firestore();
 
@@ -35,7 +58,7 @@ const infantToddlerSkills = [
     id: "inf-object-permanence",
     name: "Object Permanence",
     description: "Understanding that objects continue to exist even when they cannot be seen",
-    area: "cognitive",
+    area: "sensorial",
     ageRanges: ["0-1", "1-2"],
     prerequisites: []
   },
@@ -43,7 +66,7 @@ const infantToddlerSkills = [
     id: "inf-cause-effect",
     name: "Cause and Effect",
     description: "Recognition that actions produce predictable results",
-    area: "cognitive",
+    area: "sensorial",
     ageRanges: ["0-1", "1-2"],
     prerequisites: []
   },
@@ -101,7 +124,7 @@ const infantToddlerSkills = [
     id: "tod-shape-recognition",
     name: "Shape Recognition",
     description: "Ability to recognize and match basic shapes",
-    area: "cognitive",
+    area: "sensorial",
     ageRanges: ["1-2", "2-3"],
     prerequisites: []
   },
@@ -109,7 +132,7 @@ const infantToddlerSkills = [
     id: "tod-spatial",
     name: "Spatial Relationships",
     description: "Understanding how objects fit together and relate to one another",
-    area: "cognitive",
+    area: "sensorial",
     ageRanges: ["1-2", "2-3", "3-4"],
     prerequisites: []
   },
@@ -151,7 +174,7 @@ const infantToddlerSkills = [
     id: "tod-sequencing",
     name: "Simple Sequencing",
     description: "Arranging objects in a logical order",
-    area: "cognitive",
+    area: "sensorial",
     ageRanges: ["2-3", "3-4"],
     prerequisites: ["tod-size-discrimination"]
   },
@@ -207,7 +230,7 @@ const infantToddlerSkills = [
     id: "tod-sorting",
     name: "Basic Sorting",
     description: "Grouping objects based on common characteristics",
-    area: "cognitive",
+    area: "sensorial",
     ageRanges: ["2-3", "3-4"],
     prerequisites: ["tod-visual-discrimination"]
   }
@@ -236,7 +259,7 @@ const infantToddlerActivities = [
     description: "Simple box with a ball that disappears and reappears",
     instructions: "Place the ball in the hole and let it drop through. Show baby how the ball appears in the tray. For older infants, encourage them to retrieve the ball. This helps develop understanding that objects continue to exist even when out of sight.",
     ageRanges: ["0-1", "1-2"],
-    area: "cognitive",
+    area: "sensorial",
     materialsNeeded: ["Object permanence box or container with a hole in top", "Small ball"],
     duration: 10,
     difficulty: "beginner",
@@ -303,7 +326,7 @@ const infantToddlerActivities = [
     description: "Single-piece puzzles with large knob handles",
     instructions: "Present the puzzle with just a few pieces removed. Show the toddler how to remove a puzzle piece using the knob, then place it back in its spot. Allow independent exploration and practice. For beginners, start with 1-2 pieces only.",
     ageRanges: ["1-2", "2-3"],
-    area: "cognitive",
+    area: "practical_life",
     materialsNeeded: ["Simple knobbed puzzles with 1-3 large pieces", "Small tray"],
     duration: 15,
     difficulty: "beginner",
@@ -316,7 +339,7 @@ const infantToddlerActivities = [
     description: "Dropping balls through a tube to see them emerge at the bottom",
     instructions: "Set up the tube securely at an angle. Demonstrate dropping a ball into the top opening and watching it roll out the bottom. Encourage the toddler to try, emphasizing the cause-effect relationship. For older toddlers, invite prediction about where the ball will exit.",
     ageRanges: ["1-2", "2-3"],
-    area: "cognitive",
+    area: "sensorial",
     materialsNeeded: ["Clear tube or paper towel roll", "Small balls that fit inside tube", "Blocks to prop tube at an angle"],
     duration: 15,
     difficulty: "beginner",
@@ -327,26 +350,26 @@ const infantToddlerActivities = [
   {
     title: "Posting Activities",
     description: "Putting objects into containers through matching openings",
-    instructions: "Demonstrate putting objects through their corresponding openings (coins in a slot, shapes in a sorter). Start with just 1-2 shapes for beginners. Allow the toddler to explore and practice this skill independently, adding more shapes as mastery develops.",
+    instructions: "Present the shape sorter or posting box with corresponding objects. Demonstrate how to match the shape to its opening. Allow independent exploration and practice.",
     ageRanges: ["1-2", "2-3"],
-    area: "cognitive",
+    area: "practical_life",
     materialsNeeded: ["Shape sorter or posting box", "Coin slot box", "Objects that fit through openings"],
     duration: 15,
     difficulty: "beginner",
-    skillsAddressed: ["tod-shape-recognition", "tod-spatial", "tod-hand-eye"],
+    skillsAddressed: ["tod-hand-eye", "tod-pincer-grasp", "tod-shape-recognition"],
     status: "active",
     imageUrl: ""
   },
   {
     title: "Stacking Rings",
     description: "Placing rings on a vertical post in sequence",
-    instructions: "Show how to remove the rings and then place them back on the post. For beginners, start with just a few rings. For more advanced toddlers, encourage stacking in size order. Name the colors and sizes as you work.",
+    instructions: "Present the stacking rings toy. Demonstrate how to place rings on the post. Allow independent exploration. For older toddlers, introduce concepts of size gradation.",
     ageRanges: ["1-2", "2-3"],
-    area: "cognitive",
+    area: "sensorial",
     materialsNeeded: ["Stacking rings toy"],
     duration: 15,
     difficulty: "beginner",
-    skillsAddressed: ["tod-size-discrimination", "tod-sequencing", "tod-hand-eye"],
+    skillsAddressed: ["tod-hand-eye", "tod-size-discrimination", "tod-sequencing"],
     status: "active",
     imageUrl: ""
   },
@@ -366,13 +389,13 @@ const infantToddlerActivities = [
   {
     title: "Object Basket Matching",
     description: "Matching miniature objects to pictures",
-    instructions: "Place picture cards in a row and corresponding objects in a basket. Show the toddler how to select an object, identify what it is, and place it on the matching picture. Start with just 3-4 familiar objects for beginners.",
+    instructions: "Present the basket of objects and corresponding picture cards. Show how to match an object to its picture. Allow the child to continue matching independently.",
     ageRanges: ["1-2", "2-3"],
-    area: "cognitive",
+    area: "sensorial",
     materialsNeeded: ["Small basket", "Miniature objects (toy animals, vehicles, household items)", "Corresponding picture cards"],
     duration: 15,
-    difficulty: "intermediate",
-    skillsAddressed: ["tod-visual-discrimination", "tod-vocabulary", "tod-object-function"],
+    difficulty: "beginner",
+    skillsAddressed: ["tod-matching", "tod-visual-discrimination", "tod-vocabulary"],
     status: "active",
     imageUrl: ""
   },
@@ -394,13 +417,13 @@ const infantToddlerActivities = [
   {
     title: "Simple Matching Activities",
     description: "Matching identical objects or pictures",
-    instructions: "Present pairs of identical objects or pictures. Demonstrate matching one set, then allow the child to complete the matching independently. For beginners, use 3-4 pairs; increase as skills develop. Use familiar, everyday objects.",
+    instructions: "Present pairs of identical objects or cards. Show how to find matching pairs. Start with 2-3 pairs and gradually increase as the child shows readiness.",
     ageRanges: ["2-3", "3-4"],
-    area: "cognitive",
+    area: "sensorial",
     materialsNeeded: ["Pairs of identical objects or picture cards", "Small tray or mat"],
     duration: 15,
     difficulty: "beginner",
-    skillsAddressed: ["tod-visual-discrimination", "tod-concentration", "tod-sorting"],
+    skillsAddressed: ["tod-matching", "tod-visual-discrimination", "tod-concentration"],
     status: "active",
     imageUrl: ""
   },
@@ -540,28 +563,43 @@ async function seedInfantToddlerSkills() {
  * Seed the infant and toddler activities
  */
 async function seedInfantToddlerActivities() {
-  console.log('Starting to seed infant and toddler activities...');
+  console.log('Starting to seed and update infant and toddler activities...');
   
   try {
-    // Get existing activities to avoid duplicates
+    // Get existing activities
     const activitiesCollection = db.collection('activities');
     const snapshot = await activitiesCollection.get();
     
-    // Map to store existing activity titles
-    const existingTitles = new Set();
+    // Map to store existing activities by title
+    const existingActivities = new Map();
     
     if (!snapshot.empty) {
       snapshot.docs.forEach(doc => {
         const data = doc.data();
-        existingTitles.add(data.title);
+        existingActivities.set(data.title, { id: doc.id, ...data });
       });
-      console.log(`Found ${existingTitles.size} existing activities. Adding new infant-toddler activities...`);
+      console.log(`Found ${existingActivities.size} existing activities. Processing updates and additions...`);
     }
     
-    // Add only new activities
     let addedCount = 0;
+    let updatedCount = 0;
+
     for (const activity of infantToddlerActivities) {
-      if (!existingTitles.has(activity.title)) {
+      const existingActivity = existingActivities.get(activity.title);
+      
+      if (existingActivity) {
+        // Update existing activity if area has changed
+        if (existingActivity.area !== activity.area) {
+          await db.collection('activities').doc(existingActivity.id).update({
+            area: activity.area,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          
+          console.log(`Updated area for activity: ${activity.title} from ${existingActivity.area} to ${activity.area}`);
+          updatedCount++;
+        }
+      } else {
+        // Add new activity
         const activityId = generateActivityId(activity.area, activity.title);
         
         await db.collection('activities').doc(activityId).set({
@@ -578,7 +616,7 @@ async function seedInfantToddlerActivities() {
       }
     }
     
-    console.log(`Added ${addedCount} new infant and toddler activities.`);
+    console.log(`Updated ${updatedCount} existing activities and added ${addedCount} new activities.`);
     return true;
   } catch (error) {
     console.error('Error seeding infant and toddler activities:', error);
@@ -591,15 +629,15 @@ async function seedInfantToddlerActivities() {
  */
 async function seedInfantToddlerData() {
   try {
-    console.log("Service account check:");
+    console.log("Environment variables check:");
     try {
-      // Log basic information about the service account to confirm it's loaded
-      console.log(`Project ID: ${serviceAccount.project_id}`);
-      console.log(`Client Email: ${serviceAccount.client_email}`);
-      console.log(`Service account loaded successfully`);
+      // Log basic information to confirm environment variables are loaded
+      console.log(`Project ID: ${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}`);
+      console.log(`Client Email: ${process.env.FIREBASE_ADMIN_CLIENT_EMAIL}`);
+      console.log(`Environment variables loaded successfully`);
     } catch (error) {
-      console.error("Error accessing service account:", error);
-      console.error("Make sure config/service-account.json exists and is properly formatted");
+      console.error("Error accessing environment variables:", error);
+      console.error("Make sure .env.local exists and contains the required Firebase configuration");
       return false;
     }
     

@@ -131,6 +131,10 @@ export default function ActivitiesPage() {
   // Format area name for display
   const formatAreaName = (area?: string): string => {
     if (!area) return '';
+    
+    // Special case for social_emotional
+    if (area === 'social_emotional') return 'Social & Emotional';
+    
     return area
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -143,10 +147,11 @@ export default function ActivitiesPage() {
     
     switch(area) {
       case 'practical_life': return 'bg-blue-100 text-blue-800';
-      case 'sensorial': return 'bg-purple-100 text-purple-800';
+      case 'sensorial': return 'bg-pink-100 text-pink-800';
       case 'language': return 'bg-green-100 text-green-800';
-      case 'mathematics': return 'bg-red-100 text-red-800';
-      case 'cultural': return 'bg-amber-100 text-amber-800';
+      case 'mathematics': return 'bg-pink-100 text-pink-800';
+      case 'cultural': return 'bg-amber-50 text-amber-800';
+      case 'social_emotional': return 'bg-pink-100 text-pink-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

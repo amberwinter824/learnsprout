@@ -1,10 +1,15 @@
 // adminDevelopmentalSkillsSeeder.cjs
+require('dotenv').config({ path: '.env.local' });
 
 const admin = require('firebase-admin');
-const serviceAccount = require('./config/service-account.json');
 
+// Initialize Firebase Admin with environment variables
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert({
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n')
+  })
 });
 
 const db = admin.firestore();
@@ -261,6 +266,72 @@ const developmentalSkills = [
     area: "cultural",
     ageRanges: ["3-4", "4-5", "5-6"],
     prerequisites: []
+  },
+
+  // SOCIAL-EMOTIONAL SKILLS
+  {
+    id: "soc-self-awareness",
+    name: "Self-Awareness",
+    description: "Recognition and understanding of one's own emotions, thoughts, and values",
+    area: "social_emotional",
+    ageRanges: ["3-4", "4-5", "5-6"],
+    prerequisites: []
+  },
+  {
+    id: "soc-emotion-reg",
+    name: "Emotional Regulation",
+    description: "Ability to manage emotions and respond to situations appropriately",
+    area: "social_emotional",
+    ageRanges: ["3-4", "4-5", "5-6"],
+    prerequisites: ["soc-self-awareness"]
+  },
+  {
+    id: "soc-empathy",
+    name: "Empathy",
+    description: "Understanding and sharing the feelings of others",
+    area: "social_emotional",
+    ageRanges: ["3-4", "4-5", "5-6"],
+    prerequisites: ["soc-self-awareness"]
+  },
+  {
+    id: "soc-relationships",
+    name: "Building Relationships",
+    description: "Forming and maintaining positive relationships with peers and adults",
+    area: "social_emotional",
+    ageRanges: ["3-4", "4-5", "5-6"],
+    prerequisites: []
+  },
+  {
+    id: "soc-cooperation",
+    name: "Cooperation",
+    description: "Working together with others and participating in group activities",
+    area: "social_emotional",
+    ageRanges: ["3-4", "4-5", "5-6"],
+    prerequisites: ["soc-relationships"]
+  },
+  {
+    id: "soc-conflict",
+    name: "Conflict Resolution",
+    description: "Ability to resolve disagreements and problems peacefully",
+    area: "social_emotional",
+    ageRanges: ["4-5", "5-6"],
+    prerequisites: ["soc-empathy", "soc-emotion-reg"]
+  },
+  {
+    id: "soc-independence",
+    name: "Independence",
+    description: "Confidence in making choices and completing tasks independently",
+    area: "social_emotional",
+    ageRanges: ["3-4", "4-5", "5-6"],
+    prerequisites: ["soc-self-awareness"]
+  },
+  {
+    id: "soc-boundaries",
+    name: "Personal Boundaries",
+    description: "Understanding and respecting personal space and boundaries",
+    area: "social_emotional",
+    ageRanges: ["3-4", "4-5", "5-6"],
+    prerequisites: ["soc-relationships"]
   }
 ];
 
@@ -338,8 +409,8 @@ if (require.main === module) {
   console.log("Service account check:");
   try {
     // Log basic information about the service account to confirm it's loaded
-    console.log(`Project ID: ${serviceAccount.project_id}`);
-    console.log(`Client Email: ${serviceAccount.client_email}`);
+    console.log(`Project ID: ${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}`);
+    console.log(`Client Email: ${process.env.FIREBASE_ADMIN_CLIENT_EMAIL}`);
     console.log(`Service account loaded successfully`);
     
     seedDevelopmentalSkills().then(() => {
@@ -351,7 +422,7 @@ if (require.main === module) {
     });
   } catch (error) {
     console.error("Error accessing service account:", error);
-    console.error("Make sure config/service-account.json exists and is properly formatted");
+    console.error("Make sure environment variables are set correctly");
     process.exit(1);
   }
 }
