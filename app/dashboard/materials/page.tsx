@@ -11,10 +11,16 @@ interface Material {
   id: string;
   name: string;
   normalizedName: string;
-  category?: string;
-  description?: string;
-  amazonLink?: string;
-  affiliateLink?: string;
+  category: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  isReusable: boolean;
+  isOptional: boolean;
+  amazonLink: string;
+  affiliateLink: string;
+  activities: string[];
+  alternativeNames: string[];
   isOwned: boolean;
 }
 
@@ -29,18 +35,36 @@ export default function MaterialsInventory() {
   const [selectedChild, setSelectedChild] = useState<{ id: string; name: string; age: number } | null>(null);
 
   const fetchMaterials = async () => {
+    if (!currentUser?.uid) return;
+
     try {
       setLoading(true);
-      const materialsRef = collection(db, 'materials');
-      const q = query(materialsRef, where('userId', '==', currentUser?.uid));
-      const querySnapshot = await getDocs(q);
       
-      const materialsData = querySnapshot.docs.map(doc => ({
+      // Get all materials
+      const materialsRef = collection(db, 'materials');
+      const materialsSnapshot = await getDocs(materialsRef);
+      const allMaterials = materialsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Material[];
+
+      // Get user's owned materials
+      const userMaterialsRef = collection(db, 'userMaterials');
+      const userMaterialsQuery = query(
+        userMaterialsRef,
+        where('userId', '==', currentUser.uid),
+        where('isOwned', '==', true)
+      );
+      const userMaterialsSnapshot = await getDocs(userMaterialsQuery);
+      const ownedMaterialIds = new Set(userMaterialsSnapshot.docs.map(doc => doc.data().materialId));
+
+      // Combine materials with ownership status
+      const materialsWithOwnership = allMaterials.map(material => ({
+        ...material,
+        isOwned: ownedMaterialIds.has(material.id) || false
+      }));
       
-      setMaterials(materialsData);
+      setMaterials(materialsWithOwnership);
     } catch (error) {
       console.error('Error fetching materials:', error);
       setError('Failed to load materials');
@@ -191,10 +215,19 @@ export default function MaterialsInventory() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-medium text-gray-900">{material.name}</h3>
-                {material.category && (
-                  <p className="text-sm text-gray-500 mt-1">{material.category}</p>
-                )}
+                <h3 className="font-medium text-gray-900">
+                  {material.name}
+                  {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                  {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-gray-500">{material.category}</span>
+                  {material.isReusable && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      Reusable
+                    </span>
+                  )}
+                </div>
                 {material.description && (
                   <p className="text-sm text-gray-600 mt-2">{material.description}</p>
                 )}
