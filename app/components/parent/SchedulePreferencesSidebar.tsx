@@ -91,6 +91,15 @@ export default function SchedulePreferencesSidebar({ onPreferencesUpdated }: Sch
         </div>
       )}
 
+      <div className="bg-gray-50 rounded-lg p-3 mb-4">
+        <p className="text-sm text-gray-600 mb-2">
+          Choose how many activities you'd like to do each day. This helps us create a personalized weekly plan that matches your family's routine.
+        </p>
+        <p className="text-xs text-gray-500">
+          Use the + and - buttons to adjust the number of activities for each day. Setting a day to 0 means it will be a rest day.
+        </p>
+      </div>
+
       <div className="space-y-3">
         {weekdays.map(day => (
           <div key={day.id} className="flex items-center justify-between">

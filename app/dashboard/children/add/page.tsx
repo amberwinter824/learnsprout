@@ -122,8 +122,8 @@ export default function AddChildPage() {
 
       await createChild(currentUser.uid, childData);
       
-      // Redirect to settings page after adding a child
-      router.push('/dashboard/settings?setup=complete');
+      // Redirect to dashboard after adding a child
+      router.push('/dashboard');
     } catch (err: any) {
       console.error('Error adding child:', err);
       setError(err.message || 'Failed to add child');
