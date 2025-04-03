@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, setDoc } from 'firebase/firestore';
-import { Loader2, Package, Plus, Search, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Package, Plus, Search, CheckCircle, XCircle, ExternalLink, X } from 'lucide-react';
+import MaterialsAssessment from '@/components/parent/MaterialsAssessment';
 
 interface Material {
   id: string;
@@ -24,56 +25,34 @@ export default function MaterialsInventory() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'owned' | 'needed'>('all');
+  const [showAssessment, setShowAssessment] = useState(false);
+  const [selectedChild, setSelectedChild] = useState<{ id: string; name: string; age: number } | null>(null);
+
+  const fetchMaterials = async () => {
+    try {
+      setLoading(true);
+      const materialsRef = collection(db, 'materials');
+      const q = query(materialsRef, where('userId', '==', currentUser?.uid));
+      const querySnapshot = await getDocs(q);
+      
+      const materialsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Material[];
+      
+      setMaterials(materialsData);
+    } catch (error) {
+      console.error('Error fetching materials:', error);
+      setError('Failed to load materials');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!currentUser?.uid) return;
-
-    async function fetchMaterials() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (!currentUser?.uid) {
-          setError('User not authenticated');
-          return;
-        }
-
-        // Get all materials
-        const materialsRef = collection(db, 'materials');
-        const materialsSnapshot = await getDocs(materialsRef);
-        
-        // Get user's owned materials
-        const userMaterialsRef = collection(db, 'userMaterials');
-        const userMaterialsQuery = query(userMaterialsRef, where('userId', '==', currentUser.uid));
-        const userMaterialsSnapshot = await getDocs(userMaterialsQuery);
-        
-        const ownedMaterialIds = new Set(userMaterialsSnapshot.docs.map(doc => doc.data().materialId));
-        
-        // Combine materials with ownership status
-        const materialsList = materialsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name,
-            normalizedName: data.normalizedName,
-            category: data.category,
-            description: data.description,
-            amazonLink: data.amazonLink,
-            affiliateLink: data.affiliateLink,
-            isOwned: ownedMaterialIds.has(doc.id)
-          };
-        });
-
-        setMaterials(materialsList);
-      } catch (error) {
-        console.error('Error fetching materials:', error);
-        setError('Failed to load materials');
-      } finally {
-        setLoading(false);
-      }
+    if (currentUser) {
+      fetchMaterials();
     }
-
-    fetchMaterials();
   }, [currentUser]);
 
   const toggleMaterialOwnership = async (materialId: string, currentStatus: boolean) => {
@@ -132,11 +111,20 @@ export default function MaterialsInventory() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Materials Inventory</h1>
-        <p className="mt-2 text-gray-600">
-          Manage your materials and track what you have available for activities.
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Materials Inventory</h1>
+          <p className="mt-2 text-gray-600">
+            Manage your materials and track what you have available for activities.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAssessment(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
+        >
+          <Package className="h-4 w-4 mr-2" />
+          Update Materials Assessment
+        </button>
       </div>
 
       {error && (
@@ -270,6 +258,39 @@ export default function MaterialsInventory() {
               ? 'You have all the materials you need'
               : 'No materials available'}
           </p>
+        </div>
+      )}
+
+      {/* Materials Assessment Modal */}
+      {showAssessment && selectedChild && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-lg bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Materials Assessment for {selectedChild.name}
+              </h2>
+              <button 
+                onClick={() => {
+                  setShowAssessment(false);
+                  setSelectedChild(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <MaterialsAssessment
+              childId={selectedChild.id}
+              childAge={selectedChild.age}
+              childName={selectedChild.name}
+              onComplete={() => {
+                setShowAssessment(false);
+                setSelectedChild(null);
+                // Optionally refresh materials list
+                fetchMaterials();
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
