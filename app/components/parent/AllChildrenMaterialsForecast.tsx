@@ -119,7 +119,7 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
         const userMaterialsQuery = query(
           userMaterialsRef,
           where('userId', '==', currentUser.uid),
-          where('inInventory', '==', true)
+          where('isOwned', '==', true)
         );
         
         const userMaterialsSnapshot = await getDocs(userMaterialsQuery);

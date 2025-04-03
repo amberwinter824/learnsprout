@@ -110,7 +110,7 @@ export async function addMaterial(material: Omit<Material, 'id'>): Promise<strin
 export async function updateUserMaterial(
   userId: string, 
   materialId: string, 
-  inInventory: boolean
+  isOwned: boolean
 ): Promise<void> {
   try {
     const docId = `${userId}_${materialId}`;
@@ -119,9 +119,9 @@ export async function updateUserMaterial(
     await setDoc(userMaterialRef, {
       userId,
       materialId,
-      inInventory,
+      isOwned,
       updatedAt: serverTimestamp(),
-      ...(inInventory ? { addedAt: serverTimestamp() } : {})
+      ...(isOwned ? { addedAt: serverTimestamp() } : {})
     }, { merge: true });
   } catch (error) {
     console.error('Error updating user material:', error);
@@ -137,7 +137,7 @@ export async function getUserMaterials(userId: string): Promise<string[]> {
     const userMaterialsQuery = query(
       collection(db, 'userMaterials'),
       where('userId', '==', userId),
-      where('inInventory', '==', true)
+      where('isOwned', '==', true)
     );
     
     const snapshot = await getDocs(userMaterialsQuery);
@@ -202,7 +202,7 @@ export async function findActivitiesWithAvailableMaterials(
       query(
         collection(db, 'userMaterials'),
         where('userId', '==', userId),
-        where('inInventory', '==', true)
+        where('isOwned', '==', true)
       )
     );
     
