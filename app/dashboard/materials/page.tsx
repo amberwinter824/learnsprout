@@ -369,7 +369,6 @@ export default function MaterialsInventory() {
               ) : (
                 <MaterialsAssessment
                   childId={selectedChild?.id || ''}
-                  childAge={selectedChild?.age || 0}
                   childName={selectedChild?.name || ''}
                   onComplete={() => {
                     setShowAssessment(false);

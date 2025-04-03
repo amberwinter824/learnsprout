@@ -175,7 +175,6 @@ export default function AddChildFlow({ onComplete }: AddChildFlowProps) {
       {step === 2 && (
         <MaterialsAssessment
           childId={childData.id || ''}
-          childAge={childData.age}
           childName={childData.name}
           onComplete={handleMaterialsComplete}
           isInitialSetup={true}

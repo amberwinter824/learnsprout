@@ -51,7 +51,6 @@ interface Activity {
 
 interface MaterialsAssessmentProps {
   childId: string;
-  childAge: number;
   childName?: string;
   onComplete?: () => void;
   isInitialSetup?: boolean;
@@ -59,7 +58,6 @@ interface MaterialsAssessmentProps {
 
 export default function MaterialsAssessment({ 
   childId, 
-  childAge,
   childName,
   onComplete,
   isInitialSetup = false
@@ -269,9 +267,10 @@ export default function MaterialsAssessment({
         </div>
         <p className="mt-1 text-sm text-gray-600">
           {isInitialSetup 
-            ? `Let's get you set up with the materials needed for your ${childAge} year old's activities.`
-            : `Materials needed for ${childName || 'your child'}'s activities (${childAge} years old).`
+            ? `Let's get you set up with the materials needed for ${childName || 'your child'}'s activities.`
+            : `Materials needed for ${childName || 'your child'}'s activities.`
           }
+          {childAgeGroup && ` (Ages ${childAgeGroup})`}
           Check off what you already have at home.
         </p>
       </div>

@@ -267,16 +267,7 @@ import {
       // Add more detailed logging
       console.log(`Querying 'children' collection for userId: ${userId}`);
       
-      // Get user data to check for family membership
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      let familyId = null;
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        familyId = userData.familyId;
-      }
-      
-      // Start with directly owned children
+      // Only get directly owned children
       const directChildrenQuery = query(
         collection(db, "children"), 
         where("userId", "==", userId),
@@ -300,83 +291,9 @@ import {
           active: data.active !== false,
           interests: data.interests || [],
           notes: data.notes || '',
-          familyId: data.familyId || null,
           ...data
         });
       });
-      
-      // If user belongs to a family, also get family children
-      if (familyId) {
-        console.log(`User belongs to family ${familyId}, fetching family children`);
-        
-        const familyChildrenQuery = query(
-          collection(db, "children"),
-          where("familyId", "==", familyId),
-          where("userId", "!=", userId),
-          orderBy("userId"), // Required for the inequality filter
-          orderBy("name", "asc")
-        );
-        
-        try {
-          const familyChildrenSnapshot = await getDocs(familyChildrenQuery);
-          console.log(`Found ${familyChildrenSnapshot.docs.length} family children`);
-          
-          familyChildrenSnapshot.forEach(doc => {
-            const data = doc.data();
-            children.push({
-              id: doc.id,
-              name: data.name || 'Unnamed Child',
-              userId: data.userId,
-              ageGroup: data.ageGroup || '',
-              birthDate: data.birthDate || null,
-              birthDateString: data.birthDateString || '',
-              active: data.active !== false,
-              interests: data.interests || [],
-              notes: data.notes || '',
-              familyId: familyId,
-              ...data
-            });
-          });
-        } catch (familyError) {
-          console.error(`Error fetching family children:`, familyError);
-          // Continue with direct children only
-        }
-      }
-
-      // Finally, get children where the user is in the accessList
-      const accessListQuery = query(
-        collection(db, "children"),
-        where("accessList", "array-contains", userId),
-        orderBy("name", "asc")
-      );
-
-      try {
-        const accessListSnapshot = await getDocs(accessListQuery);
-        console.log(`Found ${accessListSnapshot.docs.length} children through access list`);
-        
-        accessListSnapshot.forEach(doc => {
-          const data = doc.data();
-          // Only add if not already in the list
-          if (!children.some(child => child.id === doc.id)) {
-            children.push({
-              id: doc.id,
-              name: data.name || 'Unnamed Child',
-              userId: data.userId,
-              ageGroup: data.ageGroup || '',
-              birthDate: data.birthDate || null,
-              birthDateString: data.birthDateString || '',
-              active: data.active !== false,
-              interests: data.interests || [],
-              notes: data.notes || '',
-              familyId: data.familyId || null,
-              ...data
-            });
-          }
-        });
-      } catch (accessListError) {
-        console.error(`Error fetching children through access list:`, accessListError);
-        // Continue with existing children
-      }
       
       console.log(`Found ${children.length} total children for user ID: ${userId}`);
       return children;
