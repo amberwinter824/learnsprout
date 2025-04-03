@@ -359,27 +359,43 @@ export default function WeeklyPlanWithDayFocus({
                           let skillNames: string[] = [];
                           if (latestObservation.skillsDemonstrated?.length > 0) {
                             try {
-                              const skillPromises = latestObservation.skillsDemonstrated.map(
-                                async (skillId: string) => {
-                                  const skillDoc = await getDoc(doc(db, 'developmentalSkills', skillId));
-                                  if (skillDoc.exists()) {
-                                    const data = skillDoc.data();
-                                    return data.name || 'Unnamed Skill';
+                              // Ensure skill IDs are strings
+                              const validSkillIds = latestObservation.skillsDemonstrated
+                                .filter((skillId: any): skillId is string => {
+                                  if (typeof skillId !== 'string') {
+                                    console.warn('Invalid skill ID type:', typeof skillId, 'value:', skillId);
+                                    return false;
                                   }
-                                  console.warn('Skill document not found:', skillId);
-                                  return 'Unnamed Skill';
-                                }
-                              );
-                              
-                              skillNames = await Promise.all(skillPromises);
-                              
-                              if (skillNames.length === 0 && latestObservation.skillsDemonstrated.length > 0) {
-                                console.warn('No valid skill names found for:', latestObservation.skillsDemonstrated);
+                                  return true;
+                                });
+
+                              if (validSkillIds.length === 0) {
+                                console.warn('No valid skill IDs found in:', latestObservation.skillsDemonstrated);
+                                skillNames = ['Unnamed Skill'];
+                              } else {
+                                const skillPromises = validSkillIds.map(async (skillId: string) => {
+                                  try {
+                                    const skillDoc = await getDoc(doc(db, 'developmentalSkills', skillId));
+                                    if (skillDoc.exists()) {
+                                      const data = skillDoc.data();
+                                      return data.name || 'Unnamed Skill';
+                                    }
+                                    console.warn('Skill document not found:', skillId);
+                                    return 'Unnamed Skill';
+                                  } catch (error) {
+                                    console.error('Error fetching individual skill:', skillId, error);
+                                    return 'Unnamed Skill';
+                                  }
+                                });
+                                
+                                skillNames = await Promise.all(skillPromises);
                               }
                             } catch (error) {
                               console.error('Error fetching skill details:', error);
-                              skillNames = latestObservation.skillsDemonstrated.map(() => 'Unnamed Skill');
+                              skillNames = ['Unnamed Skill'];
                             }
+                          } else {
+                            console.log('No skills demonstrated for activity:', activity.title);
                           }
                           
                           // Store the last observation details
