@@ -256,11 +256,19 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
         });
 
         // Convert to array and sort by count
-        const materialsArray = Array.from(materialsCount.entries()).map(([material, data]) => {
-          const materialDoc = materialsByName.get(material.toLowerCase());
+        const materialsArray = Array.from(materialsCount.entries()).map(([materialId, data]) => {
+          // Find the material document by iterating through materialsByName
+          const materialDoc = Array.from(materialsByName.values()).find(m => m.id === materialId);
+          
+          if (!materialDoc) {
+            console.log(`No material document found for ID: ${materialId}`);
+          } else {
+            console.log(`Found material: ${materialDoc.name}, Amazon link: ${materialDoc.amazonLink}`);
+          }
+          
           return {
-            material,
-            materialId: materialDoc?.id || '',
+            material: materialDoc?.name || materialId,
+            materialId: materialId,
             count: data.count,
             activities: Array.from(data.activities),
             amazonLink: materialDoc?.amazonLink || ''
