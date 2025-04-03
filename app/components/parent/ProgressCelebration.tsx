@@ -131,10 +131,10 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-900">{childName}</h3>
         <Link
-          href={`/dashboard/progress?childId=${childId}`}
+          href={`/dashboard/children/${childId}/progress`}
           className="text-xs text-emerald-600 hover:text-emerald-700"
         >
-          View All
+          View {childName}'s progress
         </Link>
       </div>
       
@@ -193,7 +193,7 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
         {sortedMilestones.length > 3 && (
           <div className="text-center pt-2">
             <Link
-              href={`/dashboard/progress?childId=${childId}`}
+              href={`/dashboard/children/${childId}/progress`}
               className="text-xs text-emerald-600 hover:text-emerald-700 inline-flex items-center"
             >
               View {sortedMilestones.length - 3} more milestones
@@ -219,9 +219,6 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
               <Leaf className="h-3 w-3 text-amber-500 mr-1" />
               <span className="text-gray-600">Emerging</span>
             </div>
-          </div>
-          <div className="text-gray-500">
-            {recentMilestones.filter(m => m.status === 'mastered').length} mastered
           </div>
         </div>
       </div>

@@ -241,7 +241,16 @@ export default function Dashboard() {
   const handleSchedulePreferencesUpdated = async () => {
     // Refresh the current view to reflect new schedule
     if (selectedChildId) {
-      await handleGeneratePlan(selectedChildId, selectedDate);
+      try {
+        // Generate a new plan
+        await handleGeneratePlan(selectedChildId, selectedDate);
+        
+        // Force a refresh of the weekly plan view by updating the selected date
+        // This will trigger a re-render of the WeeklyPlanWithDayFocus component
+        setSelectedDate(new Date(selectedDate));
+      } catch (error) {
+        console.error('Error updating schedule preferences:', error);
+      }
     }
   };
   
