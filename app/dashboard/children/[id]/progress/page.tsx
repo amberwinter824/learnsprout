@@ -446,32 +446,50 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   // Map skill areas to their corresponding domains
   const mapAreaToDomain = (area: string) => {
     const domainMap: Record<string, string> = {
-      // Physical Development
-      'motor': 'physical',
-      'fine_motor': 'physical',
-      'gross_motor': 'physical',
-      'hand_eye_coordination': 'physical',
-      'coordination': 'physical',
+      // Practical Life
+      'motor': 'practical_life',
+      'fine_motor': 'practical_life',
+      'gross_motor': 'practical_life',
+      'hand_eye_coordination': 'practical_life',
+      'coordination': 'practical_life',
+      'self_care': 'practical_life',
+      'daily_living': 'practical_life',
+      'independence': 'practical_life',
+      'adaptive': 'practical_life',
       
-      // Social-Emotional Development
+      // Sensorial
+      'sensory': 'sensorial',
+      'sensorial': 'sensorial',
+      'visual': 'sensorial',
+      'auditory': 'sensorial',
+      'tactile': 'sensorial',
+      
+      // Language
+      'language': 'language',
+      'communication': 'language',
+      'vocabulary': 'language',
+      'literacy': 'language',
+      
+      // Mathematics
+      'mathematics': 'mathematics',
+      'counting': 'mathematics',
+      'number': 'mathematics',
+      'quantity': 'mathematics',
+      
+      // Cultural
+      'cultural': 'cultural',
+      'science': 'cultural',
+      'geography': 'cultural',
+      'art': 'cultural',
+      'music': 'cultural',
+      
+      // Social & Emotional
       'social': 'social_emotional',
       'emotional': 'social_emotional',
       'social_emotional': 'social_emotional',
       'social_awareness': 'social_emotional',
       'emotional_regulation': 'social_emotional',
-      'relationship_building': 'social_emotional',
-      
-      // Adaptive Development
-      'adaptive': 'adaptive',
-      'self_care': 'adaptive',
-      'daily_living': 'adaptive',
-      'independence': 'adaptive',
-      'practical_life': 'adaptive', // Many practical life skills are adaptive
-      
-      // Other Domains
-      'sensorial': 'sensory',
-      'language': 'language',
-      'cognitive': 'cognitive'
+      'relationship_building': 'social_emotional'
     };
     return domainMap[area] || area;
   };
@@ -576,37 +594,49 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Understanding Skill Development</h2>
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  Child development is organized into key developmental domains that work together to support your child's growth. Each domain focuses on specific aspects of development while maintaining connections with other areas.
+                  Child development in Montessori education is organized into key developmental domains that work together to support your child's growth. Each domain focuses on specific aspects while maintaining connections with other areas.
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-blue-50 p-3 rounded-md">
-                    <h3 className="text-sm font-medium text-gray-900">Physical Development</h3>
+                    <h3 className="text-sm font-medium text-gray-900">Practical Life</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Gross and fine motor skills, coordination, and physical health
+                      Self-care, independence, and fine motor coordination for daily activities
                     </p>
                   </div>
                   <div className="bg-purple-50 p-3 rounded-md">
-                    <h3 className="text-sm font-medium text-gray-900">Cognitive Development</h3>
+                    <h3 className="text-sm font-medium text-gray-900">Sensorial</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Thinking, problem-solving, memory, and learning abilities
+                      Refinement of senses and perception through sensory experiences
                     </p>
                   </div>
-                  <div className="bg-pink-50 p-3 rounded-md">
-                    <h3 className="text-sm font-medium text-gray-900">Social Development</h3>
+                  <div className="bg-green-50 p-3 rounded-md">
+                    <h3 className="text-sm font-medium text-gray-900">Language</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Interactions with others, relationships, and social understanding
+                      Communication, vocabulary, and literacy skills development
+                    </p>
+                  </div>
+                  <div className="bg-red-50 p-3 rounded-md">
+                    <h3 className="text-sm font-medium text-gray-900">Mathematics</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Understanding numbers, quantities, and mathematical concepts
                     </p>
                   </div>
                   <div className="bg-amber-50 p-3 rounded-md">
-                    <h3 className="text-sm font-medium text-gray-900">Emotional Development</h3>
+                    <h3 className="text-sm font-medium text-gray-900">Cultural</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Feelings, self-awareness, and emotional regulation
+                      Geography, science, art, and music exploration
+                    </p>
+                  </div>
+                  <div className="bg-pink-50 p-3 rounded-md">
+                    <h3 className="text-sm font-medium text-gray-900">Social & Emotional</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Self-awareness, emotional regulation, and social skills
                     </p>
                   </div>
                 </div>
                 <div className="pt-4">
                   <Link
-                    href="/dashboard/developmental-domains"
+                    href={`/dashboard/developmental-domains?backTo=/dashboard/children/${childId}/progress`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600"
@@ -899,7 +929,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                       </p>
                     </div>
                     <Link 
-                      href="/dashboard/developmental-domains"
+                      href={`/dashboard/developmental-domains?backTo=/dashboard/children/${childId}/progress`}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-700 hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600"
                     >
                       <BookOpen className="h-4 w-4 mr-2" />
@@ -911,7 +941,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
 
               {/* Skills Journey Map */}
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {['cognitive', 'physical', 'social_emotional', 'language', 'adaptive', 'sensory'].map((domain) => {
+                {['practical_life', 'sensorial', 'language', 'mathematics', 'cultural', 'social_emotional'].map((domain) => {
                   const domainSkills = getSkillsByDomain(domain)
                     .map(skill => ({
                       id: skill.id,

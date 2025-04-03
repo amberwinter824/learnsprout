@@ -110,33 +110,29 @@ export default function SkillsJourneyMap({ skills, area, onUpdateSkill }: Skills
   // Get area label and description
   const getAreaInfo = (area: string): { label: string; description: string } => {
     const info: Record<string, { label: string; description: string }> = {
-      'cognitive': {
-        label: 'Cognitive Development',
-        description: 'Thinking, problem-solving, and understanding concepts. This area includes skills like memory, attention, and reasoning.'
+      'practical_life': {
+        label: 'Practical Life',
+        description: 'Skills focused on self-care, independence, and fine motor coordination. These help children develop confidence in daily activities.'
       },
-      'physical': {
-        label: 'Physical Development',
-        description: 'Large and small muscle movements, coordination, and physical abilities. This includes both gross motor and fine motor skills.'
-      },
-      'social_emotional': {
-        label: 'Social-Emotional Development',
-        description: 'Understanding and managing emotions, building relationships, and developing social awareness.'
+      'sensorial': {
+        label: 'Sensorial',
+        description: 'Skills that enhance the refinement of senses and perception. Children learn to classify, sort, and understand their environment.'
       },
       'language': {
-        label: 'Language Development',
-        description: 'Communication, vocabulary, and understanding of language. This includes both expressive and receptive language skills.'
+        label: 'Language',
+        description: 'Skills in communication, vocabulary, and literacy. These form the foundation for reading, writing, and effective communication.'
       },
-      'adaptive': {
-        label: 'Adaptive Development',
-        description: 'Self-care skills and daily living activities. This includes skills needed for independence in daily routines.'
+      'mathematics': {
+        label: 'Mathematics',
+        description: 'Understanding of numbers, quantities, and mathematical concepts through concrete materials and hands-on experiences.'
       },
-      'sensory': {
-        label: 'Sensory Development',
-        description: 'Processing and responding to different sensory inputs. This includes visual, auditory, tactile, and other sensory experiences.'
+      'cultural': {
+        label: 'Cultural',
+        description: 'Exploration of geography, science, art, and music. These broaden children\'s understanding of the world and different cultures.'
       },
-      'play': {
-        label: 'Play Development',
-        description: 'Imagination, creativity, and social play. This includes both independent and interactive play skills.'
+      'social_emotional': {
+        label: 'Social & Emotional',
+        description: 'Development of self-awareness, emotional regulation, and social skills. These are crucial for building relationships and understanding oneself.'
       }
     };
     return info[area] || { label: area, description: 'Development in this area' };
