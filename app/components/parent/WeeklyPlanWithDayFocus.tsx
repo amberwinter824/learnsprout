@@ -359,19 +359,22 @@ export default function WeeklyPlanWithDayFocus({
                           let skillNames: string[] = [];
                           if (latestObservation.skillsDemonstrated?.length > 0) {
                             try {
-                              // Ensure skill IDs are strings
+                              // Extract skill IDs from the skill objects
                               const validSkillIds = latestObservation.skillsDemonstrated
-                                .filter((skillId: any): skillId is string => {
-                                  if (typeof skillId !== 'string') {
-                                    console.warn('Invalid skill ID type:', typeof skillId, 'value:', skillId);
-                                    return false;
+                                .map((skill: any) => {
+                                  // Handle both string IDs and skill objects
+                                  if (typeof skill === 'string') return skill;
+                                  if (typeof skill === 'object' && skill !== null && 'skillId' in skill) {
+                                    return skill.skillId;
                                   }
-                                  return true;
-                                });
+                                  console.warn('Invalid skill format:', skill);
+                                  return null;
+                                })
+                                .filter((skillId: unknown): skillId is string => typeof skillId === 'string');
 
                               if (validSkillIds.length === 0) {
                                 console.warn('No valid skill IDs found in:', latestObservation.skillsDemonstrated);
-                                skillNames = ['Unnamed Skill'];
+                                skillNames = [];
                               } else {
                                 const skillPromises = validSkillIds.map(async (skillId: string) => {
                                   try {
@@ -392,7 +395,7 @@ export default function WeeklyPlanWithDayFocus({
                               }
                             } catch (error) {
                               console.error('Error fetching skill details:', error);
-                              skillNames = ['Unnamed Skill'];
+                              skillNames = [];
                             }
                           } else {
                             console.log('No skills demonstrated for activity:', activity.title);
@@ -404,7 +407,7 @@ export default function WeeklyPlanWithDayFocus({
                             interestLevel: latestObservation.interestLevel,
                             completionDifficulty: latestObservation.completionDifficulty,
                             notes: latestObservation.notes,
-                            skillsDemonstrated: skillNames
+                            skillsDemonstrated: skillNames.length > 0 ? skillNames : undefined
                           };
                         }
                       }
