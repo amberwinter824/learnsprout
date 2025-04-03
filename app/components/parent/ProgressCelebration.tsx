@@ -116,7 +116,7 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
         {showProgressLinks && (
           <div className="mt-4">
             <Link
-              href={`/dashboard/children/${childId}/activities`}
+              href={`/dashboard/children/${childId}/weekly-plan`}
               className="text-blue-600 hover:text-blue-800 font-medium mr-6"
             >
               Find Activities

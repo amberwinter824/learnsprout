@@ -96,13 +96,26 @@ html body [class*="bg-red"] *:not(button) {
 }
 
 /* Ensure white text stays white on colored backgrounds */
-html body button[class*="bg-blue"],
-html body button[class*="bg-emerald"],
-html body button[class*="bg-green"],
-html body button[class*="bg-red"],
-html body button.bg-emerald-600,
-html body button.bg-blue-600 {
+html body button[class*="bg-emerald-600"],
+html body button[class*="bg-emerald-700"],
+html body button[class*="bg-blue-600"],
+html body button[class*="bg-blue-700"],
+html body button[class*="bg-green-600"],
+html body button[class*="bg-green-700"],
+html body button[class*="bg-red-600"],
+html body button[class*="bg-red-700"] {
   color: white !important;
+}
+
+/* Style for light background buttons */
+html body button[class*="bg-emerald-50"],
+html body button[class*="bg-emerald-100"] {
+  color: var(--emerald-700, #047857) !important;
+}
+
+html body button[class*="bg-emerald-50"]:hover,
+html body button[class*="bg-emerald-100"]:hover {
+  color: var(--emerald-800, #065f46) !important;
 }
 
 /* Ensure regular buttons remain readable */
