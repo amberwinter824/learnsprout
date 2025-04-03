@@ -32,8 +32,8 @@ export default function MaterialsInventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'owned' | 'needed'>('all');
   const [showAssessment, setShowAssessment] = useState(false);
-  const [selectedChild, setSelectedChild] = useState<{ id: string; name: string; age: number } | null>(null);
-  const [children, setChildren] = useState<{ id: string; name: string; age: number }[]>([]);
+  const [selectedChild, setSelectedChild] = useState<{ id: string; name: string; age: number; ageGroup: string } | null>(null);
+  const [children, setChildren] = useState<{ id: string; name: string; age: number; ageGroup: string }[]>([]);
 
   const fetchMaterials = async () => {
     if (!currentUser?.uid) return;
@@ -90,10 +90,15 @@ export default function MaterialsInventory() {
           where('userId', '==', currentUser.uid)
         );
         const childrenSnapshot = await getDocs(childrenQuery);
-        const childrenData = childrenSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as { id: string; name: string; age: number }[];
+        const childrenData = childrenSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name,
+            age: data.age || 0,
+            ageGroup: data.ageGroup || ''
+          };
+        });
         setChildren(childrenData);
       } catch (error) {
         console.error('Error fetching children:', error);
@@ -361,7 +366,7 @@ export default function MaterialsInventory() {
                         className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left"
                       >
                         <h4 className="font-medium text-gray-900">{child.name}</h4>
-                        <p className="text-sm text-gray-500">{child.age || 0} years old</p>
+                        <p className="text-sm text-gray-500">{child.ageGroup || 'Age not set'}</p>
                       </button>
                     ))}
                   </div>

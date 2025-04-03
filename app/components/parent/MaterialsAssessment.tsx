@@ -144,14 +144,21 @@ export default function MaterialsAssessment({
 
         // Filter materials based on activities
         const activityIds = new Set(activities.map(a => a.id));
-        const relevantMaterials = allMaterials.filter(material => 
-          material.activities?.some(activityId => activityIds.has(activityId))
-        );
-
-        console.log('Materials count after processing:');
-        relevantMaterials.forEach(material => {
-          console.log(`Material: ${material.id}, Count: ${material.quantity}, Activities: ${material.activities}`);
+        console.log(`Found ${activities.length} activities with IDs:`, Array.from(activityIds));
+        
+        // Log each activity's materials
+        activities.forEach(activity => {
+          console.log(`Activity ${activity.title} (${activity.id}) needs materials:`, activity.materialsNeeded);
         });
+
+        const relevantMaterials = allMaterials.filter(material => {
+          const isRelevant = material.activities?.some(activityId => activityIds.has(activityId));
+          console.log(`Material ${material.name}: isRelevant=${isRelevant}, activities=`, material.activities);
+          return isRelevant;
+        });
+
+        console.log('Materials count after processing:', relevantMaterials.length);
+        console.log('Relevant materials:', relevantMaterials.map(m => m.name));
 
         // Group materials by category
         const groupedMaterials = relevantMaterials.reduce((acc, material) => {
