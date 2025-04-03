@@ -95,83 +95,21 @@ export default function RecentProgressDashboard({
         
         // Create a map of child IDs to names for easy lookup
         const childIdToName: Record<string, string> = {};
-        childrenData.forEach(child => {
-          if (child && child.id && child.name) {
-            childIdToName[child.id] = child.name;
-          }
+        const childIds = childrenData.map(child => {
+          childIdToName[child.id] = child.name;
+          return child.id;
         });
         
-        // Create a filter for the children
-        // Make sure we have valid child IDs
-        const validChildIds = childrenData
-          .filter(child => child && child.id)
-          .map(child => child.id);
+        // First, fetch all developmental skills to use as a reference
+        const devSkillsQuery = query(collection(db, 'developmentalSkills'));
+        const devSkillsSnapshot = await getDocs(devSkillsQuery);
+        const devSkillsMap = new Map();
         
-        // If no valid child IDs, return early
-        if (validChildIds.length === 0) {
-          setLoading(false);
-          return;
-        }
-        
-        // Use selectedChildId if it's valid, otherwise use all valid child IDs
-        const childIds = selectedChildId && validChildIds.includes(selectedChildId)
-          ? [selectedChildId] 
-          : validChildIds;
-        
-        // Progress records query (completed activities and observations)
-        const progressQuery = query(
-          collection(db, 'progressRecords'),
-          where('childId', 'in', childIds),
-          where('completionStatus', '==', 'completed'),
-          orderBy('date', 'desc'),
-          firestoreLimit(limit)
-        );
-        
-        const progressSnapshot = await getDocs(progressQuery);
-        const progressData: ProgressRecord[] = [];
-        
-        progressSnapshot.forEach(doc => {
-          const data = doc.data() as Omit<ProgressRecord, 'id'>;
-          if (data && data.childId) {
-            progressData.push({
-              id: doc.id,
-              ...data,
-              childName: childIdToName[data.childId] || 'Unknown Child'
-            } as ProgressRecord);
-          }
+        devSkillsSnapshot.forEach(doc => {
+          devSkillsMap.set(doc.id, { id: doc.id, ...doc.data() });
         });
         
-        // Get activity titles for each progress record
-        const activityLookup: Record<string, string> = {};
-        const activityPromises = progressData
-          .filter(record => record.activityId && !activityLookup[record.activityId])
-          .map(async record => {
-            try {
-              const activityRef = collection(db, 'activities');
-              const activitySnapshot = await getDocs(
-                query(activityRef, where('__name__', '==', record.activityId))
-              );
-              if (!activitySnapshot.empty) {
-                const activityData = activitySnapshot.docs[0].data();
-                activityLookup[record.activityId] = activityData.title || 'Unnamed Activity';
-              }
-            } catch (err) {
-              console.error(`Error fetching activity ${record.activityId}:`, err);
-            }
-          });
-        
-        await Promise.all(activityPromises);
-        
-        // Add activity titles to progress records
-        progressData.forEach(record => {
-          if (record.activityId && activityLookup[record.activityId]) {
-            record.activityTitle = activityLookup[record.activityId];
-          }
-        });
-        
-        setRecentProgress(progressData);
-        
-        // Skills query (emerging, developing, mastered skills)
+        // Then fetch child skills
         const skillsQuery = query(
           collection(db, 'childSkills'),
           where('childId', 'in', childIds),
@@ -183,12 +121,14 @@ export default function RecentProgressDashboard({
         const skillsSnapshot = await getDocs(skillsQuery);
         const skillsData = skillsSnapshot.docs.map(doc => {
           const data = doc.data();
+          const devSkill = devSkillsMap.get(data.skillId);
           return {
             id: doc.id,
             childId: data.childId,
-            skillName: data.skillName || data.name || 'Unknown Skill',
+            skillId: data.skillId,
+            skillName: devSkill?.name || 'Unnamed Skill',
             status: data.status || 'not_started',
-            area: data.area || 'unknown',
+            area: devSkill?.area || 'unknown',
             lastAssessed: data.lastAssessed,
             childName: data.childId && childIdToName[data.childId] ? 
               childIdToName[data.childId] : 'Unknown Child'

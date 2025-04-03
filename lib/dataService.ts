@@ -599,7 +599,17 @@ import {
         console.warn('No childId provided to getChildSkills');
         return [];
       }
+
+      // First, fetch all developmental skills to use as a reference
+      const devSkillsQuery = query(collection(db, 'developmentalSkills'));
+      const devSkillsSnapshot = await getDocs(devSkillsQuery);
+      const devSkillsMap = new Map();
       
+      devSkillsSnapshot.forEach(doc => {
+        devSkillsMap.set(doc.id, { id: doc.id, ...doc.data() });
+      });
+      
+      // Then fetch child skills
       const q = query(
         collection(db, 'childSkills'),
         where('childId', '==', childId)
@@ -607,56 +617,29 @@ import {
       
       const querySnapshot = await getDocs(q);
       const skills: ChildSkill[] = [];
-      const skillDetailsPromises: Promise<void>[] = [];
       
       querySnapshot.forEach((docSnapshot) => {
         const skillData = docSnapshot.data();
+        const devSkill = devSkillsMap.get(skillData.skillId);
+        
         const skill: ChildSkill = {
           id: docSnapshot.id,
           ...skillData,
           childId,
           skillId: skillData.skillId,
+          skillName: devSkill?.name || 'Unnamed Skill',
+          category: devSkill?.area || devSkill?.category || 'Uncategorized',
+          description: devSkill?.description,
           status: skillData.status || 'not_started'
         };
         
         skills.push(skill);
-        
-        // Fetch additional skill details if skillId exists
-        if (skillData.skillId) {
-          const skillDocRef = doc(db, 'developmentalSkills', skillData.skillId);
-          const promise = getDoc(skillDocRef)
-            .then(skillDoc => {
-              if (skillDoc.exists()) {
-                const skillDetails = skillDoc.data() as DocumentData;
-                // Enhance the skill object with details from the developmentalSkills collection
-                const skillIndex = skills.findIndex(s => s.id === skill.id);
-                if (skillIndex !== -1) {
-                  skills[skillIndex] = {
-                    ...skills[skillIndex],
-                    skillName: skillDetails.name || 'Unnamed Skill',
-                    category: skillDetails.area || skillDetails.category || 'Uncategorized',
-                    description: skillDetails.description
-                  };
-                }
-              }
-            })
-            .catch(err => {
-              console.warn(`Error fetching details for skill ${skillData.skillId}:`, err);
-              // Continue without the details rather than failing the whole operation
-            });
-          
-          skillDetailsPromises.push(promise);
-        }
       });
-      
-      // Wait for all skill details to be fetched
-      await Promise.allSettled(skillDetailsPromises);
       
       console.log(`Found ${skills.length} skills for child ID: ${childId}`);
       return skills;
     } catch (error) {
       console.error('Error fetching child skills:', error);
-      // Return empty array instead of throwing error to prevent breaking the UI
       return [];
     }
   }

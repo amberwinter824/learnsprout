@@ -228,9 +228,9 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
         console.log('Final progress records:', progressData);
         setProgressRecords(progressData);
         setLoading(false);
-      } catch (err) {
-        console.error('Error fetching child progress data:', err);
-        setError(`Error loading progress data: ${err instanceof Error ? err.message : String(err)}`);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to load data');
         setLoading(false);
       }
     }

@@ -366,10 +366,17 @@ export default function WeeklyPlanWithDayFocus({
                               const skillDocs = await Promise.all(skillPromises);
                               skillNames = skillDocs
                                 .filter(doc => doc.exists())
-                                .map(doc => doc.data().name || 'Unknown Skill');
+                                .map(doc => {
+                                  const data = doc.data();
+                                  return data.name || 'Unnamed Skill';
+                                });
+
+                              if (skillNames.length === 0 && latestObservation.skillsDemonstrated.length > 0) {
+                                console.warn('No valid skill names found for:', latestObservation.skillsDemonstrated);
+                              }
                             } catch (error) {
                               console.error('Error fetching skill details:', error);
-                              skillNames = latestObservation.skillsDemonstrated;
+                              skillNames = ['Error loading skills'];
                             }
                           }
                           
@@ -683,30 +690,30 @@ export default function WeeklyPlanWithDayFocus({
       : [];
 
     return (
-      <div className="fixed transform -translate-y-full -translate-x-1/2 -mt-2 bg-white p-3 rounded-lg shadow-lg border border-gray-200 max-w-xs">
+      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 min-w-[200px] max-w-[300px]">
         <div className="space-y-2">
           {observation.engagementLevel && (
-            <div className="flex items-center text-sm whitespace-nowrap">
-              <span className="font-medium text-gray-700">Engagement:</span>
+            <div className="flex items-center text-sm">
+              <span className="font-medium text-gray-700 min-w-[80px]">Engagement:</span>
               <span className="ml-2 capitalize text-gray-600">{observation.engagementLevel}</span>
             </div>
           )}
           {observation.interestLevel && (
-            <div className="flex items-center text-sm whitespace-nowrap">
-              <span className="font-medium text-gray-700">Interest:</span>
+            <div className="flex items-center text-sm">
+              <span className="font-medium text-gray-700 min-w-[80px]">Interest:</span>
               <span className="ml-2 capitalize text-gray-600">{observation.interestLevel}</span>
             </div>
           )}
           {observation.completionDifficulty && (
-            <div className="flex items-center text-sm whitespace-nowrap">
-              <span className="font-medium text-gray-700">Difficulty:</span>
+            <div className="flex items-center text-sm">
+              <span className="font-medium text-gray-700 min-w-[80px]">Difficulty:</span>
               <span className="ml-2 capitalize text-gray-600">{observation.completionDifficulty}</span>
             </div>
           )}
           {observation.notes && (
             <div className="text-sm">
               <span className="font-medium text-gray-700">Notes:</span>
-              <p className="mt-1 text-gray-600 line-clamp-2 max-w-[250px]">{observation.notes}</p>
+              <p className="mt-1 text-gray-600 line-clamp-2">{observation.notes}</p>
             </div>
           )}
           {skills.length > 0 && (
@@ -714,7 +721,7 @@ export default function WeeklyPlanWithDayFocus({
               <span className="font-medium text-gray-700">Skills:</span>
               <div className="mt-1 flex flex-wrap gap-1">
                 {skills.map((skill, index) => (
-                  <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs whitespace-nowrap">
+                  <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
                     {typeof skill === 'string' ? skill : 'Unknown Skill'}
                   </span>
                 ))}
@@ -913,10 +920,8 @@ export default function WeeklyPlanWithDayFocus({
                               )}
                             </span>
                             {activity.lastObservation && (
-                              <div className="absolute z-50 w-max max-w-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <div className="absolute -inset-2">
-                                  <ObservationTooltip observation={activity.lastObservation} />
-                                </div>
+                              <div className="absolute left-0 top-0 z-[100] w-max max-w-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 -translate-y-full -translate-x-1/4 pointer-events-none">
+                                <ObservationTooltip observation={activity.lastObservation} />
                               </div>
                             )}
                           </div>
