@@ -360,23 +360,25 @@ export default function WeeklyPlanWithDayFocus({
                           if (latestObservation.skillsDemonstrated?.length > 0) {
                             try {
                               const skillPromises = latestObservation.skillsDemonstrated.map(
-                                (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+                                async (skillId: string) => {
+                                  const skillDoc = await getDoc(doc(db, 'developmentalSkills', skillId));
+                                  if (skillDoc.exists()) {
+                                    const data = skillDoc.data();
+                                    return data.name || 'Unnamed Skill';
+                                  }
+                                  console.warn('Skill document not found:', skillId);
+                                  return 'Unnamed Skill';
+                                }
                               );
                               
-                              const skillDocs = await Promise.all(skillPromises);
-                              skillNames = skillDocs
-                                .filter(doc => doc.exists())
-                                .map(doc => {
-                                  const data = doc.data();
-                                  return data.name || 'Unnamed Skill';
-                                });
-
+                              skillNames = await Promise.all(skillPromises);
+                              
                               if (skillNames.length === 0 && latestObservation.skillsDemonstrated.length > 0) {
                                 console.warn('No valid skill names found for:', latestObservation.skillsDemonstrated);
                               }
                             } catch (error) {
                               console.error('Error fetching skill details:', error);
-                              skillNames = ['Error loading skills'];
+                              skillNames = latestObservation.skillsDemonstrated.map(() => 'Unnamed Skill');
                             }
                           }
                           
