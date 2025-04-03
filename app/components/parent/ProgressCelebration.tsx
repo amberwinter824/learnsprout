@@ -1,6 +1,6 @@
 import { FC, useState } from 'react';
 import Link from 'next/link';
-import { FaStar, FaArrowUp, FaSeedling } from 'react-icons/fa';
+import { FaStar, FaArrowUp, FaSeedling, FaChevronRight } from 'react-icons/fa';
 import { Flower2, Sprout, Leaf, CircleDot } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -127,53 +127,103 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
   const mostSignificantMilestone = sortedMilestones[0];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-      <div className="space-y-4">
-        <div className="flex items-start">
-          <div className="mr-3 mt-1">
-            <div 
-              className="relative"
-              onMouseEnter={() => setShowTooltip(true)}
-              onMouseLeave={() => setShowTooltip(false)}
-              onTouchStart={() => setShowTooltip(!showTooltip)}
-            >
-              <div className={`${getStatusColor(mostSignificantMilestone.status)}`}>
-                {getStatusIcon(mostSignificantMilestone.status)}
+    <div className="bg-white rounded-lg p-4 border border-gray-200">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-gray-900">{childName}</h3>
+        <Link
+          href={`/dashboard/progress?childId=${childId}`}
+          className="text-xs text-emerald-600 hover:text-emerald-700"
+        >
+          View All
+        </Link>
+      </div>
+      
+      <div className="space-y-3">
+        {sortedMilestones.slice(0, 3).map((milestone, index) => (
+          <div key={milestone.id} className="relative">
+            {/* Progress bar background */}
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              {/* Progress bar fill */}
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  milestone.status === 'mastered' 
+                    ? 'bg-emerald-500' 
+                    : milestone.status === 'developing'
+                    ? 'bg-blue-500'
+                    : 'bg-amber-500'
+                }`}
+                style={{ 
+                  width: `${milestone.status === 'mastered' ? '100%' : 
+                          milestone.status === 'developing' ? '60%' : '30%'}`
+                }}
+              />
+            </div>
+            
+            {/* Milestone details */}
+            <div className="mt-1.5 flex items-start justify-between">
+              <div className="flex-1 flex items-center">
+                <div className={`mr-2 ${getStatusColor(milestone.status)}`}>
+                  {getStatusIcon(milestone.status)}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-900 truncate">
+                    {milestone.skillName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {format(new Date(milestone.lastAssessed), 'MMM d')}
+                  </p>
+                </div>
               </div>
-              <div className={`absolute left-0 top-0 z-10 bg-white p-2 rounded-lg shadow-lg text-sm text-gray-700 whitespace-nowrap transform -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-0 ${
-                showTooltip ? 'visible' : 'invisible'
+              
+              {/* Status indicator */}
+              <div className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                milestone.status === 'mastered' 
+                  ? 'bg-emerald-100 text-emerald-700' 
+                  : milestone.status === 'developing'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-amber-100 text-amber-700'
               }`}>
-                {getStatusDescription(mostSignificantMilestone.status)}
-                {/* Mobile touch indicator */}
-                <div className="sm:hidden absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-white border-r-[6px] border-r-transparent"></div>
+                {milestone.status.charAt(0).toUpperCase() + milestone.status.slice(1)}
               </div>
             </div>
           </div>
-          <div>
-            <p className="text-gray-800">
-              <span className="font-medium">{childName}</span>{' '}
-              {getStatusMessage(mostSignificantMilestone.status)}{' '}
-              <span className="font-medium">{mostSignificantMilestone.skillName}</span>!
-            </p>
-            {sortedMilestones.length > 1 && (
-              <p className="text-gray-600 mt-2">
-                Plus {sortedMilestones.length - 1} more recent milestone
-                {sortedMilestones.length > 2 ? 's' : ''}!
-              </p>
-            )}
-          </div>
-        </div>
-
-        {showProgressLinks && (
-          <div className="flex gap-4 mt-4">
+        ))}
+        
+        {/* Show "View More" if there are more milestones */}
+        {sortedMilestones.length > 3 && (
+          <div className="text-center pt-2">
             <Link
-              href={`/dashboard/children/${childId}/progress`}
-              className="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+              href={`/dashboard/progress?childId=${childId}`}
+              className="text-xs text-emerald-600 hover:text-emerald-700 inline-flex items-center"
             >
-              View Progress
+              View {sortedMilestones.length - 3} more milestones
+              <FaChevronRight className="h-3 w-3 ml-1" />
             </Link>
           </div>
         )}
+      </div>
+      
+      {/* Progress summary */}
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center">
+              <Flower2 className="h-3 w-3 text-emerald-500 mr-1" />
+              <span className="text-gray-600">Mastered</span>
+            </div>
+            <div className="flex items-center">
+              <Sprout className="h-3 w-3 text-blue-500 mr-1" />
+              <span className="text-gray-600">Developing</span>
+            </div>
+            <div className="flex items-center">
+              <Leaf className="h-3 w-3 text-amber-500 mr-1" />
+              <span className="text-gray-600">Emerging</span>
+            </div>
+          </div>
+          <div className="text-gray-500">
+            {recentMilestones.filter(m => m.status === 'mastered').length} mastered
+          </div>
+        </div>
       </div>
     </div>
   );
