@@ -33,6 +33,7 @@ export default function MaterialsInventory() {
   const [filter, setFilter] = useState<'all' | 'owned' | 'needed'>('all');
   const [showAssessment, setShowAssessment] = useState(false);
   const [selectedChild, setSelectedChild] = useState<{ id: string; name: string; age: number } | null>(null);
+  const [children, setChildren] = useState<{ id: string; name: string; age: number }[]>([]);
 
   const fetchMaterials = async () => {
     if (!currentUser?.uid) return;
@@ -79,6 +80,29 @@ export default function MaterialsInventory() {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    const fetchChildren = async () => {
+      if (!currentUser?.uid) return;
+
+      try {
+        const childrenQuery = query(
+          collection(db, 'children'),
+          where('userId', '==', currentUser.uid)
+        );
+        const childrenSnapshot = await getDocs(childrenQuery);
+        const childrenData = childrenSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as { id: string; name: string; age: number }[];
+        setChildren(childrenData);
+      } catch (error) {
+        console.error('Error fetching children:', error);
+      }
+    };
+
+    fetchChildren();
+  }, [currentUser]);
+
   const toggleMaterialOwnership = async (materialId: string, currentStatus: boolean) => {
     if (!currentUser) return;
 
@@ -122,6 +146,20 @@ export default function MaterialsInventory() {
     return matchesSearch && matchesFilter;
   });
 
+  const handleAssessmentClick = () => {
+    if (children.length === 0) {
+      setError('Please add a child before assessing materials');
+      return;
+    }
+    if (children.length === 1) {
+      setSelectedChild(children[0]);
+      setShowAssessment(true);
+    } else {
+      // If multiple children, show child selection
+      setShowAssessment(true);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -143,7 +181,7 @@ export default function MaterialsInventory() {
           </p>
         </div>
         <button
-          onClick={() => setShowAssessment(true)}
+          onClick={handleAssessmentClick}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
         >
           <Package className="h-4 w-4 mr-2" />
@@ -295,34 +333,52 @@ export default function MaterialsInventory() {
       )}
 
       {/* Materials Assessment Modal */}
-      {showAssessment && selectedChild && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-lg bg-white">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Materials Assessment for {selectedChild.name}
-              </h2>
-              <button 
-                onClick={() => {
-                  setShowAssessment(false);
-                  setSelectedChild(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      {showAssessment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Materials Assessment</h2>
+                <button
+                  onClick={() => {
+                    setShowAssessment(false);
+                    setSelectedChild(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              {!selectedChild && children.length > 1 ? (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-900">Select a Child</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {children.map(child => (
+                      <button
+                        key={child.id}
+                        onClick={() => setSelectedChild(child)}
+                        className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors"
+                      >
+                        <h4 className="font-medium text-gray-900">{child.name}</h4>
+                        <p className="text-sm text-gray-500">{child.age} years old</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <MaterialsAssessment
+                  childId={selectedChild?.id || ''}
+                  childAge={selectedChild?.age || 0}
+                  childName={selectedChild?.name || ''}
+                  onComplete={() => {
+                    setShowAssessment(false);
+                    setSelectedChild(null);
+                    fetchMaterials(); // Refresh materials list
+                  }}
+                />
+              )}
             </div>
-            <MaterialsAssessment
-              childId={selectedChild.id}
-              childAge={selectedChild.age}
-              childName={selectedChild.name}
-              onComplete={() => {
-                setShowAssessment(false);
-                setSelectedChild(null);
-                // Optionally refresh materials list
-                fetchMaterials();
-              }}
-            />
           </div>
         </div>
       )}
