@@ -17,6 +17,7 @@ interface Material {
   name: string;
   normalizedName: string;
   amazonLink?: string;
+  alternativeNames?: string[];
   [key: string]: any;
 }
 
@@ -182,19 +183,42 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
 
         console.log(`Found ${activities.length} activities with materials:`, activities);
 
+        // Inside fetchMaterialsNeeded function, after getting activities:
+        console.log('Processing activities and their materials:');
+        activities.forEach(activity => {
+          console.log(`Activity: ${activity.title}`);
+          console.log('Materials needed:', activity.materialsNeeded);
+        });
+
         // Get all materials to create a lookup table
         const materialsSnapshot = await getDocs(collection(db, 'materials'));
         const materialsByName = new Map<string, Material>();
 
         materialsSnapshot.forEach(doc => {
           const data = doc.data() as Material;
-          materialsByName.set(data.name.toLowerCase(), {
+          // Store by normalized name
+          materialsByName.set(data.normalizedName.toLowerCase(), {
             ...data,
             id: doc.id
           });
+          // Also store by alternative names if they exist
+          if (data.alternativeNames && Array.isArray(data.alternativeNames)) {
+            data.alternativeNames.forEach(altName => {
+              materialsByName.set(altName.trim().toLowerCase(), {
+                ...data,
+                id: doc.id
+              });
+            });
+          }
         });
 
         console.log(`Found ${materialsByName.size} materials in database`);
+
+        // After getting materials from database:
+        console.log('Materials in database:');
+        materialsByName.forEach((material, name) => {
+          console.log(`Material: ${name} (ID: ${material.id})`);
+        });
 
         // Count materials needed
         const materialsCount = new Map<string, { count: number; activities: Set<string> }>();
@@ -208,14 +232,27 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
             // Skip common household items
             if (isCommonHouseholdItem(normalizedName)) return;
 
-            if (!materialsCount.has(normalizedName)) {
-              materialsCount.set(normalizedName, { count: 0, activities: new Set() });
+            // Try to find the material in our database
+            const material = materialsByName.get(normalizedName);
+            if (!material) {
+              console.log(`No match found for material: ${materialName} (normalized: ${normalizedName})`);
+              return;
             }
 
-            const material = materialsCount.get(normalizedName)!;
-            material.count++;
-            material.activities.add(activity.title || 'Unknown Activity');
+            if (!materialsCount.has(material.id)) {
+              materialsCount.set(material.id, { count: 0, activities: new Set() });
+            }
+
+            const materialData = materialsCount.get(material.id)!;
+            materialData.count++;
+            materialData.activities.add(activity.title || 'Unknown Activity');
           });
+        });
+
+        // After processing materials count:
+        console.log('Materials count after processing:');
+        materialsCount.forEach((data, material) => {
+          console.log(`Material: ${material}, Count: ${data.count}, Activities:`, Array.from(data.activities));
         });
 
         // Convert to array and sort by count
@@ -231,6 +268,10 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
         })
         .filter(item => !ownedMaterialIds.includes(item.materialId))
         .sort((a, b) => b.count - a.count);
+
+        // After filtering owned materials:
+        console.log('Owned material IDs:', ownedMaterialIds);
+        console.log('Final materials array before filtering:', materialsArray);
 
         console.log(`Found ${materialsArray.length} materials needed for activities`);
         setMaterialsNeeded(materialsArray);
