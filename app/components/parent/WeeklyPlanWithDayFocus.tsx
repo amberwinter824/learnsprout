@@ -864,8 +864,8 @@ export default function WeeklyPlanWithDayFocus({
                               )}
                             </span>
                             {activity.lastObservation && (
-                              <div className="absolute z-[9999] -top-2 left-0 transform -translate-y-full hidden group-hover:block">
-                                <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 mb-2">
+                              <div className="fixed z-[9999] hidden group-hover:block">
+                                <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 w-[300px]" style={{ position: 'fixed', transform: 'translate(-20px, -100%)' }}>
                                   <div className="space-y-2">
                                     {activity.lastObservation.engagementLevel && (
                                       <div className="flex items-center text-sm">
