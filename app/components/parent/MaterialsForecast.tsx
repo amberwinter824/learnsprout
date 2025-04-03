@@ -169,10 +169,21 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
         const materialLookup = new Map();
         
         materialsSnapshot.forEach(doc => {
-          materialLookup.set(doc.data().normalizedName, {
+          const data = doc.data();
+          // Store by both normalized name and alternative names
+          materialLookup.set(data.normalizedName, {
             id: doc.id,
-            ...doc.data()
+            ...data
           });
+          // Also store by alternative names if they exist
+          if (data.alternativeNames && Array.isArray(data.alternativeNames)) {
+            data.alternativeNames.forEach((altName: string) => {
+              materialLookup.set(altName.trim().toLowerCase(), {
+                id: doc.id,
+                ...data
+              });
+            });
+          }
         });
         
         // Process each activity and its materials
@@ -217,6 +228,7 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                 });
               }
             } else {
+              console.log(`No match found for material: ${materialName} (normalized: ${normalizedName})`);
               // No match in database, create an entry without links
               if (materialMap.has(normalizedName)) {
                 // Update existing entry
