@@ -48,8 +48,11 @@ export default function EditChildPage({ params }) {
         
         // Format birthDate for input field and calculations
         let birthDateObj = null;
-        if (childDoc.birthDate) {
-          // Handle both JavaScript Date objects and Firestore Timestamps
+        if (childDoc.birthDateString) {
+          // Handle birthDateString format (YYYY-MM-DD)
+          birthDateObj = new Date(childDoc.birthDateString + 'T12:00:00');
+        } else if (childDoc.birthDate) {
+          // Handle legacy birthDate format (Timestamp or Date)
           birthDateObj = childDoc.birthDate.seconds 
             ? new Date(childDoc.birthDate.seconds * 1000) 
             : new Date(childDoc.birthDate);
@@ -175,7 +178,7 @@ export default function EditChildPage({ params }) {
       // Update the child in Firestore
       await updateChild(id, {
         name: name.trim(),
-        birthDate,
+        birthDateString: birthDate.toISOString().split('T')[0], // Store as YYYY-MM-DD string
         ageGroup, // Automatically calculated based on birthDate
         interests: selectedInterests,
         notes: notes.trim(),

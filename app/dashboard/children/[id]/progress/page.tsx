@@ -24,7 +24,10 @@ import {
   Flower2,
   Sprout,
   Leaf,
-  CircleDot
+  CircleDot,
+  CheckCircle,
+  ArrowUp,
+  Sprout as Seedling
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
@@ -567,24 +570,53 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               </div>
             </div>
 
-            {/* Progress Celebration */}
-            <ProgressCelebration
-              childId={childId}
-              childName={child?.name || ''}
-              recentMilestones={skills
-                .filter(s => s.status !== 'not_started' && s.lastAssessed)
-                .map(s => ({
-                  id: s.id,
-                  skillId: s.id,
-                  skillName: s.name,
-                  status: s.status as 'mastered' | 'developing' | 'emerging',
-                  lastAssessed: s.lastAssessed ? s.lastAssessed.toDate().toISOString() : new Date().toISOString()
-                }))
-                .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
-                .slice(0, 5)
-              }
-              showProgressLinks={false}
-            />
+            {/* Understanding Skill Development */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Understanding Skill Development</h2>
+              <div className="space-y-6">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Mastered Skills</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Skills your child has fully developed and can perform independently.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <ArrowUp className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Developing Skills</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Skills your child is actively working on and showing steady progress.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                      <Seedling className="h-4 w-4 text-amber-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Emerging Skills</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Skills your child is beginning to explore and showing initial interest in.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           
           {/* Tab Navigation */}
