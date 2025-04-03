@@ -1,7 +1,7 @@
 import { FC, useState } from 'react';
 import Link from 'next/link';
 import { FaStar, FaArrowUp, FaSeedling, FaChevronRight } from 'react-icons/fa';
-import { Flower2, Sprout, Leaf, CircleDot } from 'lucide-react';
+import { Flower2, Sprout, Leaf, CircleDot, ArrowUpRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Milestone {
@@ -132,9 +132,10 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
         <h3 className="text-sm font-medium text-gray-900">{childName}</h3>
         <Link
           href={`/dashboard/children/${childId}/progress`}
-          className="text-xs text-emerald-600 hover:text-emerald-700"
+          className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 hover:underline"
         >
-          View {childName}'s progress
+          View child's progress
+          <ArrowUpRight className="h-4 w-4 ml-1" />
         </Link>
       </div>
       
@@ -188,19 +189,6 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
             </div>
           </div>
         ))}
-        
-        {/* Show "View More" if there are more milestones */}
-        {sortedMilestones.length > 3 && (
-          <div className="text-center pt-2">
-            <Link
-              href={`/dashboard/children/${childId}/progress`}
-              className="text-xs text-emerald-600 hover:text-emerald-700 inline-flex items-center"
-            >
-              View {sortedMilestones.length - 3} more milestones
-              <FaChevronRight className="h-3 w-3 ml-1" />
-            </Link>
-          </div>
-        )}
       </div>
       
       {/* Progress summary */}

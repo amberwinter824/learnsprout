@@ -662,14 +662,6 @@ export default function ProgressDashboardPage() {
                       </div>
                     ))
                   }
-                  <div className="text-center mt-4">
-                    <button
-                      onClick={() => router.push(selectedChild ? `/dashboard/children/${selectedChild}` : '/dashboard/children')}
-                      className="text-sm text-emerald-600 hover:text-emerald-700"
-                    >
-                      View all activities
-                    </button>
-                  </div>
                 </div>
               ) : (
                 <div className="text-center py-6">

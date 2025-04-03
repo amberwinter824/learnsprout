@@ -712,13 +712,6 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
               <Edit className="h-4 w-4 mr-2" />
               Edit Profile
             </Link>
-            <Link
-              href={`/dashboard/children/${childId}?showAddRecord=true`}
-              className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Record
-            </Link>
           </div>
         </div>
         
@@ -775,21 +768,6 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
           </div>
         </Link>
 
-        {/* Activity History Card */}
-        <Link href={`/dashboard/children/${childId}/activities`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center mb-4">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <BookOpen className="h-6 w-6 text-green-600" />
-            </div>
-            <h3 className="ml-3 text-lg font-medium text-gray-900">Activity History</h3>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">Review past activities and observations</p>
-          <div className="flex items-center text-sm text-green-600">
-            View History
-            <ArrowUpRight className="h-4 w-4 ml-1" />
-          </div>
-        </Link>
-
         {/* Materials Needed Card */}
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center mb-4">
@@ -806,17 +784,17 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
           />
         </div>
 
-        {/* Settings Card */}
-        <Link href={`/dashboard/children/${childId}/settings`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+        {/* Edit Profile Card */}
+        <Link href={`/dashboard/children/${childId}/edit`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center mb-4">
             <div className="p-2 bg-gray-100 rounded-lg">
-              <Settings className="h-6 w-6 text-gray-600" />
+              <Edit className="h-6 w-6 text-gray-600" />
             </div>
-            <h3 className="ml-3 text-lg font-medium text-gray-900">Settings</h3>
+            <h3 className="ml-3 text-lg font-medium text-gray-900">Edit Profile</h3>
           </div>
-          <p className="text-sm text-gray-500 mb-4">Configure child-specific preferences and settings</p>
+          <p className="text-sm text-gray-500 mb-4">Update your child's information and preferences</p>
           <div className="flex items-center text-sm text-gray-600">
-            Manage Settings
+            Edit Profile
             <ArrowUpRight className="h-4 w-4 ml-1" />
           </div>
         </Link>
@@ -826,12 +804,6 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
-          <Link 
-            href={`/dashboard/children/${childId}/activities`}
-            className="text-sm text-emerald-600 hover:text-emerald-700"
-          >
-            View All
-          </Link>
         </div>
         
         <div className="space-y-4">

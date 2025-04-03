@@ -169,13 +169,23 @@ export default function ChildrenListPage() {
                     View profile
                   </Link>
                   
-                  <Link 
-                    href={`/dashboard/children/${child.id}/weekly-plan`}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-500"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Weekly Plan
-                  </Link>
+                  <div className="flex space-x-4">
+                    <Link 
+                      href={`/dashboard/children/${child.id}/edit`}
+                      className="text-sm font-medium text-gray-600 hover:text-gray-500"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Edit profile
+                    </Link>
+                    
+                    <Link 
+                      href={`/dashboard/children/${child.id}/weekly-plan`}
+                      className="text-sm font-medium text-gray-600 hover:text-gray-500"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Weekly Plan
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
