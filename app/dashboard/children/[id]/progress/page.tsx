@@ -517,68 +517,74 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Progress Tracking</h1>
           </div>
 
-          {/* Progress Celebration and Growth Stages */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Main content */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Understanding Growth Stages */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Understanding Growth Stages</h2>
+              <div className="space-y-6">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <Flower2 className="h-4 w-4 text-emerald-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Mastered</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Your child has fully developed this skill and can perform it independently.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Sprout className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Developing</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Your child is making steady progress and can perform this skill with some support.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                      <Leaf className="h-4 w-4 text-amber-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Emerging</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Your child is beginning to show interest and initial attempts at this skill.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Celebration */}
             <ProgressCelebration
               childId={childId}
               childName={child?.name || ''}
               recentMilestones={skills
                 .filter(s => s.status !== 'not_started' && s.lastAssessed)
-                .map(skill => ({
-                  id: skill.id,
-                  skillId: skill.skillId,
-                  skillName: skill.name,
-                  status: skill.status as 'mastered' | 'developing' | 'emerging',
-                  lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
+                .map(s => ({
+                  id: s.id,
+                  skillId: s.id,
+                  skillName: s.name,
+                  status: s.status as 'mastered' | 'developing' | 'emerging',
+                  lastAssessed: s.lastAssessed ? s.lastAssessed.toDate().toISOString() : new Date().toISOString()
                 }))
                 .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
                 .slice(0, 5)
               }
               showProgressLinks={false}
             />
-            
-            {/* Growth Stages Explanation */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Understanding Growth Stages</h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="text-green-500">
-                    <Flower2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Mastered</h3>
-                    <p className="text-sm text-gray-500">Fully bloomed and thriving independently</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-blue-500">
-                    <Sprout className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Developing</h3>
-                    <p className="text-sm text-gray-500">Growing steadily with support</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-amber-500">
-                    <Leaf className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Emerging</h3>
-                    <p className="text-sm text-gray-500">First leaves appearing</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-400">
-                    <CircleDot className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Not Started</h3>
-                    <p className="text-sm text-gray-500">Seed ready to be planted</p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
           
           {/* Tab Navigation */}
@@ -1195,4 +1201,5 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
       )}
     </div>
   );
+}
 }

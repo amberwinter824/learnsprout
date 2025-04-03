@@ -1,5 +1,6 @@
 import { FC, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { FaStar, FaArrowUp, FaSeedling, FaChevronRight } from 'react-icons/fa';
 import { Flower2, Sprout, Leaf, CircleDot, ArrowUpRight } from 'lucide-react';
 import { format } from 'date-fns';
@@ -28,6 +29,8 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
   showProgressLinks = true
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
+  const pathname = usePathname();
+  const isOnProgressPage = pathname === `/dashboard/children/${childId}/progress`;
 
   const sortedMilestones = [...recentMilestones].sort((a, b) => {
     const statusOrder: Record<SkillStatus, number> = {
@@ -130,13 +133,15 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
     <div className="bg-white rounded-lg p-4 border border-gray-200">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-900">{childName}</h3>
-        <Link
-          href={`/dashboard/children/${childId}/progress`}
-          className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 hover:underline"
-        >
-          View child's progress
-          <ArrowUpRight className="h-4 w-4 ml-1" />
-        </Link>
+        {!isOnProgressPage && (
+          <Link
+            href={`/dashboard/children/${childId}/progress`}
+            className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 hover:underline"
+          >
+            View child's progress
+            <ArrowUpRight className="h-4 w-4 ml-1" />
+          </Link>
+        )}
       </div>
       
       <div className="space-y-3">
