@@ -110,7 +110,7 @@ const INTEREST_OPTIONS = [
 // Define form validation rules
 const MAX_BIRTHDATE = new Date(); // Today (can't be born in the future)
 const MIN_BIRTHDATE = new Date(); 
-MIN_BIRTHDATE.setFullYear(MIN_BIRTHDATE.getFullYear() - 7); // Up to 7 years old
+MIN_BIRTHDATE.setFullYear(MIN_BIRTHDATE.getFullYear() - 6); // Changed from 7 to 6
 
 // Child profile form properties
 interface ChildProfileFormProps {
@@ -182,7 +182,7 @@ export default function ChildProfileForm({
     }
     
     if (inputDate < MIN_BIRTHDATE) {
-      setError("This platform is designed for children up to 7 years old");
+      setError("We currently support children up to 6 years old. We're working on expanding our activities and support for older children. Stay tuned for updates!");
       return;
     }
     
