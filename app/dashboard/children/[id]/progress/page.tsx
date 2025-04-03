@@ -579,25 +579,25 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                   Child development is organized into key developmental domains that work together to support your child's growth. Each domain focuses on specific aspects of development while maintaining connections with other areas.
                 </p>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="bg-blue-50 p-3 rounded-md">
                     <h3 className="text-sm font-medium text-gray-900">Physical Development</h3>
                     <p className="text-xs text-gray-500 mt-1">
                       Gross and fine motor skills, coordination, and physical health
                     </p>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="bg-purple-50 p-3 rounded-md">
                     <h3 className="text-sm font-medium text-gray-900">Cognitive Development</h3>
                     <p className="text-xs text-gray-500 mt-1">
                       Thinking, problem-solving, memory, and learning abilities
                     </p>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="bg-pink-50 p-3 rounded-md">
                     <h3 className="text-sm font-medium text-gray-900">Social Development</h3>
                     <p className="text-xs text-gray-500 mt-1">
                       Interactions with others, relationships, and social understanding
                     </p>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="bg-amber-50 p-3 rounded-md">
                     <h3 className="text-sm font-medium text-gray-900">Emotional Development</h3>
                     <p className="text-xs text-gray-500 mt-1">
                       Feelings, self-awareness, and emotional regulation
@@ -606,8 +606,10 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                 </div>
                 <div className="pt-4">
                   <Link
-                    href="/parent/developmental-domains"
-                    className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 hover:underline"
+                    href="/dashboard/developmental-domains"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600"
                   >
                     Learn more about developmental domains
                     <ArrowUpRight className="ml-1 h-4 w-4" />
@@ -898,7 +900,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                     </div>
                     <Link 
                       href="/dashboard/developmental-domains"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-700 hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600"
                     >
                       <BookOpen className="h-4 w-4 mr-2" />
                       View Developmental Domains
@@ -1009,7 +1011,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                           <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
                             <button
                               onClick={() => handleUpdateSkillStatus(skill.id || `skill-${skill.skillId}`)}
-                              className="text-emerald-600 hover:text-emerald-700"
+                              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600"
                             >
                               Update Status
                             </button>
@@ -1028,30 +1030,30 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                   
                   <div className="flex space-x-2">
                     <button
-                      className={`px-3 py-1 text-sm rounded-md ${
+                      className={`px-3 py-2 text-sm font-medium rounded-md shadow-sm ${
                         timeRange === 'all' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                          ? 'bg-emerald-700 text-white' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                       onClick={() => setTimeRange('all')}
                     >
                       All Time
                     </button>
                     <button
-                      className={`px-3 py-1 text-sm rounded-md ${
+                      className={`px-3 py-2 text-sm font-medium rounded-md shadow-sm ${
                         timeRange === 'quarter' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                          ? 'bg-emerald-700 text-white' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                       onClick={() => setTimeRange('quarter')}
                     >
                       Last 3 Months
                     </button>
                     <button
-                      className={`px-3 py-1 text-sm rounded-md ${
+                      className={`px-3 py-2 text-sm font-medium rounded-md shadow-sm ${
                         timeRange === 'month' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                          ? 'bg-emerald-700 text-white' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                       onClick={() => setTimeRange('month')}
                     >
@@ -1214,14 +1216,14 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setIsUpdateModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitStatusUpdate}
                 disabled={isUpdating}
-                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-700 rounded-md shadow-sm hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isUpdating ? 'Updating...' : 'Update Status'}
               </button>
