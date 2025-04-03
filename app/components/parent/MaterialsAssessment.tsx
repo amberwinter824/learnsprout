@@ -27,11 +27,16 @@ interface Material {
   id: string;
   name: string;
   normalizedName: string;
-  category?: string;
-  description?: string;
-  amazonLink?: string;
-  affiliateLink?: string;
-  activities?: string[];
+  category: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  isReusable: boolean;
+  isOptional: boolean;
+  amazonLink: string;
+  affiliateLink: string;
+  activities: string[];
+  alternativeNames: string[];
 }
 
 interface Activity {
@@ -104,33 +109,14 @@ export default function MaterialsAssessment({
           ...doc.data()
         })) as Material[];
 
-        // Create a map of materials by their normalized names
-        const materialsByName = new Map(
-          allMaterials.map(m => [m.normalizedName, m])
+        // Filter materials based on activities
+        const activityIds = new Set(activities.map(a => a.id));
+        const relevantMaterials = allMaterials.filter(material => 
+          material.activities?.some(activityId => activityIds.has(activityId))
         );
 
-        // Extract and deduplicate materials from activities
-        const materialMap = new Map<string, Material>();
-        
-        activities.forEach(activity => {
-          if (!activity.materialsNeeded) return;
-          
-          activity.materialsNeeded.forEach(materialName => {
-            const normalizedName = materialName.trim().toLowerCase();
-            const material = materialsByName.get(normalizedName);
-            
-            if (material) {
-              materialMap.set(material.id, {
-                ...material,
-                activities: [...(material.activities || []), activity.id]
-              });
-            }
-          });
-        });
-
-        // Convert to array and group by category
-        const materialsList = Array.from(materialMap.values());
-        const groupedMaterials = materialsList.reduce((acc, material) => {
+        // Group materials by category
+        const groupedMaterials = relevantMaterials.reduce((acc, material) => {
           const category = material.category || 'Other';
           if (!acc[category]) {
             acc[category] = [];
@@ -139,7 +125,7 @@ export default function MaterialsAssessment({
           return acc;
         }, {} as Record<string, Material[]>);
 
-        setMaterials(materialsList);
+        setMaterials(relevantMaterials);
         setCategories(groupedMaterials);
       } catch (err) {
         console.error('Error fetching materials:', err);
@@ -251,49 +237,60 @@ export default function MaterialsAssessment({
       </div>
 
       <div className="p-6">
-        {Object.entries(categories).map(([category, materials]) => (
+        {Object.entries(categories).map(([category, categoryMaterials]) => (
           <div key={category} className="mb-8 last:mb-0">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              {category}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {materials.map((material) => (
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{category}</h3>
+            <div className="space-y-4">
+              {categoryMaterials.map((material) => (
                 <div 
                   key={material.id}
-                  className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg"
+                  className={`p-4 rounded-lg border ${
+                    selectedMaterials.has(material.id)
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : 'bg-white border-gray-200 hover:border-emerald-200'
+                  } transition-colors duration-200`}
                 >
-                  <button
-                    onClick={() => handleMaterialToggle(material.id)}
-                    className={`mt-1 p-1 rounded-full ${
-                      selectedMaterials.has(material.id)
-                        ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                        : 'text-gray-400 bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {selectedMaterials.has(material.id) ? (
-                      <CheckCircle className="h-5 w-5" />
-                    ) : (
-                      <XCircle className="h-5 w-5" />
-                    )}
-                  </button>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{material.name}</h4>
-                    {material.description && (
-                      <p className="text-sm text-gray-600 mt-1">{material.description}</p>
-                    )}
-                    <div className="mt-2 flex items-center space-x-2">
-                      {material.amazonLink && (
-                        <a
-                          href={material.amazonLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => handleMaterialToggle(material.id)}
+                          className="group flex items-center"
                         >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          View on Amazon
-                        </a>
+                          {selectedMaterials.has(material.id) ? (
+                            <CheckCircle className="h-5 w-5 text-emerald-500 mr-2" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-gray-300 group-hover:text-emerald-500 mr-2" />
+                          )}
+                          <span className="font-medium text-gray-900">
+                            {material.name}
+                            {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                            {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
+                          </span>
+                        </button>
+                      </div>
+                      {material.description && (
+                        <p className="mt-1 text-sm text-gray-600 ml-7">
+                          {material.description}
+                        </p>
+                      )}
+                      {material.isReusable && (
+                        <span className="ml-7 inline-flex items-center px-2 py-0.5 mt-2 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          Reusable
+                        </span>
                       )}
                     </div>
+                    {(material.amazonLink || material.affiliateLink) && (
+                      <a
+                        href={material.affiliateLink || material.amazonLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-4 inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Buy on Amazon
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
@@ -301,10 +298,10 @@ export default function MaterialsAssessment({
           </div>
         ))}
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-4">
+        <div className="mt-8 flex justify-between items-center">
           <button
             onClick={createAmazonCart}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
           >
             <ShoppingCart className="h-4 w-4 mr-2" />
             Create Amazon Cart for Missing Items
@@ -312,9 +309,9 @@ export default function MaterialsAssessment({
           {onComplete && (
             <button
               onClick={onComplete}
-              className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
             >
-              Save My Inventory
+              Save and Continue
             </button>
           )}
         </div>
