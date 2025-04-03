@@ -10,7 +10,8 @@ import {
   doc, 
   getDoc,
   setDoc,
-  Timestamp 
+  Timestamp,
+  or
 } from 'firebase/firestore';
 import { 
   Package, 
@@ -22,6 +23,7 @@ import {
   CalendarRange
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { calculateAge } from '@/lib/ageUtils';
 
 interface Material {
   id: string;
@@ -42,8 +44,7 @@ interface Material {
 interface Activity {
   id: string;
   title: string;
-  minAge: number;
-  maxAge: number;
+  ageRange: number[];
   materialsNeeded?: string[];
   category?: string;
 }
@@ -90,9 +91,14 @@ export default function MaterialsAssessment({
         setSelectedMaterials(ownedMaterialIds);
 
         // Get activities appropriate for child's age
+        // Query for activities where ageRange contains the child's age
+        // Also include activities for the next age to prepare ahead
         const activitiesQuery = query(
           collection(db, 'activities'),
-          where('ageRange', 'array-contains', childAge)
+          or(
+            where('ageRange', 'array-contains', childAge),
+            where('ageRange', 'array-contains', childAge + 1)
+          )
         );
         
         const activitiesSnapshot = await getDocs(activitiesQuery);
@@ -101,6 +107,9 @@ export default function MaterialsAssessment({
           ...doc.data()
         })) as Activity[];
 
+        console.log(`Found ${activities.length} activities with materials:`, activities);
+        console.log('Processing activities and their materials:');
+
         // Get all materials
         const materialsSnapshot = await getDocs(collection(db, 'materials'));
         const allMaterials = materialsSnapshot.docs.map(doc => ({
@@ -108,11 +117,22 @@ export default function MaterialsAssessment({
           ...doc.data()
         })) as Material[];
 
+        console.log(`Found ${allMaterials.length} materials in database`);
+        console.log('Materials in database:');
+        allMaterials.forEach(material => {
+          console.log(`Material: ${material.name} (ID: ${material.id})`);
+        });
+
         // Filter materials based on activities
         const activityIds = new Set(activities.map(a => a.id));
         const relevantMaterials = allMaterials.filter(material => 
           material.activities?.some(activityId => activityIds.has(activityId))
         );
+
+        console.log('Materials count after processing:');
+        relevantMaterials.forEach(material => {
+          console.log(`Material: ${material.id}, Count: ${material.quantity}, Activities: ${material.activities}`);
+        });
 
         // Group materials by category
         const groupedMaterials = relevantMaterials.reduce((acc, material) => {
