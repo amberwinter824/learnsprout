@@ -24,6 +24,7 @@ interface Material {
   unit: string;
   isReusable: boolean;
   isOptional: boolean;
+  isCommonHouseholdItem: boolean;
   amazonLink?: string;
   affiliateLink?: string;
   activities: string[];
@@ -57,6 +58,7 @@ export default function MaterialsAdminPage() {
     unit: 'piece',
     isReusable: true,
     isOptional: false,
+    isCommonHouseholdItem: false,
     alternativeNames: []
   });
 
@@ -110,6 +112,7 @@ export default function MaterialsAdminPage() {
         unit: 'piece',
         isReusable: true,
         isOptional: false,
+        isCommonHouseholdItem: false,
         alternativeNames: []
       });
       fetchMaterials();
@@ -216,6 +219,7 @@ export default function MaterialsAdminPage() {
               unit: 'piece',
               isReusable: true,
               isOptional: false,
+              isCommonHouseholdItem: false,
               alternativeNames: []
             });
             setShowForm(true);
@@ -254,6 +258,11 @@ export default function MaterialsAdminPage() {
                       {material.isOptional && (
                         <div className="mt-2 flex items-center text-sm text-gray-500">
                           Optional
+                        </div>
+                      )}
+                      {material.isCommonHouseholdItem && (
+                        <div className="mt-2 flex items-center text-sm text-gray-500">
+                          Common Household Item
                         </div>
                       )}
                     </div>
@@ -299,6 +308,7 @@ export default function MaterialsAdminPage() {
                     unit: 'piece',
                     isReusable: true,
                     isOptional: false,
+                    isCommonHouseholdItem: false,
                     alternativeNames: []
                   });
                 }}
@@ -450,6 +460,16 @@ export default function MaterialsAdminPage() {
                   />
                   <span className="ml-2 text-sm text-gray-700">Optional</span>
                 </label>
+
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.isCommonHouseholdItem}
+                    onChange={(e) => setFormData({ ...formData, isCommonHouseholdItem: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Common Household Item</span>
+                </label>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
@@ -466,6 +486,7 @@ export default function MaterialsAdminPage() {
                       unit: 'piece',
                       isReusable: true,
                       isOptional: false,
+                      isCommonHouseholdItem: false,
                       alternativeNames: []
                     });
                   }}
