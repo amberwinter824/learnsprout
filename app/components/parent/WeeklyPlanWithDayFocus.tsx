@@ -920,7 +920,7 @@ export default function WeeklyPlanWithDayFocus({
                               )}
                             </span>
                             {activity.lastObservation && (
-                              <div className="absolute left-0 top-0 z-[100] w-max max-w-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 -translate-y-full -translate-x-1/4 pointer-events-none">
+                              <div className="absolute left-0 bottom-full z-[100] w-max max-w-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 mb-2">
                                 <ObservationTooltip observation={activity.lastObservation} />
                               </div>
                             )}
