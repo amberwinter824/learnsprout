@@ -800,46 +800,46 @@ export default function WeeklyPlanWithDayFocus({
       </div>
       
       {/* Weekly calendar strip */}
-      <div className="px-4 py-4 border-b border-gray-200 overflow-x-auto">
-        <div className="flex min-w-max">
+      <div className="px-2 py-4 border-b border-gray-200">
+        <div className="flex justify-between">
           {weekActivities.map((day, index) => (
             <div 
               key={day.dayOfWeek}
               onClick={() => handleDaySelect(day.date)}
               className={`
-                w-32 mx-1 p-2 border rounded-lg cursor-pointer transition-colors
+                w-24 mx-0.5 p-1.5 border rounded-lg cursor-pointer transition-colors
                 ${isSameDay(day.date, selectedDate) 
                   ? 'border-emerald-500 bg-emerald-50' 
                   : 'border-gray-200 hover:border-emerald-300 bg-white'}
                 ${day.isRestDay ? 'opacity-75 bg-gray-50' : ''}
               `}
             >
-              <div className="text-center mb-2">
+              <div className="text-center mb-1">
                 <p className={`text-xs font-medium ${isSameDay(day.date, selectedDate) ? 'text-emerald-700' : 'text-gray-500'}`}>
                   {day.dayName.substring(0, 3).toUpperCase()}
                 </p>
-                <p className={`text-lg font-bold ${isSameDay(day.date, selectedDate) ? 'text-emerald-700' : 'text-gray-700'}`}>
+                <p className={`text-base font-bold ${isSameDay(day.date, selectedDate) ? 'text-emerald-700' : 'text-gray-700'}`}>
                   {format(day.date, 'd')}
                 </p>
               </div>
               
               <div className="text-center">
                 {day.isRestDay ? (
-                  <p className="text-xs text-gray-500">Rest Day</p>
+                  <p className="text-xs text-gray-500">Rest</p>
                 ) : day.activities.length === 0 ? (
-                  <p className="text-xs text-gray-500">No activities</p>
+                  <p className="text-xs text-gray-500">-</p>
                 ) : (
-                  <div className="flex justify-center space-x-1">
-                    {[...Array(Math.min(day.activities.length, 3))].map((_, i) => (
+                  <div className="flex justify-center space-x-0.5">
+                    {[...Array(Math.min(day.activities.length, 2))].map((_, i) => (
                       <div 
                         key={i}
-                        className={`h-2 w-2 rounded-full ${
+                        className={`h-1.5 w-1.5 rounded-full ${
                           isSameDay(day.date, selectedDate) ? 'bg-emerald-500' : 'bg-gray-300'
                         }`}
                       />
                     ))}
-                    {day.activities.length > 3 && (
-                      <span className="text-xs text-gray-500">+{day.activities.length - 3}</span>
+                    {day.activities.length > 2 && (
+                      <span className="text-xs text-gray-500">+{day.activities.length - 2}</span>
                     )}
                   </div>
                 )}
