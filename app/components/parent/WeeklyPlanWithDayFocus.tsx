@@ -102,6 +102,7 @@ export default function WeeklyPlanWithDayFocus({
   const [weekHasPlan, setWeekHasPlan] = useState(false);
   const [ownedMaterialIds, setOwnedMaterialIds] = useState<string[]>([]);
   const [materialLookup, setMaterialLookup] = useState<Map<string, any>>(new Map());
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   
   // Check if schedule preferences are set
   const hasSchedulePreferences = useMemo(() => {
@@ -502,6 +503,13 @@ export default function WeeklyPlanWithDayFocus({
     fetchWeekActivitiesRef();
   }, [currentUser, selectedChild, weekStartDate]);
   
+  // Add this useEffect to refresh the plan when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchWeekActivitiesRef();
+    }
+  }, [refreshTrigger]);
+  
   // Navigate to previous/next week
   const handleWeekChange = (direction: 'prev' | 'next') => {
     const newWeekStart = direction === 'prev' 
@@ -613,15 +621,18 @@ export default function WeeklyPlanWithDayFocus({
     setShowActivityForm(true);
   };
   
-  // Handle successful observation submission
+  // Modify handleObservationSuccess to trigger refresh
   const handleObservationSuccess = async () => {
     setShowActivityForm(false);
     setSelectedActivity(null);
     
-    // Refresh the activities data
-    if (selectedChild) {
-      await fetchWeekActivitiesRef();
-    }
+    // Trigger refresh
+    setRefreshTrigger(prev => prev + 1);
+  };
+  
+  // Add a function to trigger refresh from outside
+  const triggerRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
   
   // Get activity count for a day

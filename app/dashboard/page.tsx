@@ -338,11 +338,33 @@ export default function Dashboard() {
                 </Link>
               </div>
             ) : (
-              <WeeklyPlanWithDayFocus 
-                selectedDate={selectedDate}
-                selectedChildId={selectedChildId}
-                onGeneratePlan={handleGeneratePlan}
-              />
+              <div className="space-y-6">
+                <WeeklyPlanWithDayFocus 
+                  selectedDate={selectedDate}
+                  selectedChildId={selectedChildId}
+                  onGeneratePlan={handleGeneratePlan}
+                />
+                
+                {/* Materials Needed */}
+                <div className="bg-white rounded-lg shadow-sm p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-medium text-gray-900">Materials Needed</h2>
+                    <button
+                      onClick={() => materialsForecastRef.current?.fetchMaterialsNeeded()}
+                      className="text-sm text-emerald-600 hover:text-emerald-700"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <AllChildrenMaterialsForecast
+                      ref={materialsForecastRef}
+                      selectedChildId={selectedChildId}
+                      onMarkMaterialOwned={handleMarkMaterialOwned}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
           
@@ -378,26 +400,6 @@ export default function Dashboard() {
                     />
                   );
                 })}
-              </div>
-            </div>
-            
-            {/* Materials Needed */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-gray-900">Materials Needed</h2>
-                <button
-                  onClick={() => materialsForecastRef.current?.fetchMaterialsNeeded()}
-                  className="text-sm text-emerald-600 hover:text-emerald-700"
-                >
-                  Refresh
-                </button>
-              </div>
-              <div className="space-y-2">
-                <AllChildrenMaterialsForecast
-                  ref={materialsForecastRef}
-                  selectedChildId={selectedChildId}
-                  onMarkMaterialOwned={handleMarkMaterialOwned}
-                />
               </div>
             </div>
             

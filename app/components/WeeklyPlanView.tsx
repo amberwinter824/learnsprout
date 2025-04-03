@@ -132,6 +132,7 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
   const [showAddObservation, setShowAddObservation] = useState<boolean>(false);
   const [selectedActivityForObservation, setSelectedActivityForObservation] = useState<SelectedActivityForObservation | null>(null);
   const [showQuickActivities, setShowQuickActivities] = useState<boolean>(false);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // Initialize days and time slots
   const daysArray: string[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -291,7 +292,27 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
     router.push(`/dashboard/children/${childId}/weekly-plan?view=detailed`);
   }
 
-  // Handle adding an activity to the weekly plan
+  // Add this useEffect to refresh the plan when refreshTrigger changes
+  useEffect(() => {
+    async function refreshPlan() {
+      if (weeklyPlanId) {
+        try {
+          setLoading(true);
+          const planData = await getWeeklyPlan(weeklyPlanId);
+          if (planData) {
+            setWeeklyPlan(planData as WeeklyPlan);
+          }
+          setLoading(false);
+        } catch (error) {
+          console.error('Error refreshing weekly plan:', error);
+          setLoading(false);
+        }
+      }
+    }
+    refreshPlan();
+  }, [weeklyPlanId, refreshTrigger]);
+
+  // Modify handleAddActivity to trigger refresh
   async function handleAddActivity(): Promise<void> {
     if (!selectedActivityId || !selectedDay || !selectedTimeSlot || !weeklyPlan) {
       return;
@@ -305,26 +326,21 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
         activityId: selectedActivityId,
         timeSlot: selectedTimeSlot,
         status: 'suggested',
-        order: weeklyPlan[selectedDay].length // Add to the end
+        order: weeklyPlan[selectedDay].length
       };
 
-      // Clone the current weekly plan and add the new activity
       const updatedWeeklyPlan = {
         ...weeklyPlan,
         [selectedDay]: [...weeklyPlan[selectedDay], newActivity]
       };
 
-      // Ensure weekStarting is a string before saving
       if (updatedWeeklyPlan.weekStarting && typeof updatedWeeklyPlan.weekStarting !== 'string') {
         updatedWeeklyPlan.weekStarting = formatDateToString(updatedWeeklyPlan.weekStarting);
       }
 
-      // Save the updated weekly plan
       if (weeklyPlan.id) {
-        // Update existing plan
         await updateWeeklyPlan(weeklyPlan.id, updatedWeeklyPlan);
       } else {
-        // Create new plan
         const planId = await createWeeklyPlan(updatedWeeklyPlan as WeeklyPlanData);
         updatedWeeklyPlan.id = planId;
       }
@@ -334,20 +350,21 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
       setSelectedActivityId('');
       setSelectedDay('');
       
-      // Show success message
       setShowSaveSuccess(true);
-      setTimeout(() => setShowSaveSuccess(false), 3000); // Hide after 3 seconds
+      setTimeout(() => setShowSaveSuccess(false), 3000);
+      
+      // Trigger refresh
+      setRefreshTrigger(prev => prev + 1);
     } catch (error: any) {
       setError('Failed to add activity: ' + error.message);
     }
   }
 
-  // Handle removing an activity from the weekly plan
+  // Modify handleRemoveActivity to trigger refresh
   async function handleRemoveActivity(day: string, index: number): Promise<void> {
     if (!weeklyPlan) return;
     
     try {
-      // Clone the current weekly plan and remove the activity
       const updatedDayActivities = [...weeklyPlan[day]];
       updatedDayActivities.splice(index, 1);
 
@@ -356,12 +373,10 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
         [day]: updatedDayActivities
       };
 
-      // Ensure weekStarting is a string before saving
       if (updatedWeeklyPlan.weekStarting && typeof updatedWeeklyPlan.weekStarting !== 'string') {
         updatedWeeklyPlan.weekStarting = formatDateToString(updatedWeeklyPlan.weekStarting);
       }
 
-      // Save the updated weekly plan
       if (weeklyPlan.id) {
         await updateWeeklyPlan(weeklyPlan.id, updatedWeeklyPlan);
       } else {
@@ -370,21 +385,21 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
       }
 
       setWeeklyPlan(updatedWeeklyPlan as WeeklyPlan);
-
-      // Show success message
       setShowSaveSuccess(true);
-      setTimeout(() => setShowSaveSuccess(false), 3000); // Hide after 3 seconds
+      setTimeout(() => setShowSaveSuccess(false), 3000);
+      
+      // Trigger refresh
+      setRefreshTrigger(prev => prev + 1);
     } catch (error: any) {
       setError('Failed to remove activity: ' + error.message);
     }
   }
 
-  // Handle updating activity status
+  // Modify handleUpdateActivityStatus to trigger refresh
   async function handleUpdateActivityStatus(day: string, index: number, newStatus: 'suggested' | 'confirmed' | 'completed'): Promise<void> {
     if (!weeklyPlan) return;
     
     try {
-      // Clone the current weekly plan and update the activity
       const updatedDayActivities = [...weeklyPlan[day]];
       updatedDayActivities[index] = {
         ...updatedDayActivities[index],
@@ -396,12 +411,10 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
         [day]: updatedDayActivities
       };
 
-      // Ensure weekStarting is a string before saving
       if (updatedWeeklyPlan.weekStarting && typeof updatedWeeklyPlan.weekStarting !== 'string') {
         updatedWeeklyPlan.weekStarting = formatDateToString(updatedWeeklyPlan.weekStarting);
       }
 
-      // Save the updated weekly plan
       if (weeklyPlan.id) {
         await updateWeeklyPlan(weeklyPlan.id, updatedWeeklyPlan);
       } else {
@@ -410,10 +423,11 @@ export default function WeeklyPlanView({ childId, weeklyPlanId, userId }: Weekly
       }
 
       setWeeklyPlan(updatedWeeklyPlan as WeeklyPlan);
-
-      // Show success message
       setShowSaveSuccess(true);
-      setTimeout(() => setShowSaveSuccess(false), 3000); // Hide after 3 seconds
+      setTimeout(() => setShowSaveSuccess(false), 3000);
+      
+      // Trigger refresh
+      setRefreshTrigger(prev => prev + 1);
     } catch (error: any) {
       setError('Failed to update activity status: ' + error.message);
     }
