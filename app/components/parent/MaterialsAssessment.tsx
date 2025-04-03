@@ -71,10 +71,29 @@ export default function MaterialsAssessment({
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<Record<string, Material[]>>({});
   const [period, setPeriod] = useState<'90' | '180' | '365'>('90');
+  const [childAgeGroup, setChildAgeGroup] = useState<string>('');
+
+  useEffect(() => {
+    const fetchChildAgeGroup = async () => {
+      if (!childId) return;
+      
+      try {
+        const childDoc = await getDoc(doc(db, 'children', childId));
+        if (childDoc.exists()) {
+          const childData = childDoc.data();
+          setChildAgeGroup(childData.ageGroup || '');
+        }
+      } catch (error) {
+        console.error('Error fetching child age group:', error);
+      }
+    };
+
+    fetchChildAgeGroup();
+  }, [childId]);
 
   useEffect(() => {
     const fetchMaterials = async () => {
-      if (!currentUser?.uid) return;
+      if (!currentUser?.uid || !childAgeGroup) return;
       
       try {
         setLoading(true);
@@ -90,14 +109,16 @@ export default function MaterialsAssessment({
         const ownedMaterialIds = new Set(userMaterialsSnapshot.docs.map(doc => doc.data().materialId));
         setSelectedMaterials(ownedMaterialIds);
 
-        // Get activities appropriate for child's age
-        // Query for activities where ageRange contains the child's age
-        // Also include activities for the next age to prepare ahead
+        // Get activities appropriate for child's age group
+        // Also include activities for the next age group to prepare ahead
+        const [currentMin] = childAgeGroup.split('-').map(Number);
+        const nextAgeGroup = `${currentMin + 1}-${currentMin + 2}`;
+
         const activitiesQuery = query(
           collection(db, 'activities'),
           or(
-            where('ageRange', 'array-contains', childAge),
-            where('ageRange', 'array-contains', childAge + 1)
+            where('ageRanges', 'array-contains', childAgeGroup),
+            where('ageRanges', 'array-contains', nextAgeGroup)
           )
         );
         
@@ -107,7 +128,7 @@ export default function MaterialsAssessment({
           ...doc.data()
         })) as Activity[];
 
-        console.log(`Found ${activities.length} activities with materials:`, activities);
+        console.log(`Found ${activities.length} activities for age groups ${childAgeGroup} and ${nextAgeGroup}`);
         console.log('Processing activities and their materials:');
 
         // Get all materials
@@ -155,7 +176,7 @@ export default function MaterialsAssessment({
     };
 
     fetchMaterials();
-  }, [childAge, currentUser]);
+  }, [childAgeGroup, currentUser]);
 
   const handleMaterialToggle = async (materialId: string) => {
     if (!currentUser?.uid) return;
