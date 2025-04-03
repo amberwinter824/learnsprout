@@ -108,16 +108,9 @@ export default function MaterialsAssessment({
         setSelectedMaterials(ownedMaterialIds);
 
         // Get activities appropriate for child's age group
-        // Also include activities for the next age group to prepare ahead
-        const [currentMin] = childAgeGroup.split('-').map(Number);
-        const nextAgeGroup = `${currentMin + 1}-${currentMin + 2}`;
-
         const activitiesQuery = query(
           collection(db, 'activities'),
-          or(
-            where('ageRanges', 'array-contains', childAgeGroup),
-            where('ageRanges', 'array-contains', nextAgeGroup)
-          )
+          where('ageRanges', 'array-contains', childAgeGroup)
         );
         
         const activitiesSnapshot = await getDocs(activitiesQuery);
@@ -126,7 +119,7 @@ export default function MaterialsAssessment({
           ...doc.data()
         })) as Activity[];
 
-        console.log(`Found ${activities.length} activities for age groups ${childAgeGroup} and ${nextAgeGroup}`);
+        console.log(`Found ${activities.length} activities for age group ${childAgeGroup}`);
         console.log('Processing activities and their materials:');
 
         // Get all materials
@@ -137,25 +130,45 @@ export default function MaterialsAssessment({
         })) as Material[];
 
         console.log(`Found ${allMaterials.length} materials in database`);
-        console.log('Materials in database:');
+
+        // Create a map of normalized names to materials for easier lookup
+        const materialsByNormalizedName = new Map<string, Material>();
         allMaterials.forEach(material => {
-          console.log(`Material: ${material.name} (ID: ${material.id})`);
+          // Add the main normalized name
+          materialsByNormalizedName.set(material.normalizedName, material);
+          // Also add the regular name normalized in the same way
+          materialsByNormalizedName.set(material.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), material);
+          // Also add alternative names if they exist
+          material.alternativeNames?.forEach(altName => {
+            materialsByNormalizedName.set(altName.toLowerCase().replace(/[^a-z0-9]+/g, '-'), material);
+          });
         });
 
-        // Filter materials based on activities
-        const activityIds = new Set(activities.map(a => a.id));
-        console.log(`Found ${activities.length} activities with IDs:`, Array.from(activityIds));
-        
-        // Log each activity's materials
+        // Get unique materials needed from all activities
+        const neededMaterialNames = new Set<string>();
         activities.forEach(activity => {
-          console.log(`Activity ${activity.title} (${activity.id}) needs materials:`, activity.materialsNeeded);
+          console.log(`Processing activity: ${activity.title}`);
+          activity.materialsNeeded?.forEach(materialName => {
+            // Normalize the material name in the same way
+            const normalizedName = materialName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            neededMaterialNames.add(normalizedName);
+            console.log(`  Material needed: ${materialName} (normalized: ${normalizedName})`);
+          });
         });
 
-        const relevantMaterials = allMaterials.filter(material => {
-          const isRelevant = material.activities?.some(activityId => activityIds.has(activityId));
-          console.log(`Material ${material.name}: isRelevant=${isRelevant}, activities=`, material.activities);
-          return isRelevant;
-        });
+        console.log('All normalized material names in database:', Array.from(materialsByNormalizedName.keys()));
+        console.log('Needed normalized material names:', Array.from(neededMaterialNames));
+
+        // Find relevant materials
+        const relevantMaterials = Array.from(neededMaterialNames)
+          .map(materialName => {
+            const material = materialsByNormalizedName.get(materialName);
+            if (!material) {
+              console.log(`No match found for material: ${materialName}`);
+            }
+            return material;
+          })
+          .filter((material): material is Material => material !== undefined);
 
         console.log('Materials count after processing:', relevantMaterials.length);
         console.log('Relevant materials:', relevantMaterials.map(m => m.name));
