@@ -1202,4 +1202,3 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
     </div>
   );
 }
-}
