@@ -85,17 +85,13 @@ html body .shadow-sm *:not(button):not(a) {
 
 /* Exempt specific elements we don't want to change */
 html body a[href],
-html body button[class*="bg-blue"],
-html body button[class*="bg-emerald"],
-html body button[class*="bg-green"],
-html body button[class*="bg-red"],
 html body [class*="text-emerald"],
 html body [class*="text-blue"],
 html body [class*="text-red"],
-html body [class*="bg-emerald"] *,
-html body [class*="bg-blue"] *,
-html body [class*="bg-green"] *,
-html body [class*="bg-red"] * {
+html body [class*="bg-emerald"] *:not(button),
+html body [class*="bg-blue"] *:not(button),
+html body [class*="bg-green"] *:not(button),
+html body [class*="bg-red"] *:not(button) {
   color: initial !important;
 }
 
@@ -103,8 +99,15 @@ html body [class*="bg-red"] * {
 html body button[class*="bg-blue"],
 html body button[class*="bg-emerald"],
 html body button[class*="bg-green"],
-html body button[class*="bg-red"] {
+html body button[class*="bg-red"],
+html body button.bg-emerald-600,
+html body button.bg-blue-600 {
   color: white !important;
+}
+
+/* Ensure regular buttons remain readable */
+html body button:not([class*="bg-blue"]):not([class*="bg-emerald"]):not([class*="bg-green"]):not([class*="bg-red"]):not(.bg-emerald-600):not(.bg-blue-600) {
+  color: var(--text-medium) !important;
 }
 
 /* Ensure form inputs remain readable */
