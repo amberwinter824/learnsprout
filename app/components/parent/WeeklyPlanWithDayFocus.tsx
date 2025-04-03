@@ -680,62 +680,6 @@ export default function WeeklyPlanWithDayFocus({
     });
   };
   
-  // Add this new component near the top of the file, after the imports:
-  const ObservationTooltip = ({ observation }: { observation: Activity['lastObservation'] }) => {
-    if (!observation) return null;
-
-    // Ensure skillsDemonstrated is an array of strings
-    const skills = Array.isArray(observation.skillsDemonstrated) 
-      ? observation.skillsDemonstrated 
-      : [];
-
-    return (
-      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 min-w-[200px] max-w-[300px]">
-        <div className="space-y-2">
-          {observation.engagementLevel && (
-            <div className="flex items-center text-sm">
-              <span className="font-medium text-gray-700 min-w-[80px]">Engagement:</span>
-              <span className="ml-2 capitalize text-gray-600">{observation.engagementLevel}</span>
-            </div>
-          )}
-          {observation.interestLevel && (
-            <div className="flex items-center text-sm">
-              <span className="font-medium text-gray-700 min-w-[80px]">Interest:</span>
-              <span className="ml-2 capitalize text-gray-600">{observation.interestLevel}</span>
-            </div>
-          )}
-          {observation.completionDifficulty && (
-            <div className="flex items-center text-sm">
-              <span className="font-medium text-gray-700 min-w-[80px]">Difficulty:</span>
-              <span className="ml-2 capitalize text-gray-600">{observation.completionDifficulty}</span>
-            </div>
-          )}
-          {observation.notes && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Notes:</span>
-              <p className="mt-1 text-gray-600 line-clamp-2">{observation.notes}</p>
-            </div>
-          )}
-          {skills.length > 0 && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Skills:</span>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {skills.map((skill, index) => (
-                  <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
-                    {typeof skill === 'string' ? skill : 'Unknown Skill'}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-full">
-          <div className="w-2 h-2 bg-white rotate-45 transform origin-center -mt-1 border-r border-b border-gray-200"></div>
-        </div>
-      </div>
-    );
-  };
-  
   // Loading state
   if (loading) {
     return (
@@ -920,8 +864,50 @@ export default function WeeklyPlanWithDayFocus({
                               )}
                             </span>
                             {activity.lastObservation && (
-                              <div className="invisible group-hover:visible absolute z-[9999] -top-2 left-0 transform -translate-y-full">
-                                <ObservationTooltip observation={activity.lastObservation} />
+                              <div className="absolute z-[9999] -top-2 left-0 transform -translate-y-full hidden group-hover:block">
+                                <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 mb-2">
+                                  <div className="space-y-2">
+                                    {activity.lastObservation.engagementLevel && (
+                                      <div className="flex items-center text-sm">
+                                        <span className="font-medium text-gray-700 min-w-[80px]">Engagement:</span>
+                                        <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.engagementLevel}</span>
+                                      </div>
+                                    )}
+                                    {activity.lastObservation.interestLevel && (
+                                      <div className="flex items-center text-sm">
+                                        <span className="font-medium text-gray-700 min-w-[80px]">Interest:</span>
+                                        <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.interestLevel}</span>
+                                      </div>
+                                    )}
+                                    {activity.lastObservation.completionDifficulty && (
+                                      <div className="flex items-center text-sm">
+                                        <span className="font-medium text-gray-700 min-w-[80px]">Difficulty:</span>
+                                        <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.completionDifficulty}</span>
+                                      </div>
+                                    )}
+                                    {activity.lastObservation.notes && (
+                                      <div className="text-sm">
+                                        <span className="font-medium text-gray-700">Notes:</span>
+                                        <p className="mt-1 text-gray-600 line-clamp-2">{activity.lastObservation.notes}</p>
+                                      </div>
+                                    )}
+                                    {activity.lastObservation.skillsDemonstrated && activity.lastObservation.skillsDemonstrated.length > 0 && (
+                                      <div className="text-sm">
+                                        <span className="font-medium text-gray-700">Skills:</span>
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                          {activity.lastObservation.skillsDemonstrated.map((skill, index) => (
+                                            <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
+                                              {skill}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-full">
+                                    <div className="w-2 h-2 bg-white rotate-45 transform origin-center -mt-1 border-r border-b border-gray-200"></div>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
