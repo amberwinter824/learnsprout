@@ -23,10 +23,12 @@ import {
   ArrowUpRight,
   Loader2,
   AlertCircle,
-  Play
+  Play,
+  Package,
+  Users,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import ChildFamilyAccess from '@/app/components/ChildFamilyAccess';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
 import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
 import { generateWeeklyPlan } from '@/lib/planGenerator';
@@ -740,133 +742,136 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
           </div>
         )}
       </div>
-      
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content - Left and Center columns */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Weekly Plan */}
-          <WeeklyPlanWithDayFocus
-            selectedDate={new Date()}
-            selectedChildId={childId}
-            onGeneratePlan={handleGeneratePlan}
-          />
-          
-          {/* Activity Timeline */}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
-              {recentActivities.length > 0 && (
-                <Link
-                  href={`/dashboard/children/${childId}/progress?tab=activities`}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 inline-flex items-center"
-                >
-                  View All 
-                  <ArrowUpRight className="ml-1 h-3 w-3" />
-                </Link>
-              )}
+
+      {/* Quick Actions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {/* Weekly Plan Card */}
+        <Link href={`/dashboard/children/${childId}/weekly-plan`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Calendar className="h-6 w-6 text-blue-600" />
             </div>
-            
-            <div className="px-4 py-5 sm:p-6">
-              {recentActivities.length > 0 ? (
-                <div className="space-y-4">
-                  {recentActivities.map(activity => (
-                    <div 
-                      key={activity.id} 
-                      className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => router.push(`/dashboard/children/${childId}?record=${activity.id}`)}
-                    >
-                      <div className="flex justify-between">
-                        <h3 className="font-medium text-gray-900">{activity.activityTitle || 'Activity'}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(activity.completionStatus)}`}>
-                          {activity.completionStatus.charAt(0).toUpperCase() + activity.completionStatus.slice(1).replace('_', ' ')}
-                        </span>
-                      </div>
-                      
-                      <div className="mt-1 flex items-center text-xs text-gray-500">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {formatDate(activity.date)}
-                        
-                        {activity.engagementLevel && (
-                          <span className="ml-3 capitalize">
-                            Engagement: {activity.engagementLevel}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {activity.notes && (
-                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">{activity.notes}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) :
-                <div className="text-center py-8">
-                  <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 mb-2">No activity records yet</p>
-                  <p className="text-sm text-gray-500">
-                    Start tracking your child's progress by adding observations to activities
-                  </p>
-                </div>
-              }
-            </div>
+            <h3 className="ml-3 text-lg font-medium text-gray-900">Weekly Plan</h3>
           </div>
+          <p className="text-sm text-gray-500 mb-4">View and manage your child's weekly activity schedule</p>
+          <div className="flex items-center text-sm text-blue-600">
+            View Schedule
+            <ArrowUpRight className="h-4 w-4 ml-1" />
+          </div>
+        </Link>
+
+        {/* Progress Tracking Card */}
+        <Link href={`/dashboard/children/${childId}/progress`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <BarChart2 className="h-6 w-6 text-purple-600" />
+            </div>
+            <h3 className="ml-3 text-lg font-medium text-gray-900">Progress Tracking</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">Monitor your child's developmental progress and milestones</p>
+          <div className="flex items-center text-sm text-purple-600">
+            View Progress
+            <ArrowUpRight className="h-4 w-4 ml-1" />
+          </div>
+        </Link>
+
+        {/* Activity History Card */}
+        <Link href={`/dashboard/children/${childId}/activities`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <BookOpen className="h-6 w-6 text-green-600" />
+            </div>
+            <h3 className="ml-3 text-lg font-medium text-gray-900">Activity History</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">Review past activities and observations</p>
+          <div className="flex items-center text-sm text-green-600">
+            View History
+            <ArrowUpRight className="h-4 w-4 ml-1" />
+          </div>
+        </Link>
+
+        {/* Materials Needed Card */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Package className="h-6 w-6 text-yellow-600" />
+            </div>
+            <h3 className="ml-3 text-lg font-medium text-gray-900">Materials Needed</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">Track materials needed for upcoming activities</p>
+          <AllChildrenMaterialsForecast
+            ref={materialsForecastRef}
+            selectedChildId={childId}
+            onMarkMaterialOwned={handleMarkMaterialOwned}
+          />
+        </div>
+
+        {/* Settings Card */}
+        <Link href={`/dashboard/children/${childId}/settings`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <Settings className="h-6 w-6 text-gray-600" />
+            </div>
+            <h3 className="ml-3 text-lg font-medium text-gray-900">Settings</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">Configure child-specific preferences and settings</p>
+          <div className="flex items-center text-sm text-gray-600">
+            Manage Settings
+            <ArrowUpRight className="h-4 w-4 ml-1" />
+          </div>
+        </Link>
+      </div>
+
+      {/* Recent Activity Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
+          <Link 
+            href={`/dashboard/children/${childId}/activities`}
+            className="text-sm text-emerald-600 hover:text-emerald-700"
+          >
+            View All
+          </Link>
         </div>
         
-        {/* Right column content */}
-        <div className="space-y-6">
-          {/* Progress Summary */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Progress Summary</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-blue-700">{activityStats.total}</div>
-                <div className="text-xs text-gray-600">Total Activities</div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-700">{activityStats.completed}</div>
-                <div className="text-xs text-gray-600">Completed</div>
-              </div>
-              <div className="bg-amber-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-amber-700">{activityStats.recent}</div>
-                <div className="text-xs text-gray-600">Last 30 Days</div>
-              </div>
-            </div>
-            
-            <div className="mt-4">
-              <Link
-                href={`/dashboard/children/${childId}/progress`}
-                className="inline-flex justify-center items-center w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+        <div className="space-y-4">
+          {recentActivities.length > 0 ? (
+            recentActivities.map(activity => (
+              <div 
+                key={activity.id} 
+                className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                onClick={() => router.push(`/dashboard/children/${childId}?record=${activity.id}`)}
               >
-                <BarChart2 className="h-4 w-4 mr-2 text-emerald-500" />
-                View Detailed Progress
-              </Link>
+                <div className="flex justify-between">
+                  <h3 className="font-medium text-gray-900">{activity.activityTitle || 'Activity'}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(activity.completionStatus)}`}>
+                    {activity.completionStatus.charAt(0).toUpperCase() + activity.completionStatus.slice(1).replace('_', ' ')}
+                  </span>
+                </div>
+                
+                <div className="mt-1 flex items-center text-xs text-gray-500">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {formatDate(activity.date)}
+                  
+                  {activity.engagementLevel && (
+                    <span className="ml-3 capitalize">
+                      Engagement: {activity.engagementLevel}
+                    </span>
+                  )}
+                </div>
+                
+                {activity.notes && (
+                  <p className="mt-2 text-sm text-gray-600 line-clamp-2">{activity.notes}</p>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No recent activity recorded</p>
             </div>
-          </div>
-          
-          {/* Materials Forecast */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-gray-900">Materials Needed</h2>
-              <button
-                onClick={() => materialsForecastRef.current?.fetchMaterialsNeeded()}
-                className="text-sm text-emerald-600 hover:text-emerald-700"
-              >
-                Refresh
-              </button>
-            </div>
-            <div className="space-y-2">
-              <AllChildrenMaterialsForecast
-                ref={materialsForecastRef}
-                selectedChildId={childId}
-                onMarkMaterialOwned={handleMarkMaterialOwned}
-              />
-            </div>
-          </div>
+          )}
         </div>
       </div>
-      
-      {renderActivityRecordModal()}
     </div>
   );
 }
