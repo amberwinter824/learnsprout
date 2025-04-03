@@ -21,6 +21,13 @@ import Link from 'next/link';
 interface MaterialWithActivities {
   id?: string;
   name: string;
+  normalizedName: string;
+  category: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  isReusable: boolean;
+  isOptional: boolean;
   amazonLink?: string;
   affiliateLink?: string;
   activities: string[];  // Names of activities that need this material
@@ -195,6 +202,13 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                 materialMap.set(key, {
                   id: materialData.id,
                   name: materialData.name,
+                  normalizedName: materialData.normalizedName,
+                  category: materialData.category,
+                  description: materialData.description,
+                  quantity: materialData.quantity,
+                  unit: materialData.unit,
+                  isReusable: materialData.isReusable,
+                  isOptional: materialData.isOptional,
                   amazonLink: materialData.amazonLink,
                   affiliateLink: materialData.affiliateLink,
                   activities: [activity.title],
@@ -204,7 +218,6 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
               }
             } else {
               // No match in database, create an entry without links
-              
               if (materialMap.has(normalizedName)) {
                 // Update existing entry
                 const existing = materialMap.get(normalizedName)!;
@@ -213,9 +226,16 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                   existing.activityCount += 1;
                 }
               } else {
-                // Create new entry
+                // Create new entry with default values
                 materialMap.set(normalizedName, {
                   name: materialName,
+                  normalizedName: normalizedName,
+                  category: 'Uncategorized',
+                  description: '',
+                  quantity: 1,
+                  unit: 'piece',
+                  isReusable: false,
+                  isOptional: false,
                   activities: [activity.title],
                   activityCount: 1,
                   owned: false
@@ -405,10 +425,25 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                             />
                           </div>
                           <div>
-                            <span className="text-gray-800 font-medium">{material.name}</span>
-                            <div className="text-xs text-gray-500">
-                              Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
+                            <span className="text-gray-800 font-medium">
+                              {material.name}
+                              {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                              {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
+                            </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-500">{material.category}</span>
+                              {material.isReusable && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                  Reusable
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-500">
+                                Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
+                              </span>
                             </div>
+                            {material.description && (
+                              <p className="text-xs text-gray-600 mt-1">{material.description}</p>
+                            )}
                           </div>
                         </div>
                         {(material.affiliateLink || material.amazonLink) && (
@@ -449,10 +484,25 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                             />
                           </div>
                           <div>
-                            <span className="text-gray-800">{material.name}</span>
-                            <div className="text-xs text-gray-500">
-                              Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
+                            <span className="text-gray-800">
+                              {material.name}
+                              {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                              {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
+                            </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-500">{material.category}</span>
+                              {material.isReusable && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                  Reusable
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-500">
+                                Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
+                              </span>
                             </div>
+                            {material.description && (
+                              <p className="text-xs text-gray-600 mt-1">{material.description}</p>
+                            )}
                           </div>
                         </div>
                         <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
