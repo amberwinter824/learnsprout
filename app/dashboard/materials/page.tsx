@@ -358,10 +358,10 @@ export default function MaterialsInventory() {
                       <button
                         key={child.id}
                         onClick={() => setSelectedChild(child)}
-                        className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors"
+                        className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left"
                       >
                         <h4 className="font-medium text-gray-900">{child.name}</h4>
-                        <p className="text-sm text-gray-500">{child.age} years old</p>
+                        <p className="text-sm text-gray-500">{child.age || 0} years old</p>
                       </button>
                     ))}
                   </div>

@@ -257,20 +257,15 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
           }
         }
         
-        // Convert map to array and sort: first by not owned, then by activity count
-        const materialsList = Array.from(materialMap.values())
-          .sort((a, b) => {
-            // First sort by ownership (not owned first)
-            if (a.owned !== b.owned) return a.owned ? 1 : -1;
-            // Then sort by activity count (most used first)
-            return b.activityCount - a.activityCount;
-          });
+        // Convert map to array and sort by activity count
+        const materialsList = Array.from(materialMap.values()).sort((a, b) => b.activityCount - a.activityCount);
+        console.log(`Found ${materialsList.length} materials needed for activities`);
         
         setMaterials(materialsList);
-        setLoading(false);
       } catch (error) {
         console.error('Error fetching materials forecast:', error);
         setError('Failed to load materials forecast');
+      } finally {
         setLoading(false);
       }
     };

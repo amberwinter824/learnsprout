@@ -92,8 +92,7 @@ export default function MaterialsAssessment({
         // Get activities appropriate for child's age
         const activitiesQuery = query(
           collection(db, 'activities'),
-          where('minAge', '<=', childAge),
-          where('maxAge', '>=', childAge)
+          where('ageRange', 'array-contains', childAge)
         );
         
         const activitiesSnapshot = await getDocs(activitiesQuery);
