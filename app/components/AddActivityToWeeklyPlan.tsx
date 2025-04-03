@@ -331,11 +331,21 @@ export default function AddActivityToWeeklyPlan({
             </div>
           ) : filteredActivities.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="text-gray-500">No activities found</p>
+              {searchTerm ? (
+                <>
+                  <p className="text-gray-500 mb-2">No activities found matching "{searchTerm}"</p>
+                  <p className="text-sm text-gray-400">Try a different search term or clear the filters</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500 mb-2">No activities available for your child's age group</p>
+                  <p className="text-sm text-gray-400">Please check back later for age-appropriate activities</p>
+                </>
+              )}
               <button
                 type="button"
                 onClick={resetFilters}
-                className="mt-2 text-sm text-emerald-600 hover:text-emerald-700"
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
               >
                 Clear Filters
               </button>

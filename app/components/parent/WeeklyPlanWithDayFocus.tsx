@@ -1,7 +1,7 @@
 // app/components/parent/WeeklyPlanWithDayFocus.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -102,6 +102,12 @@ export default function WeeklyPlanWithDayFocus({
   const [weekHasPlan, setWeekHasPlan] = useState(false);
   const [ownedMaterialIds, setOwnedMaterialIds] = useState<string[]>([]);
   const [materialLookup, setMaterialLookup] = useState<Map<string, any>>(new Map());
+  
+  // Check if schedule preferences are set
+  const hasSchedulePreferences = useMemo(() => {
+    if (!currentUser?.preferences?.activityPreferences?.scheduleByDay) return false;
+    return Object.values(currentUser.preferences.activityPreferences.scheduleByDay).some(count => count > 0);
+  }, [currentUser]);
   
   // Helper function to get the start of the week (Monday)
   function getWeekStart(date: Date): Date {
@@ -1001,6 +1007,26 @@ export default function WeeklyPlanWithDayFocus({
               onSuccess={handleObservationSuccess}
               onClose={() => setShowActivityForm(false)}
             />
+          </div>
+        </div>
+      )}
+      
+      {!hasSchedulePreferences && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-6 text-center">
+          <Calendar className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-amber-800 mb-2">
+            Schedule Preferences Required
+          </h3>
+          <p className="text-amber-700 mb-4">
+            To generate a personalized weekly plan, please set your preferred schedule in the sidebar.
+          </p>
+          <div className="flex justify-center">
+            <Link
+              href="/dashboard/settings"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700"
+            >
+              Set Schedule Preferences
+            </Link>
           </div>
         </div>
       )}

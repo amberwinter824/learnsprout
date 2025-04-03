@@ -29,6 +29,7 @@ import { format, subMonths } from 'date-fns';
 import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
 import AllChildrenWeeklyView from '@/app/components/parent/AllChildrenWeeklyView';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
+import SchedulePreferencesSidebar from '@/app/components/parent/SchedulePreferencesSidebar';
 import { ErrorBoundary } from 'react-error-boundary';
 import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc, setDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -237,6 +238,13 @@ export default function Dashboard() {
     }
   };
   
+  const handleSchedulePreferencesUpdated = async () => {
+    // Refresh the current view to reflect new schedule
+    if (selectedChildId) {
+      await handleGeneratePlan(selectedChildId, selectedDate);
+    }
+  };
+  
   // Loading state
   if (loading) {
     return (
@@ -340,6 +348,9 @@ export default function Dashboard() {
           
           {/* Sidebar - Progress and Materials */}
           <div className="lg:col-span-4 space-y-6">
+            {/* Schedule Preferences */}
+            <SchedulePreferencesSidebar onPreferencesUpdated={handleSchedulePreferencesUpdated} />
+            
             {/* Progress Overview */}
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Children's Progress</h2>
