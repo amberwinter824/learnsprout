@@ -148,8 +148,6 @@ export default function DailyActivitiesDashboard({
                     description: activityData.description || '',
                     area: activityData.area || '',
                     duration: activityData.duration || 15,
-                    isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                          !!activityData.classroomExtension,
                     status: activity.status,
                     timeSlot: activity.timeSlot,
                     order: activity.order,
@@ -740,12 +738,6 @@ export default function DailyActivitiesDashboard({
                       <span className="flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
                         {activity.duration} min
-                      </span>
-                    )}
-                    {activity.isHomeSchoolConnection && (
-                      <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                        <Star className="h-3 w-3 mr-1" />
-                        School Connection
                       </span>
                     )}
                   </div>

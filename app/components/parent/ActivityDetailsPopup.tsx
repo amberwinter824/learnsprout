@@ -251,13 +251,6 @@ export default function ActivityDetailsPopup({
                       {activity.difficulty}
                     </span>
                   )}
-                  
-                  {activity.environmentType === 'bridge' && (
-                    <span className="flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-                      <Star className="h-3 w-3 mr-1" />
-                      School Connection
-                    </span>
-                  )}
                 </div>
                 
                 {activity.description && (

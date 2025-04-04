@@ -263,8 +263,6 @@ export default function AllChildrenDailyActivities({
                         description: activityData.description || '',
                         area: activityData.area || '',
                         duration: activityData.duration || 15,
-                        isHomeSchoolConnection: activityData.environmentType === 'bridge' || 
-                                              !!activityData.classroomExtension,
                         status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
                         timeSlot: activity.timeSlot || '',
                         order: activity.order || 0,
@@ -628,12 +626,6 @@ export default function AllChildrenDailyActivities({
                                 <span className="flex items-center">
                                   <Clock className="h-3 w-3 mr-1" />
                                   {activity.duration} min
-                                </span>
-                              )}
-                              {activity.isHomeSchoolConnection && (
-                                <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                  <Star className="h-3 w-3 mr-1" />
-                                  School Connection
                                 </span>
                               )}
                               {activity.timeSlot && (

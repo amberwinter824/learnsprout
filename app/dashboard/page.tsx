@@ -76,9 +76,7 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(
     dateParam ? new Date(dateParam) : new Date()
   );
-  const [selectedChildId, setSelectedChildId] = useState<string | undefined>(
-    childIdParam ?? undefined
-  );
+  const [selectedChildId, setSelectedChildId] = useState<string | undefined>(undefined);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
   const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
@@ -99,6 +97,21 @@ export default function Dashboard() {
     // Replace current URL to maintain navigation history
     router.replace(`/dashboard?${params.toString()}`, { scroll: false });
   }, [router]);
+  
+  // Initialize selectedChildId from URL or first child
+  useEffect(() => {
+    if (children.length > 0) {
+      if (childIdParam) {
+        // If there's a childId in the URL, use it
+        setSelectedChildId(childIdParam);
+      } else {
+        // Otherwise, select the first child
+        const firstChild = children[0];
+        setSelectedChildId(firstChild.id);
+        updateUrlParams(selectedDate, firstChild.id);
+      }
+    }
+  }, [children, childIdParam, selectedDate, updateUrlParams]);
   
   // Fetch children and their skills
   useEffect(() => {
@@ -298,6 +311,28 @@ export default function Dashboard() {
         
         <ProgressiveOnboarding />
         
+        {/* Child Selection Filter */}
+        {children.length > 1 && (
+          <div className="mb-6 bg-white shadow-sm rounded-lg p-4">
+            <div className="flex items-center flex-wrap gap-2">
+              <span className="text-sm font-medium text-gray-700 mr-2">View child:</span>
+              {children.map(child => (
+                <button
+                  key={child.id}
+                  className={`px-3 py-1 text-sm font-medium rounded-md ${
+                    selectedChildId === child.id
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                  onClick={() => setSelectedChildId(child.id)}
+                >
+                  {child.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Content - Weekly View */}
           <div className="lg:col-span-8">
@@ -317,11 +352,36 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-6">
-                <WeeklyPlanWithDayFocus 
-                  selectedDate={selectedDate}
-                  selectedChildId={selectedChildId}
-                  onGeneratePlan={handleGeneratePlan}
-                />
+                {selectedChildId ? (
+                  <WeeklyPlanWithDayFocus 
+                    selectedDate={selectedDate}
+                    selectedChildId={selectedChildId}
+                    onGeneratePlan={handleGeneratePlan}
+                  />
+                ) : (
+                  <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+                    <h2 className="text-lg font-medium text-gray-900 mb-2">Select a Child</h2>
+                    <p className="text-gray-600 mb-4">
+                      Choose a child to view their weekly activity plan
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6">
+                      {children.map(child => (
+                        <button
+                          key={child.id}
+                          onClick={() => setSelectedChildId(child.id)}
+                          className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
+                        >
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-medium">
+                              {child.name.charAt(0)}
+                            </div>
+                            <span className="ml-2 font-medium">{child.name}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Materials Needed */}
                 <div className="bg-white rounded-lg shadow-sm p-4">
