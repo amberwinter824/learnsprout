@@ -4,7 +4,7 @@ export interface Material {
   description: string;
   isEssential: boolean;
   amazonLink?: string;
-  imageUrl: string;
+  imageUrl?: string;
   householdAlternative: string;
   priority: number;
 }

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserChildren } from '@/lib/dataService';
 import { Search, Filter, BookOpen, Clock, Users, ChevronRight, X } from 'lucide-react';
 import QuickObservationForm from '@/app/components/parent/QuickObservationForm';
+import { isCommonHouseholdItem } from '@/lib/materialsData';
 
 interface Child {
   id: string;
@@ -43,6 +44,7 @@ export default function ActivitiesPage() {
   const [filterArea, setFilterArea] = useState<string>('');
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>('');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('');
+  const [filterMaterials, setFilterMaterials] = useState<'all' | 'household-only' | 'specialized'>('all');
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showQuickActivities, setShowQuickActivities] = useState<boolean>(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
@@ -110,8 +112,28 @@ export default function ActivitiesPage() {
     const matchesQuickFilter = showQuickActivities 
       ? activity.duration && activity.duration <= 10
       : true;
+
+    // Materials filter
+    const matchesMaterials = (() => {
+      if (filterMaterials === 'all') return true;
+      
+      const requiredMaterials = activity.materialsNeeded || [];
+      
+      if (filterMaterials === 'household-only') {
+        // Allow activities with no materials or only household items
+        return requiredMaterials.length === 0 || 
+          requiredMaterials.every(material => isCommonHouseholdItem(material));
+      }
+      
+      if (filterMaterials === 'specialized') {
+        // Activities that require at least one specialized material
+        return requiredMaterials.some(material => !isCommonHouseholdItem(material));
+      }
+      
+      return true;
+    })();
     
-    return matchesSearch && matchesArea && matchesAgeGroup && matchesDifficulty && matchesQuickFilter;
+    return matchesSearch && matchesArea && matchesAgeGroup && matchesDifficulty && matchesQuickFilter && matchesMaterials;
   });
 
   // Get unique areas, age groups, and difficulty levels for filters
@@ -162,6 +184,7 @@ export default function ActivitiesPage() {
     setFilterArea('');
     setFilterAgeGroup('');
     setFilterDifficulty('');
+    setFilterMaterials('all');
   };
 
   const handleObservationSuccess = () => {
@@ -274,6 +297,22 @@ export default function ActivitiesPage() {
                       {(level || '').charAt(0).toUpperCase() + (level || '').slice(1)}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="filterMaterials" className="block text-sm font-medium text-gray-700 mb-1">
+                  Materials
+                </label>
+                <select
+                  id="filterMaterials"
+                  value={filterMaterials}
+                  onChange={(e) => setFilterMaterials(e.target.value as 'all' | 'household-only' | 'specialized')}
+                  className="block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                >
+                  <option value="all">All Materials</option>
+                  <option value="household-only">Household Items Only</option>
+                  <option value="specialized">Requires Specialized Materials</option>
                 </select>
               </div>
               
