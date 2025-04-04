@@ -743,8 +743,23 @@ export async function acceptRecommendation(
 // Add helper function to check user materials
 async function checkUserHasMaterials(userId: string, materialNames: string[]): Promise<boolean> {
   const userMaterials = await getUserMaterials(userId);
-  return materialNames.every(name => {
-    const material = findMaterialByName(name);
-    return material && userMaterials.includes(material.id!);
+  const materialPromises = materialNames.map(async (name) => {
+    const material = await findMaterialByName(name);
+    return material?.id && userMaterials.includes(material.id);
   });
+  
+  const results = await Promise.all(materialPromises);
+  return results.every(Boolean);
+}
+
+async function hasAllMaterials(materialNames: string[], userMaterials: string[]): Promise<boolean> {
+  if (!materialNames.length) return true;
+  
+  const materialPromises = materialNames.map(async (name) => {
+    const material = await findMaterialByName(name);
+    return material?.id && userMaterials.includes(material.id);
+  });
+
+  const results = await Promise.all(materialPromises);
+  return results.every(Boolean);
 }
