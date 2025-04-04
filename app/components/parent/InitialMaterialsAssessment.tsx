@@ -10,7 +10,8 @@ import {
   doc, 
   getDoc,
   setDoc,
-  Timestamp 
+  Timestamp,
+  updateDoc
 } from 'firebase/firestore';
 import { 
   Package, 
@@ -145,7 +146,7 @@ export default function InitialMaterialsAssessment({
       
       if (newSelected.has(materialId)) {
         newSelected.delete(materialId);
-        await setDoc(userMaterialRef, { isOwned: false });
+        await updateDoc(userMaterialRef, { isOwned: false });
       } else {
         newSelected.add(materialId);
         await setDoc(userMaterialRef, {
