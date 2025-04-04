@@ -21,7 +21,14 @@ export interface Material {
     amazonLink: string;
     affiliateLink: string;  // Your Amazon affiliate link
     category?: string;      // Helpful for organizing (e.g., "art", "sensory", "practical_life")
+    subcategory?: string;   // More specific grouping
     imageUrl?: string;      // Optional product image
+    
+    // Classification fields
+    materialType: 'household' | 'basic' | 'advanced';
+    householdAlternative?: string;
+    isEssential: boolean;
+    difficulty: number; // 1-3 scale
 }
 
 /**
@@ -151,7 +158,7 @@ export async function getUserMaterials(userId: string): Promise<string[]> {
 /**
  * Check if a material is a common household item that most users would have
  */
-function isCommonHouseholdItem(materialName: string): boolean {
+export function isCommonHouseholdItem(materialName: string): boolean {
   const commonItems = [
     // Kitchen items
     'water', 'spoon', 'fork', 'knife', 'plate', 'bowl', 'cup', 'mug', 'napkin', 'paper towel',
@@ -310,5 +317,102 @@ export async function findActivitiesWithAvailableMaterials(
     console.error('Error finding activities with available materials:', error);
     return [];
   }
+}
+
+/**
+ * Classify materials by type: household, basic, advanced
+ */
+export function classifyMaterials(materials: Material[]): {
+  household: Material[],
+  basic: Material[],
+  advanced: Material[]
+} {
+  return {
+    household: materials.filter(m => m.materialType === 'household'),
+    basic: materials.filter(m => m.materialType === 'basic'),
+    advanced: materials.filter(m => m.materialType === 'advanced')
+  };
+}
+
+/**
+ * Get suggested materials for upgrade based on activities completed
+ */
+export async function getSuggestedMaterialsForUpgrade(
+  userId: string,
+  childId: string,
+  activitiesCompleted: number
+): Promise<Material[]> {
+  // Get all planned activities for next 30 days
+  const nextActivities = await getUpcomingActivities(childId, 30);
+  
+  // Get all materials needed for these activities
+  const materialIds = new Set<string>();
+  for (const activity of nextActivities) {
+    for (const name of activity.materialsNeeded || []) {
+      const material = await findMaterialByName(name);
+      if (material && !isCommonHouseholdItem(name)) {
+        materialIds.add(material.id!);
+      }
+    }
+  }
+  
+  // Get material details
+  const materials = await Promise.all(
+    Array.from(materialIds).map(id => getMaterial(id))
+  );
+  
+  // Basic kit for beginners (5+ activities)
+  if (activitiesCompleted >= 5 && activitiesCompleted < 20) {
+    return materials.filter((m: Material) => 
+      m.materialType === 'basic' && 
+      m.isEssential === true
+    );
+  }
+  
+  // Advanced materials for experienced users (20+ activities)
+  if (activitiesCompleted >= 20) {
+    return materials.filter((m: Material) => 
+      (m.materialType === 'basic' || m.materialType === 'advanced') &&
+      m.isEssential === true
+    );
+  }
+  
+  return [];
+}
+
+// Add missing function declarations
+async function getUpcomingActivities(childId: string, days: number): Promise<Activity[]> {
+  // Implementation would go here
+  return [];
+}
+
+/**
+ * Find material by name
+ */
+export async function findMaterialByName(name: string): Promise<Material | null> {
+  try {
+    const normalizedName = name.trim().toLowerCase();
+    const materialsRef = collection(db, 'materials');
+    const q = query(materialsRef, where('normalizedName', '==', normalizedName));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      return null;
+    }
+    
+    const doc = snapshot.docs[0];
+    return {
+      id: doc.id,
+      ...doc.data()
+    } as Material;
+  } catch (error) {
+    console.error('Error finding material by name:', error);
+    return null;
+  }
+}
+
+async function getMaterial(id: string): Promise<Material> {
+  // Implementation would go here
+  return {} as Material;
 }
 

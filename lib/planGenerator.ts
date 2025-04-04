@@ -17,6 +17,11 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { startOfWeek, format, addDays } from 'date-fns';
+import { 
+  isCommonHouseholdItem,
+  getUserMaterials,
+  findMaterialByName
+} from './materialsService';
 
 // Type definitions
 interface ChildSkill {
@@ -43,6 +48,7 @@ interface Activity {
   duration?: number;
   tags?: string[];
   keywords?: string[];
+  materialsNeeded?: string[];
   [key: string]: any;
 }
 
@@ -250,7 +256,7 @@ export async function generateWeeklyPlan(childId: string, userId: string, weekSt
     });
     
     // Score and rank activities based on child's needs
-    const scoredActivities: ScoredActivity[] = activities.map(activity => {
+    const scoredActivities: ScoredActivity[] = await Promise.all(activities.map(async activity => {
       let score = 5; // Base score
       const reasons: string[] = [];
       
@@ -288,7 +294,43 @@ export async function generateWeeklyPlan(childId: string, userId: string, weekSt
         }
       }
       
-      // Factor 3: Recent completion and engagement
+      // Factor 3: Material availability
+      const activityMaterials = activity.materialsNeeded || [];
+      const hasAllMaterials = await checkUserHasMaterials(userId, activityMaterials);
+      
+      // Get user data
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userData = userDoc.data() || {};
+      const userCreatedDate = userData.createdAt?.toDate() || new Date();
+      const userJoinedDays = Math.floor((Date.now() - userCreatedDate.getTime()) / (1000 * 60 * 60 * 24));
+      const activitiesCompleted = userData.activitiesCompleted || 0;
+      const hasMontessoriKit = userData.hasMontessoriKit || false;
+      
+      // New users (< 14 days) without kit: strongly favor household-only activities
+      if (userJoinedDays < 14 && !hasMontessoriKit) {
+        const requiresOnlyHousehold = activityMaterials.every(m => isCommonHouseholdItem(m));
+        
+        if (requiresOnlyHousehold) {
+          score += 10;  // Major boost
+          reasons.push('Uses only household items');
+        } else {
+          score -= 5;   // Major penalty
+          reasons.push('Requires specialized materials');
+        }
+      }
+      // Established users (14+ days) - weigh based on their material inventory
+      else {
+        if (hasAllMaterials) {
+          score += 3;
+          reasons.push('All needed materials available');
+        } else if (activitiesCompleted >= 5) {
+          // Give a gentle nudge toward material-requiring activities after 5 completed
+          score += 1;
+          reasons.push('Good opportunity to expand materials');
+        }
+      }
+      
+      // Factor 4: Recent completion and engagement
       const recent = recentActivities[activity.id];
       if (recent) {
         // Reduce score slightly for very recently completed activities
@@ -321,7 +363,7 @@ export async function generateWeeklyPlan(childId: string, userId: string, weekSt
         score,
         reasons
       };
-    });
+    }));
     
     // Sort by score (highest first)
     scoredActivities.sort((a, b) => b.score - a.score);
@@ -696,4 +738,13 @@ export async function acceptRecommendation(
     console.error('Error accepting recommendation:', error);
     throw error;
   }
+}
+
+// Add helper function to check user materials
+async function checkUserHasMaterials(userId: string, materialNames: string[]): Promise<boolean> {
+  const userMaterials = await getUserMaterials(userId);
+  return materialNames.every(name => {
+    const material = findMaterialByName(name);
+    return material && userMaterials.includes(material.id!);
+  });
 }

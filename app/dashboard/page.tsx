@@ -35,6 +35,7 @@ import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc, 
 import { db } from '@/lib/firebase';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
 import { Timestamp } from 'firebase/firestore';
+import ProgressiveOnboarding from '@/components/parent/ProgressiveOnboarding';
 
 interface ChildSkill {
   id: string;
@@ -288,46 +289,14 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header with child selector */}
         <div className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Your Dashboard</h1>
-              <p className="text-gray-600">
-                Welcome to Learn Sprout, your personalized Montessori learning companion
-              </p>
-            </div>
-            
-            {/* Child selector */}
-            {children.length > 0 && (
-              <div className="flex items-center gap-3">
-                <label htmlFor="child-selector" className="text-sm font-medium text-gray-700">
-                  Viewing:
-                </label>
-                <select
-                  id="child-selector"
-                  value={selectedChildId || ''}
-                  onChange={(e) => handleChildSelect(e.target.value)}
-                  className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base font-medium"
-                >
-                  {children.map((child) => (
-                    <option key={child.id} value={child.id}>
-                      {child.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Your Dashboard</h1>
+          <p className="text-gray-600">
+            Welcome to Learn Sprout, your personalized Montessori learning companion
+          </p>
         </div>
         
-        {/* Show auto-generation status */}
-        {isAutoGenerating && (
-          <div className="bg-blue-50 text-blue-700 p-2 rounded-md mb-4 flex items-center text-sm">
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Creating personalized activity plans for your child...
-          </div>
-        )}
+        <ProgressiveOnboarding />
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Content - Weekly View */}

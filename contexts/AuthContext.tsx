@@ -41,6 +41,7 @@ export interface UserData {
     emailNotifications?: boolean;
     weeklyDigest?: boolean;
     theme?: string;
+    hasViewedHouseholdMaterials?: boolean;
     activityPreferences?: {
       daysPerWeek?: string[];
       activitiesPerDay?: number;

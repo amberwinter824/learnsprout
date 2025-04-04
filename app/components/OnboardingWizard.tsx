@@ -9,9 +9,11 @@ import {
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Package
 } from 'lucide-react';
 import Link from 'next/link';
+import { User } from '@/lib/types/schema';
 
 interface OnboardingStep {
   id: string;
@@ -38,12 +40,21 @@ export default function OnboardingWizard() {
       completed: false
     },
     {
+      id: 'household-materials',
+      title: 'Start With What You Have',
+      description: 'Learn Sprout activities begin with common household items - no special purchases needed to get started!',
+      icon: <Package className="h-8 w-8 text-emerald-500" />,
+      action: 'See Examples',
+      actionLink: '/dashboard/materials/household-items',
+      completed: false
+    },
+    {
       id: 'schedule',
       title: 'Set Your Preferred Schedule',
       description: 'Choose how many activities you\'d like per day and which days of the week work best for your family.',
       icon: <Calendar className="h-8 w-8 text-emerald-500" />,
       action: 'Set Schedule',
-      actionLink: '/dashboard/settings',
+      actionLink: '/dashboard',
       completed: false
     }
   ]);
@@ -58,10 +69,15 @@ export default function OnboardingWizard() {
     // Check if user has set schedule preferences
     const hasSchedule = Boolean(currentUser.preferences?.activityPreferences?.scheduleByDay);
 
+    // Check if user has viewed household materials
+    const hasViewedHouseholdMaterials = Boolean(currentUser.preferences?.hasViewedHouseholdMaterials);
+
     setSteps(prev => prev.map(step => {
       switch (step.id) {
         case 'add-child':
           return { ...step, completed: hasChildren };
+        case 'household-materials':
+          return { ...step, completed: hasViewedHouseholdMaterials };
         case 'schedule':
           return { ...step, completed: hasSchedule };
         default:

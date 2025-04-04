@@ -47,6 +47,12 @@ export interface User {
     emailNotifications: boolean;
     weeklyDigest: boolean;
     theme: string;
+    hasViewedHouseholdMaterials?: boolean;
+    activityPreferences?: {
+      daysPerWeek?: string[];
+      activitiesPerDay?: number;
+      scheduleByDay?: {[key: string]: number};
+    };
   };
 }
 
@@ -123,4 +129,26 @@ export interface Message {
   contextId?: string; // Reference to context object if applicable
   read: boolean;
   createdAt?: Timestamp;
+}
+
+// Material Interface
+export interface Material {
+  id?: string;
+  name: string;
+  normalizedName: string;
+  amazonLink: string;
+  
+  // Classification fields
+  materialType: 'household' | 'basic' | 'advanced';
+  householdAlternative?: string;
+  isEssential: boolean;
+  difficulty: number; // 1-3 scale
+  
+  // Categorization
+  category: string;
+  subcategory?: string;
+  
+  // Metadata
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
