@@ -30,9 +30,11 @@ interface MaterialWithActivities {
   isOptional: boolean;
   amazonLink?: string;
   affiliateLink?: string;
-  activities: string[];  // Names of activities that need this material
-  activityCount: number; // How many activities use this material
-  owned: boolean; // Whether the user already owns this material
+  activities: string[];
+  activityCount: number;
+  owned: boolean;
+  materialType: 'household' | 'basic' | 'advanced';
+  householdAlternative?: string;
 }
 
 interface Activity {
@@ -224,7 +226,9 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                   affiliateLink: materialData.affiliateLink,
                   activities: [activity.title],
                   activityCount: 1,
-                  owned: ownedMaterialIds.includes(materialData.id)
+                  owned: ownedMaterialIds.includes(materialData.id),
+                  materialType: materialData.materialType,
+                  householdAlternative: materialData.householdAlternative
                 });
               }
             } else {
@@ -250,7 +254,9 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                   isOptional: false,
                   activities: [activity.title],
                   activityCount: 1,
-                  owned: false
+                  owned: false,
+                  materialType: 'basic',
+                  householdAlternative: ''
                 });
               }
             }
@@ -385,7 +391,7 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
       >
         <div className="flex items-center">
           <ShoppingBag className="h-5 w-5 text-emerald-500 mr-2" />
-          <h3 className="font-medium text-gray-900">Seasonal Materials Forecast</h3>
+          <h3 className="font-medium text-gray-900">Materials Forecast</h3>
           <div className="ml-2 flex items-center text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
             <CalendarRange className="h-3 w-3 mr-1" />
             Next {period} days
@@ -407,117 +413,184 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
           {materials.length > 0 ? (
             <div>
               <p className="text-sm text-gray-600 mb-4">
-                These are all the materials you'll need for activities over the next {period} days. 
-                Check the box next to items you already have.
+                Start with household items you already have, then gradually add specialized materials as needed.
               </p>
               
-              {/* Materials we need to get (not owned) */}
-              {materials.filter(m => !m.owned).length > 0 && (
+              {/* Household Items Section */}
+              {materials.filter(m => m.materialType === 'household').length > 0 && (
                 <div className="mb-6">
-                  <h4 className="text-sm font-medium text-red-600 mb-2">
-                    Materials to Purchase:
+                  <h4 className="text-sm font-medium text-emerald-600 mb-2">
+                    Household Items
                   </h4>
+                  <p className="text-xs text-gray-500 mb-2">
+                    These are common items you likely already have at home.
+                  </p>
                   <ul className="space-y-2 divide-y divide-gray-100">
-                    {materials.filter(m => !m.owned).map((material, index) => (
-                      <li key={index} className="flex justify-between items-center py-2">
-                        <div className="flex items-center">
-                          <div className="mr-3">
-                            <input
-                              type="checkbox"
-                              id={`material-${material.id || index}`}
-                              checked={material.owned}
-                              onChange={() => handleToggleOwned(material.id!, material.owned)}
-                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                              disabled={updatingMaterial === material.id}
-                            />
-                          </div>
-                          <div>
-                            <span className="text-gray-800 font-medium">
-                              {material.name}
-                              {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
-                              {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
-                            </span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500">{material.category}</span>
-                              {material.isReusable && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                  Reusable
-                                </span>
-                              )}
-                              <span className="text-xs text-gray-500">
-                                Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
-                              </span>
+                    {materials
+                      .filter(m => m.materialType === 'household')
+                      .map((material, index) => (
+                        <li key={index} className="flex justify-between items-center py-2">
+                          <div className="flex items-center">
+                            <div className="mr-3">
+                              <input
+                                type="checkbox"
+                                id={`material-${material.id || index}`}
+                                checked={material.owned}
+                                onChange={() => handleToggleOwned(material.id!, material.owned)}
+                                className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                                disabled={updatingMaterial === material.id}
+                              />
                             </div>
-                            {material.description && (
-                              <p className="text-xs text-gray-600 mt-1">{material.description}</p>
-                            )}
+                            <div>
+                              <span className="text-gray-800 font-medium">
+                                {material.name}
+                                {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                              </span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-500">{material.category}</span>
+                                <span className="text-xs text-gray-500">
+                                  Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        {(material.affiliateLink || material.amazonLink) && (
-                          <a 
-                            href={material.affiliateLink || material.amazonLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 text-sm flex items-center bg-blue-50 px-2 py-1 rounded"
-                          >
-                            Buy
-                            <ExternalLink className="h-3 w-3 ml-1" />
-                          </a>
-                        )}
-                      </li>
-                    ))}
+                          {material.owned ? (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+                              <Check className="h-3 w-3 mr-1" />
+                              In your inventory
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                              Common household item
+                            </span>
+                          )}
+                        </li>
+                      ))}
                   </ul>
                 </div>
               )}
               
-              {/* Materials we already have */}
-              {materials.filter(m => m.owned).length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-green-600 mb-2">
-                    Materials You Already Have:
+              {/* Basic Materials Section */}
+              {materials.filter(m => m.materialType === 'basic').length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-blue-600 mb-2">
+                    Basic Montessori Materials
                   </h4>
+                  <p className="text-xs text-gray-500 mb-2">
+                    These are the core materials that will help you get started with Montessori activities.
+                  </p>
                   <ul className="space-y-2 divide-y divide-gray-100">
-                    {materials.filter(m => m.owned).map((material, index) => (
-                      <li key={index} className="flex justify-between items-center py-2 opacity-75">
-                        <div className="flex items-center">
-                          <div className="mr-3">
-                            <input
-                              type="checkbox"
-                              id={`material-owned-${material.id || index}`}
-                              checked={material.owned}
-                              onChange={() => handleToggleOwned(material.id!, material.owned)}
-                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                              disabled={updatingMaterial === material.id}
-                            />
-                          </div>
-                          <div>
-                            <span className="text-gray-800">
-                              {material.name}
-                              {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
-                              {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
-                            </span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500">{material.category}</span>
-                              {material.isReusable && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                  Reusable
-                                </span>
-                              )}
-                              <span className="text-xs text-gray-500">
-                                Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
-                              </span>
+                    {materials
+                      .filter(m => m.materialType === 'basic')
+                      .map((material, index) => (
+                        <li key={index} className="flex justify-between items-center py-2">
+                          <div className="flex items-center">
+                            <div className="mr-3">
+                              <input
+                                type="checkbox"
+                                id={`material-${material.id || index}`}
+                                checked={material.owned}
+                                onChange={() => handleToggleOwned(material.id!, material.owned)}
+                                className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                                disabled={updatingMaterial === material.id}
+                              />
                             </div>
-                            {material.description && (
-                              <p className="text-xs text-gray-600 mt-1">{material.description}</p>
-                            )}
+                            <div>
+                              <span className="text-gray-800 font-medium">
+                                {material.name}
+                                {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                              </span>
+                              {material.householdAlternative && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Alternative: {material.householdAlternative}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-500">{material.category}</span>
+                                <span className="text-xs text-gray-500">
+                                  Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
-                          <Check className="h-3 w-3 mr-1" />
-                          In your inventory
-                        </span>
-                      </li>
-                    ))}
+                          {material.owned ? (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+                              <Check className="h-3 w-3 mr-1" />
+                              In your inventory
+                            </span>
+                          ) : (
+                            <a 
+                              href={material.affiliateLink || material.amazonLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm flex items-center bg-blue-50 px-2 py-1 rounded"
+                            >
+                              Buy
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Advanced Materials Section */}
+              {materials.filter(m => m.materialType === 'advanced').length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-purple-600 mb-2">
+                    Advanced Materials
+                  </h4>
+                  <p className="text-xs text-gray-500 mb-2">
+                    These are specialized materials that can be added as your child progresses.
+                  </p>
+                  <ul className="space-y-2 divide-y divide-gray-100">
+                    {materials
+                      .filter(m => m.materialType === 'advanced')
+                      .map((material, index) => (
+                        <li key={index} className="flex justify-between items-center py-2">
+                          <div className="flex items-center">
+                            <div className="mr-3">
+                              <input
+                                type="checkbox"
+                                id={`material-${material.id || index}`}
+                                checked={material.owned}
+                                onChange={() => handleToggleOwned(material.id!, material.owned)}
+                                className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                                disabled={updatingMaterial === material.id}
+                              />
+                            </div>
+                            <div>
+                              <span className="text-gray-800 font-medium">
+                                {material.name}
+                                {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                              </span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-500">{material.category}</span>
+                                <span className="text-xs text-gray-500">
+                                  Used in {material.activityCount} {material.activityCount === 1 ? 'activity' : 'activities'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {material.owned ? (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+                              <Check className="h-3 w-3 mr-1" />
+                              In your inventory
+                            </span>
+                          ) : (
+                            <a 
+                              href={material.affiliateLink || material.amazonLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm flex items-center bg-blue-50 px-2 py-1 rounded"
+                            >
+                              Buy
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </a>
+                          )}
+                        </li>
+                      ))}
                   </ul>
                 </div>
               )}
@@ -556,41 +629,22 @@ export default function MaterialsForecast({ childId, period = 90 }: MaterialsFor
                                 </p>
                               )}
                             </div>
-                            <Link
-                              href={`/dashboard/activities/${activity.id}?childId=${childId}`}
-                              className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200 transition-colors"
-                            >
-                              View Activity
-                            </Link>
                           </div>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <div className="text-center py-4 bg-gray-50 rounded-lg">
-                      <p className="text-gray-500">
-                        Mark materials as owned to see activities you can do now.
-                      </p>
-                    </div>
+                    <p className="text-sm text-gray-500">
+                      No activities available with your current materials.
+                    </p>
                   )}
                 </div>
               )}
-              
-              <div className="mt-6 bg-blue-50 rounded-md p-3 text-sm text-blue-800">
-                <p className="font-medium">Shopping tip</p>
-                <p className="text-xs mt-1">
-                  Purchase these materials in advance to be prepared for all upcoming activities. 
-                  Many materials can be reused across multiple activities.
-                </p>
-              </div>
             </div>
           ) : (
-            <div className="text-center py-6">
-              <p className="text-gray-500">No materials needed for upcoming activities.</p>
-              <p className="text-sm text-gray-400 mt-2">
-                This could be because there are no activities planned for the next {period} days.
-              </p>
-            </div>
+            <p className="text-sm text-gray-500">
+              No materials needed for the selected period.
+            </p>
           )}
         </div>
       )}

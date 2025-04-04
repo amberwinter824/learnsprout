@@ -40,6 +40,9 @@ interface Material {
   affiliateLink: string;
   activities: string[];
   alternativeNames: string[];
+  materialType: string;
+  owned: boolean;
+  householdAlternative?: string;
 }
 
 interface Activity {
@@ -71,6 +74,7 @@ export default function MaterialsAssessment({
   const [categories, setCategories] = useState<Record<string, Material[]>>({});
   const [period, setPeriod] = useState<'90' | '180' | '365'>('90');
   const [childAgeGroup, setChildAgeGroup] = useState<string>('');
+  const [updatingMaterial, setUpdatingMaterial] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchChildAgeGroup = async () => {
@@ -197,14 +201,15 @@ export default function MaterialsAssessment({
     fetchMaterials();
   }, [childAgeGroup, currentUser]);
 
-  const handleMaterialToggle = async (materialId: string) => {
+  const handleToggleOwned = async (materialId: string, owned: boolean) => {
     if (!currentUser?.uid) return;
 
     try {
+      setUpdatingMaterial(materialId);
       const userMaterialRef = doc(db, 'userMaterials', `${currentUser.uid}_${materialId}`);
       const newSelected = new Set(selectedMaterials);
       
-      if (newSelected.has(materialId)) {
+      if (owned) {
         newSelected.delete(materialId);
         await updateDoc(userMaterialRef, { isOwned: false });
       } else {
@@ -221,6 +226,8 @@ export default function MaterialsAssessment({
     } catch (err) {
       console.error('Error updating material status:', err);
       setError('Failed to update material status');
+    } finally {
+      setUpdatingMaterial(null);
     }
   };
 
@@ -288,93 +295,191 @@ export default function MaterialsAssessment({
         </div>
         <p className="mt-1 text-sm text-gray-600">
           {isInitialSetup 
-            ? `Let's get you set up with the materials needed for ${childName || 'your child'}'s activities.`
-            : `Materials needed for ${childName || 'your child'}'s activities.`
+            ? `Let's start with what you already have at home. You can gradually add specialized materials as needed.`
+            : `Review your materials for ${childName || 'your child'}'s activities. Start with household items, then add specialized materials as needed.`
           }
           {childAgeGroup && ` (Ages ${childAgeGroup})`}
-          Check off what you already have at home.
         </p>
       </div>
 
       <div className="p-6">
-        {Object.entries(categories).map(([category, categoryMaterials]) => (
-          <div key={category} className="mb-8 last:mb-0">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{category}</h3>
-            <div className="space-y-4">
-              {categoryMaterials.map((material) => (
-                <div 
-                  key={material.id}
-                  className={`p-4 rounded-lg border ${
-                    selectedMaterials.has(material.id)
-                      ? 'bg-emerald-50 border-emerald-200'
-                      : 'bg-white border-gray-200 hover:border-emerald-200'
-                  } transition-colors duration-200`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center">
-                        <button
-                          onClick={() => handleMaterialToggle(material.id)}
-                          className="group flex items-center"
-                        >
-                          {selectedMaterials.has(material.id) ? (
-                            <CheckCircle className="h-5 w-5 text-emerald-500 mr-2" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-gray-300 group-hover:text-emerald-500 mr-2" />
-                          )}
-                          <span className="font-medium text-gray-900">
-                            {material.name}
-                            {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
-                            {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
-                          </span>
-                        </button>
-                      </div>
-                      {material.description && (
-                        <p className="mt-1 text-sm text-gray-600 ml-7">
-                          {material.description}
-                        </p>
-                      )}
-                      {material.isReusable && (
-                        <span className="ml-7 inline-flex items-center px-2 py-0.5 mt-2 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          Reusable
-                        </span>
-                      )}
-                    </div>
-                    {(material.amazonLink || material.affiliateLink) && (
-                      <a
-                        href={material.affiliateLink || material.amazonLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-4 inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Buy on Amazon
-                      </a>
-                    )}
+        {/* Household Items Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-medium text-emerald-600 mb-4">Household Items</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            These are common items you likely already have at home. Check off what you have available.
+          </p>
+          <div className="space-y-4">
+            {Object.entries(categories)
+              .filter(([_, materials]) => materials.some(m => m.materialType === 'household'))
+              .map(([category, categoryMaterials]) => (
+                <div key={category} className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">{category}</h4>
+                  <div className="space-y-3">
+                    {categoryMaterials
+                      .filter(m => m.materialType === 'household')
+                      .map((material) => (
+                        <div key={material.id} className="flex items-start">
+                          <div className="flex items-center h-5">
+                            <input
+                              type="checkbox"
+                              id={`material-${material.id}`}
+                              checked={material.owned}
+                              onChange={() => handleToggleOwned(material.id, material.owned)}
+                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                              disabled={updatingMaterial === material.id}
+                            />
+                          </div>
+                          <div className="ml-3">
+                            <label htmlFor={`material-${material.id}`} className="text-sm font-medium text-gray-700">
+                              {material.name}
+                              {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                            </label>
+                            {material.description && (
+                              <p className="mt-1 text-sm text-gray-600">
+                                {material.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 </div>
               ))}
-            </div>
           </div>
-        ))}
+        </div>
 
-        <div className="mt-8 flex justify-between items-center">
-          <button
-            onClick={createAmazonCart}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Create Amazon Cart for Missing Items
-          </button>
-          {onComplete && (
+        {/* Basic Materials Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-medium text-blue-600 mb-4">Basic Montessori Materials</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            These are the core materials that will help you get started with Montessori activities.
+            Many have household alternatives you can use while you build your collection.
+          </p>
+          <div className="space-y-4">
+            {Object.entries(categories)
+              .filter(([_, materials]) => materials.some(m => m.materialType === 'basic'))
+              .map(([category, categoryMaterials]) => (
+                <div key={category} className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">{category}</h4>
+                  <div className="space-y-3">
+                    {categoryMaterials
+                      .filter(m => m.materialType === 'basic')
+                      .map((material) => (
+                        <div key={material.id} className="flex items-start">
+                          <div className="flex items-center h-5">
+                            <input
+                              type="checkbox"
+                              id={`material-${material.id}`}
+                              checked={material.owned}
+                              onChange={() => handleToggleOwned(material.id, material.owned)}
+                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                              disabled={updatingMaterial === material.id}
+                            />
+                          </div>
+                          <div className="ml-3">
+                            <label htmlFor={`material-${material.id}`} className="text-sm font-medium text-gray-700">
+                              {material.name}
+                              {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                            </label>
+                            {material.householdAlternative && (
+                              <p className="mt-1 text-sm text-gray-500">
+                                Alternative: {material.householdAlternative}
+                              </p>
+                            )}
+                            {material.description && (
+                              <p className="mt-1 text-sm text-gray-600">
+                                {material.description}
+                              </p>
+                            )}
+                            {(material.amazonLink || material.affiliateLink) && (
+                              <a
+                                href={material.affiliateLink || material.amazonLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-1 inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Buy on Amazon
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Advanced Materials Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-medium text-purple-600 mb-4">Advanced Materials</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            These are specialized materials that can be added as your child progresses.
+            Focus on the basic materials first.
+          </p>
+          <div className="space-y-4">
+            {Object.entries(categories)
+              .filter(([_, materials]) => materials.some(m => m.materialType === 'advanced'))
+              .map(([category, categoryMaterials]) => (
+                <div key={category} className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">{category}</h4>
+                  <div className="space-y-3">
+                    {categoryMaterials
+                      .filter(m => m.materialType === 'advanced')
+                      .map((material) => (
+                        <div key={material.id} className="flex items-start">
+                          <div className="flex items-center h-5">
+                            <input
+                              type="checkbox"
+                              id={`material-${material.id}`}
+                              checked={material.owned}
+                              onChange={() => handleToggleOwned(material.id, material.owned)}
+                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                              disabled={updatingMaterial === material.id}
+                            />
+                          </div>
+                          <div className="ml-3">
+                            <label htmlFor={`material-${material.id}`} className="text-sm font-medium text-gray-700">
+                              {material.name}
+                              {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                            </label>
+                            {material.description && (
+                              <p className="mt-1 text-sm text-gray-600">
+                                {material.description}
+                              </p>
+                            )}
+                            {(material.amazonLink || material.affiliateLink) && (
+                              <a
+                                href={material.affiliateLink || material.amazonLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-1 inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Buy on Amazon
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {onComplete && (
+          <div className="mt-8 flex justify-end">
             <button
               onClick={onComplete}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
             >
-              Save and Continue
+              Continue
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
