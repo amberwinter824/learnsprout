@@ -354,6 +354,7 @@ export default function Dashboard() {
               <div className="space-y-6">
                 {selectedChildId ? (
                   <WeeklyPlanWithDayFocus 
+                    key={selectedChildId}
                     selectedDate={selectedDate}
                     selectedChildId={selectedChildId}
                     onGeneratePlan={handleGeneratePlan}

@@ -130,9 +130,14 @@ export default function WeeklyPlanWithDayFocus({
       const child = allChildren.find(c => c.id === selectedChildId);
       if (child) {
         setSelectedChild(child);
+        // Reset week activities when child changes
+        setWeekActivities([]);
+        setWeekHasPlan(false);
       }
     } else {
       setSelectedChild(null);
+      setWeekActivities([]);
+      setWeekHasPlan(false);
     }
   }, [selectedChildId, allChildren]);
   
@@ -219,12 +224,23 @@ export default function WeeklyPlanWithDayFocus({
   
   // Fetch activities when selectedChild changes
   useEffect(() => {
+    let isMounted = true;
+    
     if (selectedChild) {
-      fetchWeekActivitiesRef();
+      fetchWeekActivitiesRef().then(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
     } else {
       setWeekActivities([]);
       setWeekHasPlan(false);
+      setLoading(false);
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [selectedChild, weekStartDate, refreshTrigger]);
   
   // Create a function reference for fetchWeekActivities
