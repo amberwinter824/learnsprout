@@ -124,6 +124,18 @@ export default function WeeklyPlanWithDayFocus({
     }
   }, [initialDate]);
   
+  // Update selected child when selectedChildId changes
+  useEffect(() => {
+    if (selectedChildId && allChildren.length > 0) {
+      const child = allChildren.find(c => c.id === selectedChildId);
+      if (child) {
+        setSelectedChild(child);
+      }
+    } else {
+      setSelectedChild(null);
+    }
+  }, [selectedChildId, allChildren]);
+  
   // Fetch all children for the current user
   useEffect(() => {
     if (!currentUser) return;
@@ -204,6 +216,16 @@ export default function WeeklyPlanWithDayFocus({
       fetchOwnedMaterials();
     }
   }, [currentUser]);
+  
+  // Fetch activities when selectedChild changes
+  useEffect(() => {
+    if (selectedChild) {
+      fetchWeekActivitiesRef();
+    } else {
+      setWeekActivities([]);
+      setWeekHasPlan(false);
+    }
+  }, [selectedChild, weekStartDate, refreshTrigger]);
   
   // Create a function reference for fetchWeekActivities
   const fetchWeekActivitiesRef = async () => {
@@ -515,19 +537,6 @@ export default function WeeklyPlanWithDayFocus({
       setLoading(false);
     }
   };
-  
-  // Then update the useEffect to use this function
-  useEffect(() => {
-    if (!currentUser || !selectedChild) {
-      // Clear or set default state when dependencies are null
-      setWeekActivities([]);
-      setWeekHasPlan(false);
-      setLoading(false);
-      return;
-    }
-    
-    fetchWeekActivitiesRef();
-  }, [currentUser, selectedChild, weekStartDate]);
   
   // Add this useEffect to watch for changes in user preferences
   useEffect(() => {

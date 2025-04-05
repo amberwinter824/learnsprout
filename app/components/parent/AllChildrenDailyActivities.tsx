@@ -107,6 +107,8 @@ export default function AllChildrenDailyActivities({
   useEffect(() => {
     if (selectedChildId) {
       setFilterChild(selectedChildId);
+    } else {
+      setFilterChild('all');
     }
   }, [selectedChildId]);
 

@@ -79,6 +79,15 @@ export default function AllChildrenWeeklyView({
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [filterChild, setFilterChild] = useState<string>(selectedChildId || 'all');
   
+  // Update filterChild when selectedChildId changes
+  useEffect(() => {
+    if (selectedChildId) {
+      setFilterChild(selectedChildId);
+    } else {
+      setFilterChild('all');
+    }
+  }, [selectedChildId]);
+  
   // Activity details popup state
   const [showDetailsPopup, setShowDetailsPopup] = useState(false);
   const [detailsActivityId, setDetailsActivityId] = useState<string | null>(null);
