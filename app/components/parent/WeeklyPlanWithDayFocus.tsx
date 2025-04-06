@@ -552,7 +552,7 @@ export default function WeeklyPlanWithDayFocus({
       // Reset week activities and plan status
       setWeekActivities([]);
       setWeekHasPlan(false);
-      // Trigger a refresh
+      // Force a refresh by incrementing the trigger
       setRefreshTrigger(prev => prev + 1);
     }
   }, [currentUser?.preferences?.activityPreferences?.scheduleByDay]);
@@ -561,9 +561,20 @@ export default function WeeklyPlanWithDayFocus({
   useEffect(() => {
     if (refreshTrigger > 0) {
       console.log('Refreshing plan due to trigger:', refreshTrigger);
+      // Reset loading state to show loading indicator
+      setLoading(true);
       fetchWeekActivitiesRef();
     }
   }, [refreshTrigger, selectedChild, weekStartDate]);
+  
+  // Add this useEffect to watch for changes in the selected child
+  useEffect(() => {
+    if (selectedChild) {
+      console.log('Selected child changed, refreshing plan');
+      setLoading(true);
+      fetchWeekActivitiesRef();
+    }
+  }, [selectedChild]);
   
   // Navigate to previous/next week
   const handleWeekChange = (direction: 'prev' | 'next') => {

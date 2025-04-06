@@ -414,10 +414,10 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
 
       await setDoc(skillRef, updateData);
 
-      // Update local state - only update the specific skill
+      // Update local state - match by both id and skillId
       setSkills(prevSkills => 
         prevSkills.map(skill => 
-          skill.skillId === selectedSkill.skillId
+          (skill.id === selectedSkill.id || skill.skillId === selectedSkill.skillId)
             ? { 
                 ...skill, 
                 id: skillRef.id,

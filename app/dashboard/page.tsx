@@ -224,6 +224,10 @@ export default function Dashboard() {
         for (const child of children) {
           await handleGeneratePlan(child.id, selectedDate);
         }
+        // Force a refresh of the WeeklyPlanWithDayFocus component
+        if (children.length > 0) {
+          await handleGeneratePlan(children[0].id, selectedDate);
+        }
       } catch (error) {
         console.error('Error updating schedule:', error);
         setError('Failed to update schedule');
