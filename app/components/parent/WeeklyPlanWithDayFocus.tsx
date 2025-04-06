@@ -74,13 +74,11 @@ interface Child {
 
 interface WeeklyPlanWithDayFocusProps {
   selectedDate?: Date;
-  selectedChildId?: string;
   onGeneratePlan?: (childId: string, weekStartDate?: Date) => Promise<any>;
 }
 
 export default function WeeklyPlanWithDayFocus({ 
   selectedDate: initialDate,
-  selectedChildId,
   onGeneratePlan
 }: WeeklyPlanWithDayFocusProps) {
   const router = useRouter();
@@ -124,22 +122,15 @@ export default function WeeklyPlanWithDayFocus({
     }
   }, [initialDate]);
   
-  // Update selected child when selectedChildId changes
-  useEffect(() => {
-    if (selectedChildId && allChildren.length > 0) {
-      const child = allChildren.find(c => c.id === selectedChildId);
-      if (child) {
-        setSelectedChild(child);
-        // Reset week activities when child changes
-        setWeekActivities([]);
-        setWeekHasPlan(false);
-      }
-    } else {
-      setSelectedChild(null);
+  // Handle child selection
+  const handleChildSelect = (childId: string) => {
+    const child = allChildren.find(c => c.id === childId);
+    if (child) {
+      setSelectedChild(child);
       setWeekActivities([]);
       setWeekHasPlan(false);
     }
-  }, [selectedChildId, allChildren]);
+  };
   
   // Fetch all children for the current user
   useEffect(() => {
@@ -173,20 +164,20 @@ export default function WeeklyPlanWithDayFocus({
         
         setAllChildren(children);
         
-        // Set selected child from prop
-        if (selectedChildId) {
-          const selectedChild = children.find(child => child.id === selectedChildId) || null;
-          setSelectedChild(selectedChild);
+        // If no child is selected yet, select the first one
+        if (!selectedChild && children.length > 0) {
+          setSelectedChild(children[0]);
         }
       } catch (error) {
         console.error('Error fetching children:', error);
         setError('Failed to load children');
+      } finally {
         setLoading(false);
       }
     }
     
     fetchChildren();
-  }, [currentUser, selectedChildId]);
+  }, [currentUser, selectedChild]);
   
   // Add useEffect to load owned materials
   useEffect(() => {
@@ -766,7 +757,23 @@ export default function WeeklyPlanWithDayFocus({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <h2 className="text-lg font-medium text-gray-900">Weekly Plan</h2>
-            {selectedChild && (
+            {allChildren.length > 1 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">for</span>
+                <select
+                  value={selectedChild?.id || ''}
+                  onChange={(e) => handleChildSelect(e.target.value)}
+                  className="text-sm font-medium text-gray-900 bg-transparent border-0 focus:ring-0 focus:outline-none"
+                >
+                  {allChildren.map(child => (
+                    <option key={child.id} value={child.id}>
+                      {child.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {allChildren.length === 1 && selectedChild && (
               <span className="text-sm text-gray-500">
                 for {selectedChild.name}
               </span>

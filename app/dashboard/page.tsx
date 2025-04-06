@@ -68,7 +68,6 @@ export default function Dashboard() {
   
   // Parse URL parameters
   const dateParam = searchParams.get('date');
-  const childIdParam = searchParams.get('childId');
   
   // State
   const [loading, setLoading] = useState(true);
@@ -76,42 +75,22 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(
     dateParam ? new Date(dateParam) : new Date()
   );
-  const [selectedChildId, setSelectedChildId] = useState<string | undefined>(undefined);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
   const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
   const materialsForecastRef = useRef<{ fetchMaterialsNeeded: () => void }>(null);
   
-  // Update URL when parameters change
-  const updateUrlParams = useCallback((date?: Date, childId?: string) => {
+  // Update URL when date changes
+  const updateUrlParams = useCallback((date?: Date) => {
     const params = new URLSearchParams();
     
     if (date) {
       params.set('date', format(date, 'yyyy-MM-dd'));
     }
     
-    if (childId) {
-      params.set('childId', childId);
-    }
-    
     // Replace current URL to maintain navigation history
     router.replace(`/dashboard?${params.toString()}`, { scroll: false });
   }, [router]);
-  
-  // Initialize selectedChildId from URL or first child
-  useEffect(() => {
-    if (children.length > 0) {
-      if (childIdParam) {
-        // If there's a childId in the URL, use it
-        setSelectedChildId(childIdParam);
-      } else {
-        // Otherwise, select the first child
-        const firstChild = children[0];
-        setSelectedChildId(firstChild.id);
-        updateUrlParams(selectedDate, firstChild.id);
-      }
-    }
-  }, [children, childIdParam, selectedDate, updateUrlParams]);
   
   // Fetch children and their skills
   useEffect(() => {
@@ -128,13 +107,6 @@ export default function Dashboard() {
           ...doc.data()
         })) as Child[];
         setChildren(childrenData);
-
-        // Automatically select the first child if no child is selected
-        if (childrenData.length > 0 && !selectedChildId) {
-          const firstChild = childrenData[0];
-          setSelectedChildId(firstChild.id);
-          updateUrlParams(selectedDate, firstChild.id);
-        }
 
         // Fetch recent skills
         if (childrenData.length > 0) {
@@ -177,19 +149,13 @@ export default function Dashboard() {
     if (currentUser?.uid) {
       fetchData();
     }
-  }, [currentUser, selectedChildId, selectedDate, updateUrlParams]);
+  }, [currentUser]);
   
   // Handle date selection
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate(date);
-    updateUrlParams(date, selectedChildId);
-  }, [selectedChildId, updateUrlParams]);
-  
-  // Handle child selection
-  const handleChildSelect = useCallback((childId: string) => {
-    setSelectedChildId(childId);
-    updateUrlParams(selectedDate, childId);
-  }, [selectedDate, updateUrlParams]);
+    updateUrlParams(date);
+  }, [updateUrlParams]);
   
   // Handle generate plan
   const handleGeneratePlan = async (childId: string, weekDate?: Date): Promise<void> => {
@@ -206,7 +172,7 @@ export default function Dashboard() {
       
     } catch (error) {
       console.error('Error generating plan:', error);
-      throw error;
+      setError('Failed to generate plan');
     } finally {
       setIsGeneratingPlan(false);
     }
@@ -254,7 +220,7 @@ export default function Dashboard() {
   
   const handleSchedulePreferencesUpdated = async () => {
     // Refresh the current view to reflect new schedule
-    if (selectedChildId) {
+    if (selectedDate) {
       try {
         // Generate a new plan
         await handleGeneratePlan(selectedChildId, selectedDate);
@@ -311,28 +277,6 @@ export default function Dashboard() {
         
         <ProgressiveOnboarding />
         
-        {/* Child Selection Filter */}
-        {children.length > 1 && (
-          <div className="mb-6 bg-white shadow-sm rounded-lg p-4">
-            <div className="flex items-center flex-wrap gap-2">
-              <span className="text-sm font-medium text-gray-700 mr-2">View child:</span>
-              {children.map(child => (
-                <button
-                  key={child.id}
-                  className={`px-3 py-1 text-sm font-medium rounded-md ${
-                    selectedChildId === child.id
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  }`}
-                  onClick={() => setSelectedChildId(child.id)}
-                >
-                  {child.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Content - Weekly View */}
           <div className="lg:col-span-8">
@@ -352,37 +296,10 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-6">
-                {selectedChildId ? (
-                  <WeeklyPlanWithDayFocus 
-                    key={selectedChildId}
-                    selectedDate={selectedDate}
-                    selectedChildId={selectedChildId}
-                    onGeneratePlan={handleGeneratePlan}
-                  />
-                ) : (
-                  <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-                    <h2 className="text-lg font-medium text-gray-900 mb-2">Select a Child</h2>
-                    <p className="text-gray-600 mb-4">
-                      Choose a child to view their weekly activity plan
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-                      {children.map(child => (
-                        <button
-                          key={child.id}
-                          onClick={() => setSelectedChildId(child.id)}
-                          className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
-                        >
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-medium">
-                              {child.name.charAt(0)}
-                            </div>
-                            <span className="ml-2 font-medium">{child.name}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <WeeklyPlanWithDayFocus 
+                  selectedDate={selectedDate}
+                  onGeneratePlan={handleGeneratePlan}
+                />
                 
                 {/* Materials Needed */}
                 <div className="bg-white rounded-lg shadow-sm p-4">
@@ -398,7 +315,6 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     <AllChildrenMaterialsForecast
                       ref={materialsForecastRef}
-                      selectedChildId={selectedChildId}
                       onMarkMaterialOwned={handleMarkMaterialOwned}
                     />
                   </div>
@@ -447,14 +363,14 @@ export default function Dashboard() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
               <div className="grid grid-cols-2 gap-2">
                 <Link
-                  href={`/dashboard/activities?childId=${selectedChildId}`}
+                  href="/dashboard/activities"
                   className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
                   Activities
                 </Link>
                 <Link
-                  href={`/dashboard/progress?childId=${selectedChildId}`}
+                  href="/dashboard/progress"
                   className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <BarChart2 className="h-4 w-4 mr-2" />
