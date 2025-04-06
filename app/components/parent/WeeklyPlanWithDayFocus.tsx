@@ -552,15 +552,16 @@ export default function WeeklyPlanWithDayFocus({
   
   // Add this useEffect to watch for changes in user preferences
   useEffect(() => {
-    if (currentUser?.preferences?.activityPreferences?.scheduleByDay) {
-      console.log('Schedule preferences changed, triggering refresh');
+    if (currentUser?.preferences?.activityPreferences?.scheduleByDay && selectedChild) {
+      console.log('Schedule preferences changed, triggering plan regeneration');
       // Reset week activities and plan status
       setWeekActivities([]);
       setWeekHasPlan(false);
-      // Force a refresh by incrementing the trigger
-      setRefreshTrigger(prev => prev + 1);
+      
+      // Generate a new plan
+      handleGeneratePlan();
     }
-  }, [currentUser?.preferences?.activityPreferences?.scheduleByDay]);
+  }, [currentUser?.preferences?.activityPreferences?.scheduleByDay, selectedChild]);
   
   // Add this useEffect to refresh the plan when refreshTrigger changes
   useEffect(() => {

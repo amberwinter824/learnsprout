@@ -414,20 +414,28 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
 
       await setDoc(skillRef, updateData);
 
-      // Update local state - match by both id and skillId
+      // Update local state - handle both new and existing skills
       setSkills(prevSkills => 
-        prevSkills.map(skill => 
-          (skill.id === selectedSkill.id || skill.skillId === selectedSkill.skillId)
-            ? { 
-                ...skill, 
-                id: skillRef.id,
-                status: updateStatus,
-                notes: updateNotes,
-                lastAssessed: Timestamp.now(),
-                updatedAt: Timestamp.now()
-              }
-            : skill
-        )
+        prevSkills.map(skill => {
+          // Check if this is the skill we're updating
+          const isTargetSkill = 
+            (skill.id === selectedSkill.id) || 
+            (skill.skillId === selectedSkill.skillId) ||
+            (skill.id === `new-${selectedSkill.skillId}`);
+
+          if (isTargetSkill) {
+            return {
+              ...skill,
+              id: skillRef.id, // Use the new/existing document ID
+              skillId: selectedSkill.skillId,
+              status: updateStatus,
+              notes: updateNotes,
+              lastAssessed: Timestamp.now(),
+              updatedAt: Timestamp.now()
+            };
+          }
+          return skill;
+        })
       );
 
       // Close modal and reset state
@@ -945,7 +953,7 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
                   const domainSkills = getSkillsByDomain(domain)
                     .map(skill => ({
                       id: skill.id,
-                      skillId: skill.id,
+                      skillId: skill.skillId,
                       name: skill.name,
                       description: skill.description || 'No description available',
                       area: skill.area,
