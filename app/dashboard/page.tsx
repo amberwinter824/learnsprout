@@ -158,18 +158,16 @@ export default function Dashboard() {
   }, [updateUrlParams]);
   
   // Handle generate plan
-  const handleGeneratePlan = async (childId: string, weekDate?: Date): Promise<void> => {
-    if (!childId || !currentUser) {
-      throw new Error('Missing child ID or user');
+  const handleGeneratePlan = async (childId: string, date: Date): Promise<void> => {
+    if (!currentUser) {
+      throw new Error('User not authenticated');
     }
     
     try {
       setIsGeneratingPlan(true);
-      
       // Import and use your plan generator with the week date
       const { generateWeeklyPlan } = await import('@/lib/planGenerator');
-      await generateWeeklyPlan(childId, currentUser.uid, weekDate);
-      
+      await generateWeeklyPlan(childId, currentUser.uid, date);
     } catch (error) {
       console.error('Error generating plan:', error);
       setError('Failed to generate plan');
@@ -222,14 +220,13 @@ export default function Dashboard() {
     // Refresh the current view to reflect new schedule
     if (selectedDate) {
       try {
-        // Generate a new plan
-        await handleGeneratePlan(selectedChildId, selectedDate);
-        
-        // Force a refresh of the weekly plan view by updating the selected date
-        // This will trigger a re-render of the WeeklyPlanWithDayFocus component
-        setSelectedDate(new Date(selectedDate));
+        // Generate a new plan for each child
+        for (const child of children) {
+          await handleGeneratePlan(child.id, selectedDate);
+        }
       } catch (error) {
-        console.error('Error updating schedule preferences:', error);
+        console.error('Error updating schedule:', error);
+        setError('Failed to update schedule');
       }
     }
   };
@@ -298,7 +295,9 @@ export default function Dashboard() {
               <div className="space-y-6">
                 <WeeklyPlanWithDayFocus 
                   selectedDate={selectedDate}
-                  onGeneratePlan={handleGeneratePlan}
+                  onGeneratePlan={async (childId: string, weekStartDate?: Date) => {
+                    await handleGeneratePlan(childId, weekStartDate || selectedDate);
+                  }}
                 />
                 
                 {/* Materials Needed */}

@@ -30,7 +30,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
-import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
 import { generateWeeklyPlan } from '@/lib/planGenerator';
 import { updateUserMaterial } from '@/lib/materialsService';
 
