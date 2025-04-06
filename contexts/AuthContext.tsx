@@ -553,14 +553,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Update Firestore with the new preferences
       await updateDoc(userRef, updateData);
       
-      // Update local state
+      // Update local state with a deep merge of preferences
       setCurrentUser(prev => {
         if (!prev) return null;
         return { 
           ...prev, 
           preferences: {
             ...prev.preferences,
-            ...preferences
+            ...preferences,
+            activityPreferences: {
+              ...prev.preferences?.activityPreferences,
+              ...preferences?.activityPreferences
+            }
           }
         } as (User & UserData);
       });

@@ -548,7 +548,11 @@ export default function WeeklyPlanWithDayFocus({
   // Add this useEffect to watch for changes in user preferences
   useEffect(() => {
     if (currentUser?.preferences?.activityPreferences?.scheduleByDay) {
-      // Trigger a refresh when schedule preferences change
+      console.log('Schedule preferences changed, triggering refresh');
+      // Reset week activities and plan status
+      setWeekActivities([]);
+      setWeekHasPlan(false);
+      // Trigger a refresh
       setRefreshTrigger(prev => prev + 1);
     }
   }, [currentUser?.preferences?.activityPreferences?.scheduleByDay]);
@@ -556,9 +560,10 @@ export default function WeeklyPlanWithDayFocus({
   // Add this useEffect to refresh the plan when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger > 0) {
+      console.log('Refreshing plan due to trigger:', refreshTrigger);
       fetchWeekActivitiesRef();
     }
-  }, [refreshTrigger]);
+  }, [refreshTrigger, selectedChild, weekStartDate]);
   
   // Navigate to previous/next week
   const handleWeekChange = (direction: 'prev' | 'next') => {
