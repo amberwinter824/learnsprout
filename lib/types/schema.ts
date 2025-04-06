@@ -20,6 +20,13 @@ export interface Activity {
   classroomExtension: boolean; // Whether activity extends classroom learning
   homeReinforcement: boolean;  // Whether activity reinforces home concepts
   
+  // Parent guidance fields
+  setupSteps?: string[];  // Step-by-step setup instructions
+  demonstrationSteps?: string[];  // How to demonstrate the activity to the child
+  observationPoints?: string[];  // What to look for during the activity
+  successIndicators?: string[];  // Signs that the child has mastered the activity
+  commonChallenges?: string[];  // Common issues and how to address them
+  
   // Existing relationships
   prerequisites?: string[]; // References to other activity IDs
   nextSteps?: string[];    // References to follow-up activity IDs

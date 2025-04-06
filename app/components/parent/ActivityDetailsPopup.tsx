@@ -10,7 +10,8 @@ import {
   ArrowRight, 
   BookOpen,
   ClipboardList,
-  Layers
+  Layers,
+  Eye
 } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -38,6 +39,11 @@ interface ActivityData {
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   ageRanges?: string[];
   skillsAddressed?: string[];
+  setupSteps?: string[];  // Step-by-step setup instructions
+  demonstrationSteps?: string[];  // How to demonstrate the activity to the child
+  observationPoints?: string[];  // What to look for during the activity
+  successIndicators?: string[];  // Signs that the child has mastered the activity
+  commonChallenges?: string[];  // Common issues and how to address them
   [key: string]: any;
 }
 
@@ -48,7 +54,7 @@ export default function ActivityDetailsPopup({
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'setup' | 'instructions'>('setup');
+  const [tab, setTab] = useState<'setup' | 'instructions' | 'observation'>('setup');
   const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
 
   useEffect(() => {
@@ -223,6 +229,19 @@ export default function ActivityDetailsPopup({
                 Instructions
               </div>
             </button>
+            <button
+              onClick={() => setTab('observation')}
+              className={`px-4 py-2 text-sm font-medium ${
+                tab === 'observation' 
+                  ? 'text-emerald-600 border-b-2 border-emerald-500' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center">
+                <Eye className="h-4 w-4 mr-2" />
+                Observation
+              </div>
+            </button>
           </div>
         </div>
         
@@ -277,80 +296,112 @@ export default function ActivityDetailsPopup({
                 )}
               </div>
               
-              {/* Preparation */}
+              {/* Setup Steps */}
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Preparation</h3>
-                <p className="text-gray-600 mb-2">
-                  Before starting this activity, make sure you have all materials ready and create a calm environment.
-                </p>
-              </div>
-
-              {/* Activity Skills Overview */}
-              {activitySkills.length > 0 && (
-                <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                  <h4 className="text-sm font-medium text-blue-800 mb-2">Developmental Focus</h4>
-                  <div className="space-y-3">
-                    {activitySkills.map(skill => (
-                      <div key={skill.id} className="flex items-start">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium text-blue-800">{skill.name}</p>
-                          <p className="text-sm text-blue-700">{skill.description}</p>
-                        </div>
-                      </div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Setup Steps</h3>
+                {activity.setupSteps && activity.setupSteps.length > 0 ? (
+                  <ol className="space-y-2">
+                    {activity.setupSteps.map((step, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-800 font-medium text-sm mr-3 shrink-0">
+                          {index + 1}
+                        </span>
+                        <span className="text-gray-700">{step}</span>
+                      </li>
                     ))}
-                  </div>
-                </div>
-              )}
-              
-              <button
-                onClick={() => setTab('instructions')}
-                className="mt-4 w-full py-2 bg-emerald-600 text-white rounded-md flex items-center justify-center"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                View Instructions
-              </button>
+                  </ol>
+                ) : (
+                  <p className="text-gray-500 italic">No specific setup steps provided.</p>
+                )}
+              </div>
             </div>
           )}
           
           {tab === 'instructions' && (
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">How to Complete This Activity</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">How to Demonstrate This Activity</h3>
               
-              {instructionsList.length > 0 ? (
+              {activity.demonstrationSteps && activity.demonstrationSteps.length > 0 ? (
                 <ol className="space-y-4 mb-6">
-                  {instructionsList.map((instruction, index) => (
+                  {activity.demonstrationSteps.map((step, index) => (
                     <li key={index} className="flex">
                       <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-800 font-medium text-sm mr-3 shrink-0">
                         {index + 1}
                       </span>
-                      <span className="text-gray-700">{instruction}</span>
+                      <span className="text-gray-700">{step}</span>
                     </li>
                   ))}
                 </ol>
               ) : (
-                <p className="text-gray-500 italic mb-4">No specific instructions provided.</p>
+                <p className="text-gray-500 italic mb-4">No specific demonstration steps provided.</p>
               )}
               
+              {/* Common Challenges */}
+              {activity.commonChallenges && activity.commonChallenges.length > 0 && (
+                <div className="bg-yellow-50 p-4 rounded-md border border-yellow-100 mb-6">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Common Challenges</h4>
+                  <ul className="text-sm text-yellow-700 space-y-2">
+                    {activity.commonChallenges.map((challenge, index) => (
+                      <li key={index}>• {challenge}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {tab === 'observation' && (
+            <div>
+              {/* What to Observe */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">What to Observe</h3>
+                {activity.observationPoints && activity.observationPoints.length > 0 ? (
+                  <ul className="space-y-2">
+                    {activity.observationPoints.map((point, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="inline-block w-4 h-4 bg-blue-100 text-blue-600 rounded-full text-xs flex items-center justify-center mr-2 mt-0.5">
+                          •
+                        </span>
+                        <span className="text-gray-700">{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 italic">No specific observation points provided.</p>
+                )}
+              </div>
+              
+              {/* Success Indicators */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Success Indicators</h3>
+                {activity.successIndicators && activity.successIndicators.length > 0 ? (
+                  <ul className="space-y-2">
+                    {activity.successIndicators.map((indicator, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="inline-block w-4 h-4 bg-green-100 text-green-600 rounded-full text-xs flex items-center justify-center mr-2 mt-0.5">
+                          ✓
+                        </span>
+                        <span className="text-gray-700">{indicator}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 italic">No specific success indicators provided.</p>
+                )}
+              </div>
+              
               {/* Tips */}
-              <div className="bg-blue-50 p-4 rounded-md border border-blue-100 mb-6">
-                <h4 className="text-sm font-medium text-blue-800 mb-2">Tips</h4>
+              <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                <h4 className="text-sm font-medium text-blue-800 mb-2">Tips for Success</h4>
                 <ul className="text-sm text-blue-700 space-y-2">
                   <li>• Observe your child's level of interest and engagement</li>
                   <li>• Let your child lead the activity at their own pace</li>
                   <li>• It's okay if the activity doesn't go exactly as planned</li>
                   <li>• Focus on the process, not the end result</li>
+                  <li>• Provide minimal assistance - let your child self-correct</li>
+                  <li>• Notice when your child needs a break or is ready to move on</li>
                 </ul>
               </div>
-              
-              {/* Mark complete button */}
-              <button
-                onClick={onClose}
-                className="w-full py-2 bg-emerald-600 text-white rounded-md flex items-center justify-center"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Ready to Start
-              </button>
             </div>
           )}
         </div>
