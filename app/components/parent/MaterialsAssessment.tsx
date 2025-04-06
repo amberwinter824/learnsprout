@@ -207,22 +207,28 @@ export default function MaterialsAssessment({
     try {
       setUpdatingMaterial(materialId);
       const userMaterialRef = doc(db, 'userMaterials', `${currentUser.uid}_${materialId}`);
-      const newSelected = new Set(selectedMaterials);
       
       if (owned) {
-        newSelected.delete(materialId);
+        // Remove ownership
         await updateDoc(userMaterialRef, { isOwned: false });
       } else {
-        newSelected.add(materialId);
+        // Add ownership
         await setDoc(userMaterialRef, {
           userId: currentUser.uid,
           materialId: materialId,
           isOwned: true,
-          addedAt: Timestamp.now()
+          addedAt: new Date()
         });
       }
-      
-      setSelectedMaterials(newSelected);
+
+      // Update local state
+      setMaterials(prevMaterials =>
+        prevMaterials.map(material =>
+          material.id === materialId
+            ? { ...material, owned: !owned }
+            : material
+        )
+      );
     } catch (err) {
       console.error('Error updating material status:', err);
       setError('Failed to update material status');
