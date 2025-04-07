@@ -44,6 +44,7 @@ interface ActivityData {
   observationPoints?: string[];  // What to look for during the activity
   successIndicators?: string[];  // Signs that the child has mastered the activity
   commonChallenges?: string[];  // Common issues and how to address them
+  extensions?: string[];  // Ways to extend or vary the activity
   [key: string]: any;
 }
 
@@ -54,7 +55,7 @@ export default function ActivityDetailsPopup({
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'setup' | 'instructions' | 'observation'>('setup');
+  const [tab, setTab] = useState<'setup' | 'instructions' | 'observation' | 'extensions'>('setup');
   const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
 
   useEffect(() => {
@@ -242,6 +243,19 @@ export default function ActivityDetailsPopup({
                 Observation
               </div>
             </button>
+            <button
+              onClick={() => setTab('extensions')}
+              className={`px-4 py-2 text-sm font-medium ${
+                tab === 'extensions' 
+                  ? 'text-emerald-600 border-b-2 border-emerald-500' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center">
+                <ArrowRight className="h-4 w-4 mr-2" />
+                Extensions
+              </div>
+            </button>
           </div>
         </div>
         
@@ -402,6 +416,30 @@ export default function ActivityDetailsPopup({
                   <li>• Notice when your child needs a break or is ready to move on</li>
                 </ul>
               </div>
+            </div>
+          )}
+
+          {tab === 'extensions' && (
+            <div className="space-y-4">
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-emerald-800 mb-2">Activity Extensions</h3>
+                <p className="text-sm text-emerald-700">
+                  Try these variations to extend the learning and keep the activity engaging:
+                </p>
+              </div>
+              
+              <ul className="space-y-3">
+                {activity.extensions?.map((extension, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
+                    <span className="text-gray-700">{extension}</span>
+                  </li>
+                )) || (
+                  <li className="text-gray-500 italic">
+                    No extensions available for this activity yet.
+                  </li>
+                )}
+              </ul>
             </div>
           )}
         </div>

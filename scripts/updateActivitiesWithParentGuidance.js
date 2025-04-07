@@ -56,6 +56,11 @@ const areaGuidance = {
       "Child may need guidance on maintaining order",
       "Child might need encouragement to complete the full sequence",
       "Child may need help with cleanup"
+    ],
+    extensions: [
+      "Increase difficulty by adding time constraints",
+      "Use different materials for sensory variation",
+      "Have the child teach the activity to a sibling or friend"
     ]
   },
   sensorial: {
@@ -92,6 +97,11 @@ const areaGuidance = {
       "Child may need vocabulary support",
       "Child might need help with discrimination tasks",
       "Child may need encouragement to explore variations"
+    ],
+    extensions: [
+      "Increase difficulty by adding time constraints",
+      "Use different materials for sensory variation",
+      "Have the child teach the activity to a sibling or friend"
     ]
   },
   language: {
@@ -128,6 +138,11 @@ const areaGuidance = {
       "Child may need guidance on proper handling",
       "Child might need encouragement to participate",
       "Child may need help with sequencing"
+    ],
+    extensions: [
+      "Increase difficulty by adding time constraints",
+      "Use different materials for sensory variation",
+      "Have the child teach the activity to a sibling or friend"
     ]
   },
   mathematics: {
@@ -164,6 +179,11 @@ const areaGuidance = {
       "Child may need guidance on proper handling",
       "Child might need encouragement to explore concepts",
       "Child may need help with abstract thinking"
+    ],
+    extensions: [
+      "Increase difficulty by adding time constraints",
+      "Use different materials for sensory variation",
+      "Have the child teach the activity to a sibling or friend"
     ]
   },
   cultural: {
@@ -200,6 +220,11 @@ const areaGuidance = {
       "Child may need support with cultural concepts",
       "Child might need encouragement to explore differences",
       "Child may need help with cultural vocabulary"
+    ],
+    extensions: [
+      "Increase difficulty by adding time constraints",
+      "Use different materials for sensory variation",
+      "Have the child teach the activity to a sibling or friend"
     ]
   },
   social_emotional: {
@@ -236,6 +261,11 @@ const areaGuidance = {
       "Child may need support with conflict resolution",
       "Child might need encouragement to express feelings",
       "Child may need help with perspective-taking"
+    ],
+    extensions: [
+      "Increase difficulty by adding time constraints",
+      "Use different materials for sensory variation",
+      "Have the child teach the activity to a sibling or friend"
     ]
   }
 };
@@ -277,6 +307,11 @@ const getParentGuidanceFields = (activity) => {
       "Child may need reminders to handle materials carefully",
       "Child might need encouragement to complete the activity",
       "Child may need help staying focused"
+    ],
+    extensions: [
+      "Increase difficulty by adding time constraints",
+      "Use different materials for sensory variation",
+      "Have the child teach the activity to a sibling or friend"
     ]
   };
 
@@ -312,6 +347,11 @@ const getParentGuidanceFields = (activity) => {
         "Child might need frequent breaks",
         "Child may need help with physical coordination",
         "Child might need encouragement to explore"
+      ],
+      extensions: [
+        "Increase difficulty by adding time constraints",
+        "Use different materials for sensory variation",
+        "Have the child teach the activity to a sibling or friend"
       ]
     },
     '1-2': {
@@ -344,6 +384,11 @@ const getParentGuidanceFields = (activity) => {
         "Child might need frequent redirection",
         "Child may need help with sequencing",
         "Child might need encouragement to persist"
+      ],
+      extensions: [
+        "Increase difficulty by adding time constraints",
+        "Use different materials for sensory variation",
+        "Have the child teach the activity to a sibling or friend"
       ]
     },
     '2-3': {
@@ -376,6 +421,11 @@ const getParentGuidanceFields = (activity) => {
         "Child might need reminders about sequence",
         "Child may need encouragement to persist",
         "Child might need help with frustration"
+      ],
+      extensions: [
+        "Increase difficulty by adding time constraints",
+        "Use different materials for sensory variation",
+        "Have the child teach the activity to a sibling or friend"
       ]
     },
     '3-4': {
@@ -408,6 +458,11 @@ const getParentGuidanceFields = (activity) => {
         "Child might need reminders about sequence",
         "Child may need encouragement to persist",
         "Child might need help with frustration"
+      ],
+      extensions: [
+        "Increase difficulty by adding time constraints",
+        "Use different materials for sensory variation",
+        "Have the child teach the activity to a sibling or friend"
       ]
     },
     '4-5': {
@@ -440,6 +495,11 @@ const getParentGuidanceFields = (activity) => {
         "Child might need reminders about sequence",
         "Child may need encouragement to persist",
         "Child might need help with frustration"
+      ],
+      extensions: [
+        "Increase difficulty by adding time constraints",
+        "Use different materials for sensory variation",
+        "Have the child teach the activity to a sibling or friend"
       ]
     },
     '5-6': {
@@ -472,58 +532,108 @@ const getParentGuidanceFields = (activity) => {
         "Child might need reminders about sequence",
         "Child may need encouragement to persist",
         "Child might need help with frustration"
+      ],
+      extensions: [
+        "Increase difficulty by adding time constraints",
+        "Use different materials for sensory variation",
+        "Have the child teach the activity to a sibling or friend"
       ]
     }
   };
 
-  // Apply age-specific adjustments for each age range in the activity
+  // Create activity-specific guidance
+  const activitySpecificGuidance = {
+    setupSteps: [
+      // Start with activity-specific setup
+      `Gather the following materials: ${activity.materialsNeeded?.join(', ') || 'as listed in the activity'}`,
+      `Find a suitable space for ${activity.title.toLowerCase()}`,
+      // Add area-specific setup steps
+      ...areaSpecificGuidance.setupSteps
+    ],
+    demonstrationSteps: [
+      // Start with activity-specific demonstration
+      `Introduce ${activity.title.toLowerCase()} to the child`,
+      `Explain that we will be ${activity.description?.toLowerCase() || 'working on this activity'}`,
+      // Add area-specific demonstration steps
+      ...areaSpecificGuidance.demonstrationSteps
+    ],
+    observationPoints: [
+      // Start with activity-specific observations
+      `Watch how the child approaches ${activity.title.toLowerCase()}`,
+      `Notice their interest in ${activity.description?.toLowerCase() || 'the activity'}`,
+      // Add area-specific observation points
+      ...areaSpecificGuidance.observationPoints
+    ],
+    successIndicators: [
+      // Start with activity-specific success indicators
+      `Child shows understanding of ${activity.title.toLowerCase()}`,
+      `Child can complete ${activity.title.toLowerCase()} independently`,
+      // Add area-specific success indicators
+      ...areaSpecificGuidance.successIndicators
+    ],
+    commonChallenges: [
+      // Start with activity-specific challenges
+      `Child may need help understanding ${activity.title.toLowerCase()}`,
+      `Child might need guidance with ${activity.description?.toLowerCase() || 'the activity'}`,
+      // Add area-specific common challenges
+      ...areaSpecificGuidance.commonChallenges
+    ],
+    extensions: [
+      // Start with activity-specific extensions
+      `Try ${activity.title.toLowerCase()} with different materials`,
+      `Increase the complexity of ${activity.title.toLowerCase()}`,
+      `Have the child create their own variation of ${activity.title.toLowerCase()}`,
+      // Add area-specific extensions
+      ...areaSpecificGuidance.extensions
+    ]
+  };
+
+  // Apply age-specific adjustments
   activity.ageRanges?.forEach(ageRange => {
     const ageAdjustments = ageSpecificAdjustments[ageRange];
     if (ageAdjustments) {
-      // Add age-specific setup steps
-      areaSpecificGuidance.setupSteps = [
+      // Add age-specific steps to the beginning of each list
+      activitySpecificGuidance.setupSteps = [
         ...ageAdjustments.setupSteps,
-        ...areaSpecificGuidance.setupSteps
+        ...activitySpecificGuidance.setupSteps
       ];
-
-      // Add age-specific demonstration steps
-      areaSpecificGuidance.demonstrationSteps = [
+      activitySpecificGuidance.demonstrationSteps = [
         ...ageAdjustments.demonstrationSteps,
-        ...areaSpecificGuidance.demonstrationSteps
+        ...activitySpecificGuidance.demonstrationSteps
       ];
-
-      // Add age-specific observation points
-      areaSpecificGuidance.observationPoints = [
+      activitySpecificGuidance.observationPoints = [
         ...ageAdjustments.observationPoints,
-        ...areaSpecificGuidance.observationPoints
+        ...activitySpecificGuidance.observationPoints
       ];
-
-      // Add age-specific success indicators
-      areaSpecificGuidance.successIndicators = [
+      activitySpecificGuidance.successIndicators = [
         ...ageAdjustments.successIndicators,
-        ...areaSpecificGuidance.successIndicators
+        ...activitySpecificGuidance.successIndicators
       ];
-
-      // Add age-specific common challenges
-      areaSpecificGuidance.commonChallenges = [
+      activitySpecificGuidance.commonChallenges = [
         ...ageAdjustments.commonChallenges,
-        ...areaSpecificGuidance.commonChallenges
+        ...activitySpecificGuidance.commonChallenges
+      ];
+      activitySpecificGuidance.extensions = [
+        ...ageAdjustments.extensions,
+        ...activitySpecificGuidance.extensions
       ];
     }
   });
 
   // Customize guidance based on activity difficulty
   if (activity.difficulty === 'beginner') {
-    areaSpecificGuidance.setupSteps.unshift("Choose a time when the child is well-rested and alert");
-    areaSpecificGuidance.demonstrationSteps.unshift("Start with a simple introduction to the materials");
-    areaSpecificGuidance.commonChallenges.push("Child may need more frequent breaks");
+    activitySpecificGuidance.setupSteps.unshift("Choose a time when the child is well-rested and alert");
+    activitySpecificGuidance.demonstrationSteps.unshift(`Start with a simple introduction to ${activity.title.toLowerCase()}`);
+    activitySpecificGuidance.commonChallenges.push("Child may need more frequent breaks");
+    activitySpecificGuidance.extensions.push(`Start with simpler variations of ${activity.title.toLowerCase()}`);
   } else if (activity.difficulty === 'advanced') {
-    areaSpecificGuidance.setupSteps.unshift("Ensure the child has mastered prerequisite skills");
-    areaSpecificGuidance.demonstrationSteps.unshift("Review prerequisite skills if needed");
-    areaSpecificGuidance.commonChallenges.push("Child may need help with complex sequencing");
+    activitySpecificGuidance.setupSteps.unshift("Ensure the child has mastered prerequisite skills");
+    activitySpecificGuidance.demonstrationSteps.unshift(`Review prerequisite skills for ${activity.title.toLowerCase()}`);
+    activitySpecificGuidance.commonChallenges.push("Child may need help with complex sequencing");
+    activitySpecificGuidance.extensions.push(`Create more complex variations of ${activity.title.toLowerCase()}`);
   }
 
-  return areaSpecificGuidance;
+  return activitySpecificGuidance;
 };
 
 async function updateActivitiesWithParentGuidance() {

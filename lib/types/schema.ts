@@ -26,6 +26,7 @@ export interface Activity {
   observationPoints?: string[];  // What to look for during the activity
   successIndicators?: string[];  // Signs that the child has mastered the activity
   commonChallenges?: string[];  // Common issues and how to address them
+  extensions?: string[];  // Ways to extend or vary the activity
   
   // Existing relationships
   prerequisites?: string[]; // References to other activity IDs
