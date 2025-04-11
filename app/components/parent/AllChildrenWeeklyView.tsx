@@ -1,7 +1,7 @@
 // app/components/parent/AllChildrenWeeklyView.tsx
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Calendar, 
@@ -61,6 +61,14 @@ interface AllChildrenWeeklyViewProps {
   parentId?: string;
 }
 
+// Add cache interface
+interface WeeklyPlanCache {
+  [key: string]: {
+    data: { [day: string]: ChildDayActivities[] };
+    timestamp: number;
+  };
+}
+
 export default function AllChildrenWeeklyView({
   onWeeklyViewRequest,
   onDailyViewRequest,
@@ -118,6 +126,9 @@ export default function AllChildrenWeeklyView({
   // Use parentId prop if provided, otherwise fall back to currentUser.uid
   const effectiveParentId = parentId || currentUser?.uid;
   
+  // Add cache state
+  const [planCache, setPlanCache] = useState<WeeklyPlanCache>({});
+  
   // Fetch children
   useEffect(() => {
     if (!effectiveParentId) return;
@@ -153,294 +164,129 @@ export default function AllChildrenWeeklyView({
     fetchChildren();
   }, [effectiveParentId]);
   
-  // Fetch activities for all children
-  useEffect(() => {
+  // Optimized fetch function
+  const fetchAllChildrenActivities = useCallback(async () => {
     if (!currentUser || !allChildren.length) return;
     
-    async function fetchAllChildrenActivities() {
-      try {
-        console.log('Fetching weekly plan for week starting:', format(weekStart, 'yyyy-MM-dd'));
-        setLoading(true);
-        setError(null);
-        
-        // Format date for query
-        const weekStartDate = format(weekStart, 'yyyy-MM-dd');
-        
-        // Initialize structure to hold activities by day for all children
-        const weekActivitiesData: { [day: string]: ChildDayActivities[] } = {
-          Monday: [],
-          Tuesday: [],
-          Wednesday: [],
-          Thursday: [],
-          Friday: [],
-          Saturday: [],
-          Sunday: []
-        };
-        
-        // For each child, find their activities for this week
-        for (const child of allChildren) {
-          // Skip if filtering by child and this isn't the selected child
-          if (filterChild !== 'all' && filterChild !== child.id) continue;
-          
-          // First try to fetch by the plan ID format (childId_date)
-          const planId = `${child.id}_${weekStartDate}`;
-          
-          // Try to get the plan directly by ID first
-          const planDocRef = doc(db, 'weeklyPlans', planId);
-          const planDocSnap = await getDoc(planDocRef);
-          
-          if (planDocSnap.exists()) {
-            // Process the plan data
-            const planData = planDocSnap.data();
-            
-            // Process each day's activities
-            for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
-              const dayKey = day.toLowerCase();
-              
-              if (planData[dayKey] && Array.isArray(planData[dayKey])) {
-                const dayActivities = planData[dayKey];
-                
-                // If there are activities for this day
-                if (dayActivities.length > 0) {
-                  // Fetch details for each activity
-                  const activitiesWithDetails = await Promise.all(
-                    dayActivities.map(async (activity: any) => {
-                      try {
-                        // Check if there are observations for this activity
-                        let lastObservedDate = null;
-                        if (activity.observationIds && activity.observationIds.length > 0) {
-                          lastObservedDate = activity.lastObservedDate || null;
-                        } else {
-                          try {
-                            const observationsQuery = query(
-                              collection(db, 'progressRecords'),
-                              where('childId', '==', child.id),
-                              where('activityId', '==', activity.activityId)
-                            );
-                            
-                            const observationsSnapshot = await getDocs(observationsQuery);
-                            if (!observationsSnapshot.empty) {
-                              // Sort observations by date (most recent first)
-                              const sortedObservations = observationsSnapshot.docs
-                                .map(doc => doc.data())
-                                .sort((a, b) => {
-                                  const dateA = a.date?.seconds ? new Date(a.date.seconds * 1000) : new Date(a.date);
-                                  const dateB = b.date?.seconds ? new Date(b.date.seconds * 1000) : new Date(b.date);
-                                  return dateB.getTime() - dateA.getTime();
-                                });
-                              
-                              if (sortedObservations.length > 0) {
-                                lastObservedDate = sortedObservations[0].date;
-                              }
-                            }
-                          } catch (observationError) {
-                            console.error('Error fetching observations:', observationError);
-                          }
-                        }
-                        
-                        // Get activity details
-                        const activityDocRef = doc(db, 'activities', activity.activityId);
-                        const activityDoc = await getDoc(activityDocRef);
-                        
-                        if (activityDoc.exists()) {
-                          const activityData = activityDoc.data();
-                          return {
-                            id: `${planId}_${day}_${activity.activityId}`,
-                            activityId: activity.activityId,
-                            childId: child.id,
-                            childName: child.name,
-                            title: activityData.title,
-                            description: activityData.description,
-                            area: activityData.area,
-                            duration: activityData.duration || 15,
-                            status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
-                            timeSlot: activity.timeSlot,
-                            order: activity.order,
-                            lastObservedDate
-                          };
-                        }
-                        
-                        // If activity not found, still return the basic info
-                        return {
-                          id: `${planId}_${day}_${activity.activityId}`,
-                          activityId: activity.activityId,
-                          childId: child.id,
-                          childName: child.name,
-                          title: 'Unknown Activity',
-                          status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
-                          timeSlot: activity.timeSlot,
-                          order: activity.order,
-                          lastObservedDate
-                        };
-                      } catch (error) {
-                        console.error(`Error fetching activity ${activity.activityId}:`, error);
-                        return {
-                          id: `${planId}_${day}_${activity.activityId}`,
-                          activityId: activity.activityId,
-                          childId: child.id,
-                          childName: child.name,
-                          title: 'Error Loading Activity',
-                          status: activity.status || 'suggested'
-                        };
-                      }
-                    })
-                  );
-                  
-                  // Sort activities by order
-                  const sortedActivities = activitiesWithDetails.sort((a, b) => 
-                    (a.order || 0) - (b.order || 0)
-                  );
-                  
-                  // Add this child's activities to the day
-                  if (sortedActivities.length > 0) {
-                    weekActivitiesData[day].push({
-                      child,
-                      activities: sortedActivities
-                    });
-                  }
-                }
-              }
-            }
-          } else {
-            // If not found by ID, try the query approach
-            const plansQuery = query(
-              collection(db, 'weeklyPlans'),
-              where('childId', '==', child.id),
-              where('weekStarting', '==', weekStartDate)
-            );
-            
-            const plansSnapshot = await getDocs(plansQuery);
-            
-            if (!plansSnapshot.empty) {
-              // Use the first plan (should only be one per week)
-              const planDoc = plansSnapshot.docs[0];
-              const planData = planDoc.data();
-              const planId = planDoc.id;
-              
-              // Process each day's activities
-              for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
-                const dayKey = day.toLowerCase();
-                
-                if (planData[dayKey] && Array.isArray(planData[dayKey])) {
-                  const dayActivities = planData[dayKey];
-                  
-                  // If there are activities for this day
-                  if (dayActivities.length > 0) {
-                    // Fetch details for each activity
-                    const activitiesWithDetails = await Promise.all(
-                      dayActivities.map(async (activity: any) => {
-                        try {
-                          // Check if there are observations for this activity
-                          let lastObservedDate = null;
-                          if (activity.observationIds && activity.observationIds.length > 0) {
-                            lastObservedDate = activity.lastObservedDate || null;
-                          } else {
-                            try {
-                              const observationsQuery = query(
-                                collection(db, 'progressRecords'),
-                                where('childId', '==', child.id),
-                                where('activityId', '==', activity.activityId)
-                              );
-                              
-                              const observationsSnapshot = await getDocs(observationsQuery);
-                              if (!observationsSnapshot.empty) {
-                                // Sort observations by date (most recent first)
-                                const sortedObservations = observationsSnapshot.docs
-                                  .map(doc => doc.data())
-                                  .sort((a, b) => {
-                                    const dateA = a.date?.seconds ? new Date(a.date.seconds * 1000) : new Date(a.date);
-                                    const dateB = b.date?.seconds ? new Date(b.date.seconds * 1000) : new Date(b.date);
-                                    return dateB.getTime() - dateA.getTime();
-                                  });
-                                
-                                if (sortedObservations.length > 0) {
-                                  lastObservedDate = sortedObservations[0].date;
-                                }
-                              }
-                            } catch (observationError) {
-                              console.error('Error fetching observations:', observationError);
-                            }
-                          }
-                          
-                          // Get activity details
-                          const activityDocRef = doc(db, 'activities', activity.activityId);
-                          const activityDoc = await getDoc(activityDocRef);
-                          
-                          if (activityDoc.exists()) {
-                            const activityData = activityDoc.data();
-                            return {
-                              id: `${planId}_${day}_${activity.activityId}`,
-                              activityId: activity.activityId,
-                              childId: child.id,
-                              childName: child.name,
-                              title: activityData.title,
-                              description: activityData.description,
-                              area: activityData.area,
-                              duration: activityData.duration || 15,
-                              status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
-                              timeSlot: activity.timeSlot,
-                              order: activity.order,
-                              lastObservedDate
-                            };
-                          }
-                          
-                          // If activity not found, still return the basic info
-                          return {
-                            id: `${planId}_${day}_${activity.activityId}`,
-                            activityId: activity.activityId,
-                            childId: child.id,
-                            childName: child.name,
-                            title: 'Unknown Activity',
-                            status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
-                            timeSlot: activity.timeSlot,
-                            order: activity.order,
-                            lastObservedDate
-                          };
-                        } catch (error) {
-                          console.error(`Error fetching activity ${activity.activityId}:`, error);
-                          return {
-                            id: `${planId}_${day}_${activity.activityId}`,
-                            activityId: activity.activityId,
-                            childId: child.id,
-                            childName: child.name,
-                            title: 'Error Loading Activity',
-                            status: activity.status || 'suggested'
-                          };
-                        }
-                      })
-                    );
-                    
-                    // Sort activities by order
-                    const sortedActivities = activitiesWithDetails.sort((a, b) => 
-                      (a.order || 0) - (b.order || 0)
-                    );
-                    
-                    // Add this child's activities to the day
-                    if (sortedActivities.length > 0) {
-                      weekActivitiesData[day].push({
-                        child,
-                        activities: sortedActivities
-                      });
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        
-        setChildrenActivities(weekActivitiesData);
+    try {
+      console.log('Fetching weekly plan for week starting:', format(weekStart, 'yyyy-MM-dd'));
+      setLoading(true);
+      setError(null);
+      
+      const weekStartDate = format(weekStart, 'yyyy-MM-dd');
+      const cacheKey = `${effectiveParentId}_${weekStartDate}`;
+      
+      // Check cache first
+      const cachedData = planCache[cacheKey];
+      if (cachedData && Date.now() - cachedData.timestamp < 5 * 60 * 1000) { // 5 minute cache
+        setChildrenActivities(cachedData.data);
         setLoading(false);
-      } catch (err) {
-        console.error('Error fetching weekly plans for all children:', err);
-        setError('Failed to load weekly plans');
-        setLoading(false);
+        return;
       }
+      
+      const weekActivitiesData: { [day: string]: ChildDayActivities[] } = {
+        Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [], Sunday: []
+      };
+      
+      // Batch fetch all plans for the week
+      const planPromises = allChildren
+        .filter(child => filterChild === 'all' || filterChild === child.id)
+        .map(child => {
+          const planId = `${child.id}_${weekStartDate}`;
+          return getDoc(doc(db, 'weeklyPlans', planId));
+        });
+      
+      const planSnapshots = await Promise.all(planPromises);
+      
+      // Batch fetch all activities
+      const activityIds = new Set<string>();
+      planSnapshots.forEach(snap => {
+        if (snap.exists()) {
+          const data = snap.data();
+          Object.values(data).forEach((dayActivities: any) => {
+            if (Array.isArray(dayActivities)) {
+              dayActivities.forEach((activity: any) => {
+                activityIds.add(activity.activityId);
+              });
+            }
+          });
+        }
+      });
+      
+      const activityPromises = Array.from(activityIds).map(id => 
+        getDoc(doc(db, 'activities', id))
+      );
+      const activitySnapshots = await Promise.all(activityPromises);
+      const activitiesMap = new Map(
+        activitySnapshots.map(snap => [snap.id, snap.data()])
+      );
+      
+      // Process all plans
+      planSnapshots.forEach((snap, index) => {
+        if (!snap.exists()) return;
+        
+        const child = allChildren[index];
+        const planData = snap.data();
+        
+        Object.entries(planData).forEach(([dayKey, dayActivities]: [string, any]) => {
+          if (!Array.isArray(dayActivities)) return;
+          
+          const day = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+          if (!weekActivitiesData[day]) return;
+          
+          const processedActivities = dayActivities.map((activity: any) => {
+            const activityData = activitiesMap.get(activity.activityId);
+            if (!activityData) return null;
+            
+            return {
+              id: `${snap.id}_${day}_${activity.activityId}`,
+              activityId: activity.activityId,
+              childId: child.id,
+              childName: child.name,
+              title: activityData.title || 'Unknown Activity',
+              description: activityData.description,
+              area: activityData.area,
+              duration: activityData.duration || 15,
+              isHomeSchoolConnection: activityData.isHomeSchoolConnection,
+              status: activity.status || 'suggested',
+              timeSlot: activity.timeSlot,
+              order: activity.order || 0,
+              lastObservedDate: activity.lastObservedDate
+            } as Activity;
+          }).filter((activity): activity is Activity => activity !== null);
+          
+          if (processedActivities.length > 0) {
+            weekActivitiesData[day].push({
+              child,
+              activities: processedActivities
+            });
+          }
+        });
+      });
+      
+      // Update cache
+      setPlanCache(prev => ({
+        ...prev,
+        [cacheKey]: {
+          data: weekActivitiesData,
+          timestamp: Date.now()
+        }
+      }));
+      
+      setChildrenActivities(weekActivitiesData);
+    } catch (error) {
+      console.error('Error fetching weekly plan:', error);
+      setError('Failed to load weekly plan');
+    } finally {
+      setLoading(false);
     }
-    
+  }, [currentUser, allChildren, weekStart, filterChild, effectiveParentId, planCache]);
+  
+  // Update useEffect to use the optimized fetch function
+  useEffect(() => {
     fetchAllChildrenActivities();
-  }, [currentUser, weekStart, allChildren, filterChild]);
-
+  }, [fetchAllChildrenActivities]);
+  
   // Navigate to previous week
   const handlePrevWeek = () => {
     setLoading(true);
