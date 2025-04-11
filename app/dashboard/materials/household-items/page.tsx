@@ -57,9 +57,7 @@ export default function HouseholdItemsPage() {
     ),
     'Tools & Educational Items': commonHouseholdItems.filter(item => 
       ['book', 'paper', 'pencil', 'pen', 'marker', 'crayon', 'chalk', 'board', 'card', 
-       'block', 'bead', 'button', 'coin', 'key', 'lock', 'magnet', 'mirror', 
-       'magnifying glass', 'hammer', 'screwdriver', 'pliers', 'scissors', 'knife', 
-       'spoon', 'fork', 'tongs', 'clamp'].includes(item)
+       'hammer', 'screwdriver', 'pliers', 'scissors', 'knife', 'spoon', 'fork', 'tongs', 'clamp'].includes(item)
     )
   };
 
