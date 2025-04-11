@@ -19,10 +19,11 @@ import {
   Camera,
   Info,
   Plus,
-  PlusCircle
+  PlusCircle,
+  Shuffle
 } from 'lucide-react';
 import { format, startOfWeek, addDays, addWeeks, isSameDay, isToday } from 'date-fns';
-import { collection, query, where, getDocs, getDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import ActivityDetailModal from '@/app/components/ActivityDetailModal';
@@ -44,6 +45,10 @@ interface Activity {
   order?: number;
   description?: string;
   lastObservedDate?: Date | string;
+  skillsAddressed?: string[];
+  tags?: string[];
+  keywords?: string[];
+  materialsNeeded?: string[];
 }
 
 // Day info interface
@@ -86,6 +91,7 @@ export default function WeekAtAGlanceView({
   const [weekPlanId, setWeekPlanId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [schedulePreferences, setSchedulePreferences] = useState<{[key: string]: number}>({});
+  const [isShuffling, setIsShuffling] = useState<{[key: string]: boolean}>({});
   
   // Activity detail modal state
   const [showActivityDetail, setShowActivityDetail] = useState(false);
@@ -459,6 +465,204 @@ export default function WeekAtAGlanceView({
     }
   };
   
+  // Handle shuffling an activity
+  const handleShuffleActivity = async (activity: Activity, dayOfWeek: string) => {
+    if (!currentUser) return;
+    
+    try {
+      setIsShuffling(prev => ({ ...prev, [activity.id]: true }));
+      setError(null);
+      
+      // Get the current plan
+      const weekStartString = format(weekStart, 'yyyy-MM-dd');
+      const planId = `${childId}_${weekStartString}`;
+      const planRef = doc(db, 'weeklyPlans', planId);
+      const planDoc = await getDoc(planRef);
+      
+      if (!planDoc.exists()) {
+        throw new Error('Plan not found');
+      }
+      
+      const planData = planDoc.data();
+      const dayActivities = planData[dayOfWeek.toLowerCase()] || [];
+      
+      // Get child's age group and interests
+      const childDoc = await getDoc(doc(db, 'children', childId));
+      if (!childDoc.exists()) {
+        throw new Error('Child not found');
+      }
+      
+      const childData = childDoc.data();
+      const ageGroup = childData.ageGroup;
+      const interests = childData.interests || [];
+      
+      // Get child's skills
+      const skillsQuery = query(
+        collection(db, 'childSkills'),
+        where('childId', '==', childId)
+      );
+      const skillsSnapshot = await getDocs(skillsQuery);
+      const childSkills: Record<string, string> = {};
+      skillsSnapshot.forEach(doc => {
+        const data = doc.data();
+        childSkills[data.skillId] = data.status;
+      });
+      
+      // Get recent activities
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const recentActivitiesQuery = query(
+        collection(db, 'progressRecords'),
+        where('childId', '==', childId),
+        where('date', '>=', thirtyDaysAgo)
+      );
+      const recentActivitiesSnapshot = await getDocs(recentActivitiesQuery);
+      const recentActivities: Record<string, any> = {};
+      recentActivitiesSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (!recentActivities[data.activityId]) {
+          recentActivities[data.activityId] = {
+            lastCompleted: data.date,
+            completionCount: 0,
+            engagement: data.engagementLevel || 'medium',
+            interest: data.interestLevel || 'medium'
+          };
+        }
+        recentActivities[data.activityId].completionCount++;
+      });
+      
+      // Get suitable activities for this age group
+      const activitiesQuery = query(
+        collection(db, 'activities'),
+        where('ageRanges', 'array-contains', ageGroup),
+        where('status', '==', 'active')
+      );
+      const activitiesSnapshot = await getDocs(activitiesQuery);
+      let activities: Activity[] = [];
+      
+      activitiesSnapshot.forEach(doc => {
+        const data = doc.data();
+        activities.push({
+          id: doc.id,
+          title: data.title,
+          ...data
+        } as Activity);
+      });
+      
+      // Filter out current activity and any activities already in the day's plan
+      const currentActivityIds = dayActivities.map((a: any) => a.activityId);
+      activities = activities.filter(a => 
+        a.id !== activity.activityId && 
+        !currentActivityIds.includes(a.id)
+      );
+      
+      // Score and rank activities
+      const scoredActivities = await Promise.all(activities.map(async activity => {
+        let score = 5; // Base score
+        const reasons: string[] = [];
+        
+        // Factor 1: Skills addressed
+        const activitySkills = activity.skillsAddressed || [];
+        for (const skillId of activitySkills) {
+          const skillStatus = childSkills[skillId] || 'unknown';
+          if (skillStatus === 'emerging') {
+            score += 3;
+            reasons.push(`Helps develop emerging skill`);
+          } else if (skillStatus === 'developing') {
+            score += 2;
+            reasons.push(`Reinforces developing skill`);
+          } else if (skillStatus === 'mastered') {
+            score += 0.5;
+            reasons.push(`Maintains mastered skill`);
+          } else {
+            score += 2;
+            reasons.push(`Introduces new skill`);
+          }
+        }
+        
+        // Factor 2: Child's interests
+        for (const interest of interests) {
+          if (activity.area && activity.area.toLowerCase().includes(interest.toLowerCase())) {
+            score += 2;
+            reasons.push(`Matches child's interest in ${interest}`);
+          }
+          if (activity.tags?.includes(interest) || activity.keywords?.includes(interest)) {
+            score += 2;
+            reasons.push(`Tagged with child's interest: ${interest}`);
+          }
+        }
+        
+        // Factor 3: Material availability
+        const activityMaterials = activity.materialsNeeded || [];
+        const hasAllMaterials = await canDoActivityWithOwnedMaterials(activity);
+        
+        if (hasAllMaterials) {
+          score += 3;
+          reasons.push('All needed materials available');
+        }
+        
+        // Factor 4: Recent completion and engagement
+        const recent = recentActivities[activity.id];
+        if (recent) {
+          const daysSinceCompletion = Math.floor((Date.now() - recent.lastCompleted.toMillis()) / (24 * 60 * 60 * 1000));
+          if (daysSinceCompletion < 7) {
+            score -= 2;
+            reasons.push(`Completed recently (${daysSinceCompletion} days ago)`);
+          } else if (recent.engagement === 'high' || recent.interest === 'high') {
+            score += 2;
+            reasons.push(`Child showed high engagement previously`);
+          }
+          if (recent.completionCount > 3) {
+            score -= 1;
+            reasons.push(`Already completed ${recent.completionCount} times recently`);
+          }
+        } else {
+          score += 1;
+          reasons.push(`New activity`);
+        }
+        
+        return {
+          ...activity,
+          score,
+          reasons
+        };
+      }));
+      
+      // Sort by score and pick the highest scoring activity
+      scoredActivities.sort((a, b) => b.score - a.score);
+      const newActivity = scoredActivities[0];
+      
+      if (!newActivity) {
+        throw new Error('No suitable replacement activity found');
+      }
+      
+      // Update the plan with the new activity
+      const updatedDayActivities = dayActivities.map((a: any) => 
+        a.activityId === activity.activityId 
+          ? {
+              ...a,
+              activityId: newActivity.id,
+              notes: newActivity.reasons.join('. ')
+            }
+          : a
+      );
+      
+      await updateDoc(planRef, {
+        [dayOfWeek.toLowerCase()]: updatedDayActivities,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Refresh the weekly plan
+      await fetchWeeklyPlan();
+      
+    } catch (error) {
+      console.error('Error shuffling activity:', error);
+      setError(`Failed to shuffle activity: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsShuffling(prev => ({ ...prev, [activity.id]: false }));
+    }
+  };
+  
   // Get color for activity area
   const getAreaColor = (area?: string): string => {
     const areaColors: Record<string, string> = {
@@ -536,6 +740,32 @@ export default function WeekAtAGlanceView({
       onSelectDay(day.date);
     } else {
       setSelectedDay(day.dayName);
+    }
+  };
+
+  // Helper function to check if user has all materials needed for an activity
+  const canDoActivityWithOwnedMaterials = async (activity: Activity): Promise<boolean> => {
+    if (!activity.materialsNeeded || activity.materialsNeeded.length === 0) {
+      return true;
+    }
+    
+    try {
+      const userMaterialsQuery = query(
+        collection(db, 'userMaterials'),
+        where('userId', '==', currentUser?.uid),
+        where('inInventory', '==', true)
+      );
+      const userMaterialsSnapshot = await getDocs(userMaterialsQuery);
+      const ownedMaterialIds = new Set<string>();
+      
+      userMaterialsSnapshot.forEach(doc => {
+        ownedMaterialIds.add(doc.data().materialId);
+      });
+      
+      return activity.materialsNeeded.every(materialId => ownedMaterialIds.has(materialId));
+    } catch (error) {
+      console.error('Error checking material availability:', error);
+      return false;
     }
   };
 
@@ -773,6 +1003,23 @@ export default function WeekAtAGlanceView({
                         >
                           <PlusCircle className="h-3 w-3 mr-1" />
                           {activity.status === 'completed' ? 'Add Another Observation' : 'Add Observation'}
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShuffleActivity(activity, day.dayName);
+                          }}
+                          className="text-sm text-purple-600 hover:text-purple-700 flex items-center"
+                          type="button"
+                          disabled={isShuffling[activity.id]}
+                        >
+                          {isShuffling[activity.id] ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Shuffle className="h-3 w-3 mr-1" />
+                          )}
+                          Shuffle
                         </button>
                       </div>
                     </div>

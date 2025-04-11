@@ -22,6 +22,16 @@ interface Material {
   activities: string[];
   alternativeNames: string[];
   isOwned: boolean;
+  materialType?: string;
+  householdAlternative?: string;
+  isNeededForUpcoming?: boolean;
+}
+
+interface Activity {
+  id: string;
+  title: string;
+  materialsNeeded: string[];
+  scheduledDate?: Date;
 }
 
 export default function MaterialsInventory() {
@@ -30,10 +40,39 @@ export default function MaterialsInventory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'owned' | 'needed'>('all');
-  const [showAssessment, setShowAssessment] = useState(false);
-  const [selectedChild, setSelectedChild] = useState<{ id: string; name: string; age: number; ageGroup: string } | null>(null);
+  const [updatingMaterial, setUpdatingMaterial] = useState<string | null>(null);
   const [children, setChildren] = useState<{ id: string; name: string; age: number; ageGroup: string }[]>([]);
+  const [upcomingActivities, setUpcomingActivities] = useState<Activity[]>([]);
+
+  const fetchUpcomingActivities = async () => {
+    if (!currentUser?.uid) return;
+
+    try {
+      // Get all children
+      const childrenQuery = query(
+        collection(db, 'children'),
+        where('userId', '==', currentUser.uid)
+      );
+      const childrenSnapshot = await getDocs(childrenQuery);
+      const childrenIds = childrenSnapshot.docs.map(doc => doc.id);
+
+      // Get upcoming activities for all children
+      const activitiesQuery = query(
+        collection(db, 'activities'),
+        where('childId', 'in', childrenIds),
+        where('scheduledDate', '>=', new Date())
+      );
+      const activitiesSnapshot = await getDocs(activitiesQuery);
+      const activities = activitiesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Activity[];
+
+      setUpcomingActivities(activities);
+    } catch (error) {
+      console.error('Error fetching upcoming activities:', error);
+    }
+  };
 
   const fetchMaterials = async () => {
     if (!currentUser?.uid) return;
@@ -59,13 +98,19 @@ export default function MaterialsInventory() {
       const userMaterialsSnapshot = await getDocs(userMaterialsQuery);
       const ownedMaterialIds = new Set(userMaterialsSnapshot.docs.map(doc => doc.data().materialId));
 
-      // Combine materials with ownership status
-      const materialsWithOwnership = allMaterials.map(material => ({
+      // Get materials needed for upcoming activities
+      const neededMaterialIds = new Set(
+        upcomingActivities.flatMap(activity => activity.materialsNeeded)
+      );
+
+      // Combine materials with ownership and needed status
+      const materialsWithStatus = allMaterials.map(material => ({
         ...material,
-        isOwned: ownedMaterialIds.has(material.id) || false
+        isOwned: ownedMaterialIds.has(material.id) || false,
+        isNeededForUpcoming: neededMaterialIds.has(material.id) && !ownedMaterialIds.has(material.id)
       }));
       
-      setMaterials(materialsWithOwnership);
+      setMaterials(materialsWithStatus);
     } catch (error) {
       console.error('Error fetching materials:', error);
       setError('Failed to load materials');
@@ -76,9 +121,15 @@ export default function MaterialsInventory() {
 
   useEffect(() => {
     if (currentUser) {
-      fetchMaterials();
+      fetchUpcomingActivities();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser && upcomingActivities.length > 0) {
+      fetchMaterials();
+    }
+  }, [currentUser, upcomingActivities]);
 
   useEffect(() => {
     const fetchChildren = async () => {
@@ -112,6 +163,7 @@ export default function MaterialsInventory() {
     if (!currentUser) return;
 
     try {
+      setUpdatingMaterial(materialId);
       const userMaterialRef = doc(db, 'userMaterials', `${currentUser.uid}_${materialId}`);
       
       if (currentStatus) {
@@ -138,32 +190,23 @@ export default function MaterialsInventory() {
     } catch (error) {
       console.error('Error updating material ownership:', error);
       setError('Failed to update material status');
+    } finally {
+      setUpdatingMaterial(null);
     }
   };
 
   const filteredMaterials = materials.filter(material => {
-    const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = 
-      filter === 'all' ||
-      (filter === 'owned' && material.isOwned) ||
-      (filter === 'needed' && !material.isOwned);
-    
-    return matchesSearch && matchesFilter;
+    return material.name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const handleAssessmentClick = () => {
-    if (children.length === 0) {
-      setError('Please add a child before assessing materials');
-      return;
+  const groupedMaterials = filteredMaterials.reduce((acc, material) => {
+    const type = material.materialType || 'other';
+    if (!acc[type]) {
+      acc[type] = [];
     }
-    if (children.length === 1) {
-      setSelectedChild(children[0]);
-      setShowAssessment(true);
-    } else {
-      // If multiple children, show child selection
-      setShowAssessment(true);
-    }
-  };
+    acc[type].push(material);
+    return acc;
+  }, {} as Record<string, Material[]>);
 
   if (loading) {
     return (
@@ -178,20 +221,11 @@ export default function MaterialsInventory() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Materials Inventory</h1>
-          <p className="mt-2 text-gray-600">
-            Manage your materials and track what you have available for activities.
-          </p>
-        </div>
-        <button
-          onClick={handleAssessmentClick}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
-        >
-          <Package className="h-4 w-4 mr-2" />
-          Update Materials Assessment
-        </button>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Materials Inventory</h1>
+        <p className="mt-2 text-gray-600">
+          Manage your materials and track what you have available for activities.
+        </p>
       </div>
 
       {error && (
@@ -200,192 +234,225 @@ export default function MaterialsInventory() {
         </div>
       )}
 
-      {/* Filters and Search */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search materials..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
-            />
-          </div>
-        </div>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-md ${
-              filter === 'all'
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            All Materials
-          </button>
-          <button
-            onClick={() => setFilter('owned')}
-            className={`px-4 py-2 rounded-md ${
-              filter === 'owned'
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Owned
-          </button>
-          <button
-            onClick={() => setFilter('needed')}
-            className={`px-4 py-2 rounded-md ${
-              filter === 'needed'
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Needed
-          </button>
+      {/* Search */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search materials..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+          />
         </div>
       </div>
 
-      {/* Materials Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredMaterials.map(material => (
-          <div
-            key={material.id}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:border-emerald-300 transition-colors"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">
-                  {material.name}
-                  {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
-                  {material.isOptional && <span className="ml-2 text-sm text-gray-500">(Optional)</span>}
-                </h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm text-gray-500">{material.category}</span>
-                  {material.isReusable && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      Reusable
-                    </span>
+      {/* Household Items Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-emerald-600">Household Items</h2>
+          <span className="text-sm text-gray-500">
+            {groupedMaterials.household?.filter(m => m.isOwned).length || 0} of {groupedMaterials.household?.length || 0} owned
+          </span>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          These are common items you likely already have at home. Check off what you have available.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {groupedMaterials.household?.map(material => (
+            <div 
+              key={material.id} 
+              className={`bg-white border rounded-lg p-4 ${
+                material.isNeededForUpcoming 
+                  ? 'border-amber-300 bg-amber-50' 
+                  : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-gray-900">
+                      {material.name}
+                      {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                    </h3>
+                    {material.isNeededForUpcoming && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        Needed Soon
+                      </span>
+                    )}
+                  </div>
+                  {material.description && (
+                    <p className="text-sm text-gray-600 mt-1">{material.description}</p>
                   )}
                 </div>
-                {material.description && (
-                  <p className="text-sm text-gray-600 mt-2">{material.description}</p>
-                )}
-                {(material.amazonLink || material.affiliateLink) && (
-                  <div className="mt-2">
-                    {material.affiliateLink && (
-                      <a
-                        href={material.affiliateLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center mr-3 mb-1"
-                      >
-                        Buy (Affiliate Link)
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    )}
-                    {material.amazonLink && !material.affiliateLink && (
-                      <a
-                        href={material.amazonLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-                      >
-                        Buy on Amazon
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => toggleMaterialOwnership(material.id, material.isOwned)}
-                className={`p-2 rounded-full ${
-                  material.isOwned
-                    ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                    : 'text-gray-400 bg-gray-50 hover:bg-gray-100'
-                }`}
-                title={material.isOwned ? 'Mark as not owned' : 'Mark as owned'}
-              >
-                {material.isOwned ? (
-                  <CheckCircle className="h-5 w-5" />
-                ) : (
-                  <XCircle className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredMaterials.length === 0 && (
-        <div className="text-center py-12">
-          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No materials found</h3>
-          <p className="text-gray-500">
-            {searchTerm
-              ? 'Try adjusting your search terms'
-              : filter === 'owned'
-              ? 'You haven\'t marked any materials as owned yet'
-              : filter === 'needed'
-              ? 'You have all the materials you need'
-              : 'No materials available'}
-          </p>
-        </div>
-      )}
-
-      {/* Materials Assessment Modal */}
-      {showAssessment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Materials Assessment</h2>
                 <button
-                  onClick={() => {
-                    setShowAssessment(false);
-                    setSelectedChild(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-500"
+                  onClick={() => toggleMaterialOwnership(material.id, material.isOwned)}
+                  className={`p-2 rounded-full ${
+                    material.isOwned
+                      ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                      : 'text-gray-400 bg-gray-50 hover:bg-gray-100'
+                  }`}
+                  disabled={updatingMaterial === material.id}
                 >
-                  <X className="h-6 w-6" />
+                  {material.isOwned ? (
+                    <CheckCircle className="h-5 w-5" />
+                  ) : (
+                    <XCircle className="h-5 w-5" />
+                  )}
                 </button>
               </div>
-              
-              {!selectedChild && children.length > 1 ? (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900">Select a Child</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {children.map(child => (
-                      <button
-                        key={child.id}
-                        onClick={() => setSelectedChild(child)}
-                        className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left"
-                      >
-                        <h4 className="font-medium text-gray-900">{child.name}</h4>
-                        <p className="text-sm text-gray-500">{child.ageGroup || 'Age not set'}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <MaterialsAssessment
-                  childId={selectedChild?.id || ''}
-                  childName={selectedChild?.name || ''}
-                  onComplete={() => {
-                    setShowAssessment(false);
-                    setSelectedChild(null);
-                    fetchMaterials(); // Refresh materials list
-                  }}
-                />
-              )}
             </div>
-          </div>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* Basic Materials Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-blue-600">Basic Montessori Materials</h2>
+          <span className="text-sm text-gray-500">
+            {groupedMaterials.basic?.filter(m => m.isOwned).length || 0} of {groupedMaterials.basic?.length || 0} owned
+          </span>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          These are the core materials that will help you get started with Montessori activities.
+          Many have household alternatives you can use while you build your collection.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {groupedMaterials.basic?.map(material => (
+            <div 
+              key={material.id} 
+              className={`bg-white border rounded-lg p-4 ${
+                material.isNeededForUpcoming 
+                  ? 'border-amber-300 bg-amber-50' 
+                  : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-gray-900">
+                      {material.name}
+                      {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                    </h3>
+                    {material.isNeededForUpcoming && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        Needed Soon
+                      </span>
+                    )}
+                  </div>
+                  {material.householdAlternative && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Alternative: {material.householdAlternative}
+                    </p>
+                  )}
+                  {material.description && (
+                    <p className="text-sm text-gray-600 mt-1">{material.description}</p>
+                  )}
+                  {(material.amazonLink || material.affiliateLink) && (
+                    <a
+                      href={material.affiliateLink || material.amazonLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Buy on Amazon
+                    </a>
+                  )}
+                </div>
+                <button
+                  onClick={() => toggleMaterialOwnership(material.id, material.isOwned)}
+                  className={`p-2 rounded-full ${
+                    material.isOwned
+                      ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                      : 'text-gray-400 bg-gray-50 hover:bg-gray-100'
+                  }`}
+                  disabled={updatingMaterial === material.id}
+                >
+                  {material.isOwned ? (
+                    <CheckCircle className="h-5 w-5" />
+                  ) : (
+                    <XCircle className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Advanced Materials Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-purple-600">Advanced Materials</h2>
+          <span className="text-sm text-gray-500">
+            {groupedMaterials.advanced?.filter(m => m.isOwned).length || 0} of {groupedMaterials.advanced?.length || 0} owned
+          </span>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          These are specialized materials that can be added as your child progresses.
+          Focus on the basic materials first.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {groupedMaterials.advanced?.map(material => (
+            <div 
+              key={material.id} 
+              className={`bg-white border rounded-lg p-4 ${
+                material.isNeededForUpcoming 
+                  ? 'border-amber-300 bg-amber-50' 
+                  : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-gray-900">
+                      {material.name}
+                      {material.quantity > 1 && ` (${material.quantity} ${material.unit}s)`}
+                    </h3>
+                    {material.isNeededForUpcoming && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        Needed Soon
+                      </span>
+                    )}
+                  </div>
+                  {material.description && (
+                    <p className="text-sm text-gray-600 mt-1">{material.description}</p>
+                  )}
+                  {(material.amazonLink || material.affiliateLink) && (
+                    <a
+                      href={material.affiliateLink || material.amazonLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Buy on Amazon
+                    </a>
+                  )}
+                </div>
+                <button
+                  onClick={() => toggleMaterialOwnership(material.id, material.isOwned)}
+                  className={`p-2 rounded-full ${
+                    material.isOwned
+                      ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                      : 'text-gray-400 bg-gray-50 hover:bg-gray-100'
+                  }`}
+                  disabled={updatingMaterial === material.id}
+                >
+                  {material.isOwned ? (
+                    <CheckCircle className="h-5 w-5" />
+                  ) : (
+                    <XCircle className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 } 
