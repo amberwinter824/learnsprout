@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getActivity, getChild } from '@/lib/dataService';
 import { ActivityObservationForm } from '@/app/components/ActivityObservationForm';
-import { ArrowLeft, Clock, BarChart2, Target, Book } from 'lucide-react';
+import { ArrowLeft, Clock, BarChart2, Target, Book, Layers, ClipboardList, Eye, ArrowRight, CheckCircle } from 'lucide-react';
 
 // Define TypeScript interfaces
 interface ActivityData {
@@ -25,6 +25,12 @@ interface ActivityData {
   nextSteps?: string[];
   relatedActivities?: string[];
   skillsAddressed?: string[];
+  setupSteps?: string[];
+  demonstrationSteps?: string[];
+  observationPoints?: string[];
+  successIndicators?: string[];
+  commonChallenges?: string[];
+  extensions?: string[];
 }
 
 interface ChildData {
@@ -54,6 +60,7 @@ export default function ActivityDetailPage({ params }: PageParams) {
   const [child, setChild] = useState<ChildData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'setup' | 'instructions' | 'observation' | 'extensions'>('setup');
   
   useEffect(() => {
     async function fetchData() {
@@ -171,139 +178,220 @@ export default function ActivityDetailPage({ params }: PageParams) {
           )}
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Activity details card */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Activity Details</h2>
+
+      {/* Tabs Navigation */}
+      <div className="mb-6 border-b border-gray-200">
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setActiveTab('setup')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === 'setup'
+                ? 'text-emerald-600 border-emerald-500'
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center">
+              <Layers className="h-4 w-4 mr-2" />
+              Setup
             </div>
-            
-            <div className="p-6">
-              {activity.description && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Description</h3>
-                  <p className="text-gray-600">{activity.description}</p>
-                </div>
-              )}
-              
-              {activity.instructions && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Instructions</h3>
-                  <div className="prose prose-sm max-w-none text-gray-600">
-                    {activity.instructions.split('\n').map((paragraph, i) => (
-                      <p key={i}>{paragraph}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {activity.materialsNeeded && activity.materialsNeeded.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Materials Needed</h3>
-                  <ul className="list-disc pl-5 text-gray-600">
-                    {activity.materialsNeeded.map((material, index) => (
-                      <li key={index}>{material}</li>
+          </button>
+          <button
+            onClick={() => setActiveTab('instructions')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === 'instructions'
+                ? 'text-emerald-600 border-emerald-500'
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center">
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Instructions
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('observation')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === 'observation'
+                ? 'text-emerald-600 border-emerald-500'
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center">
+              <Eye className="h-4 w-4 mr-2" />
+              Observation
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('extensions')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === 'extensions'
+                ? 'text-emerald-600 border-emerald-500'
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center">
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Extensions
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        {activeTab === 'setup' && (
+          <div className="p-6 space-y-6">
+            {/* Materials Needed */}
+            {activity.materialsNeeded && activity.materialsNeeded.length > 0 && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Materials Needed</h3>
+                <ul className="space-y-2">
+                  {activity.materialsNeeded.map((material, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
+                      <span className="text-gray-700">{material}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Setup Steps */}
+            {activity.setupSteps && activity.setupSteps.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Setup Steps</h3>
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <ul className="divide-y divide-gray-200">
+                    {activity.setupSteps.map((step, index) => (
+                      <li key={index} className="p-4 flex items-start">
+                        <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 mt-0.5">
+                          {index + 1}
+                        </span>
+                        <span className="text-gray-700">{step}</span>
+                      </li>
                     ))}
                   </ul>
                 </div>
-              )}
-              
-              {activity.skillsAddressed && activity.skillsAddressed.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Skills Addressed</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {activity.skillsAddressed.map(skillId => (
-                      <span key={skillId} className="bg-emerald-50 text-emerald-700 px-2 py-1 text-xs rounded-full">
-                        {skillId}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Progress tracking section - only show if childId is provided */}
-          {childId && (
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Observation Tracking</h2>
               </div>
-              
-              <ActivityObservationForm 
-                activityId={id} 
-                childId={childId} 
-                onSuccess={() => {
-                  // Optionally refresh any data after successful observation
-                }}
-              />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'instructions' && (
+          <div className="p-6 space-y-6">
+            <div className="bg-emerald-50 rounded-lg p-4 mb-4">
+              <h3 className="text-sm font-medium text-emerald-800 mb-2">How to Present This Activity</h3>
+              <p className="text-sm text-emerald-700">
+                Follow these steps to introduce the activity to your child for the first time:
+              </p>
             </div>
-          )}
-        </div>
-        
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* What to observe card */}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 flex items-center">
-              <Target className="h-5 w-5 text-emerald-500 mr-2" />
-              <h2 className="text-lg font-medium text-gray-900">What to Observe</h2>
+
+            {activity.demonstrationSteps && activity.demonstrationSteps.length > 0 && (
+              <div className="bg-white rounded-lg border border-gray-200">
+                <ul className="divide-y divide-gray-200">
+                  {activity.demonstrationSteps.map((step, index) => (
+                    <li key={index} className="p-4 flex items-start">
+                      <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 mt-0.5">
+                        {index + 1}
+                      </span>
+                      <span className="text-gray-700">{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'observation' && (
+          <div className="p-6 space-y-6">
+            <div className="bg-emerald-50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-emerald-800 mb-2">What to Watch For</h3>
+              <p className="text-sm text-emerald-700">
+                Observe these key points as your child works with the activity:
+              </p>
             </div>
-            
-            <div className="p-6">
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>Can the child follow multi-step instructions?</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>How long does the child maintain concentration?</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>Does the child repeat the activity without prompting?</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>How does the child handle frustration if encountered?</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>Does the child notice and correct their own mistakes?</span>
-                </li>
+
+            {activity.observationPoints && activity.observationPoints.length > 0 && (
+              <ul className="space-y-3">
+                {activity.observationPoints.map((point, index) => (
+                  <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                    <Eye className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
+                    <span className="text-gray-700">{point}</span>
+                  </li>
+                ))}
               </ul>
+            )}
+
+            {activity.successIndicators && activity.successIndicators.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Key Signs of Success</h3>
+                <ul className="space-y-3">
+                  {activity.successIndicators.slice(0, 3).map((indicator, index) => (
+                    <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                      <CheckCircle className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
+                      <span className="text-gray-700">{indicator}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'extensions' && (
+          <div className="p-6 space-y-6">
+            <div className="bg-emerald-50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-emerald-800 mb-2">Next Steps</h3>
+              <p className="text-sm text-emerald-700">
+                When your child shows mastery, try these variations to extend the learning:
+              </p>
             </div>
+
+            {activity.extensions && activity.extensions.length > 0 && (
+              <ul className="space-y-3">
+                {activity.extensions.map((extension, index) => (
+                  <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                    <ArrowRight className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
+                    <span className="text-gray-700">{extension}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {activity.commonChallenges && activity.commonChallenges.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Common Challenges to Watch For</h3>
+                <ul className="space-y-3">
+                  {activity.commonChallenges.slice(0, 3).map((challenge, index) => (
+                    <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                      <Target className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
+                      <span className="text-gray-700">{challenge}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Progress tracking section - only show if childId is provided */}
+      {childId && (
+        <div className="mt-6 bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Observation Tracking</h2>
           </div>
           
-          {/* Extensions card */}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 flex items-center">
-              <BarChart2 className="h-5 w-5 text-emerald-500 mr-2" />
-              <h2 className="text-lg font-medium text-gray-900">Extensions</h2>
-            </div>
-            
-            <div className="p-6">
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>Increase difficulty by adding time constraints</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>Use different materials for sensory variation</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
-                  <span>Have the child teach the activity to a sibling or friend</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <ActivityObservationForm 
+            activityId={id} 
+            childId={childId} 
+            onSuccess={() => {
+              // Optionally refresh any data after successful observation
+            }}
+          />
         </div>
-      </div>
+      )}
     </div>
   );
 }

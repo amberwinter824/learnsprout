@@ -262,183 +262,99 @@ export default function ActivityDetailsPopup({
         {/* Content */}
         <div className="p-6">
           {tab === 'setup' && (
-            <div>
-              {/* Activity info and tags */}
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {activity.area && (
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getAreaColor(activity.area)}`}>
-                      {activity.area.replace('_', ' ')}
-                    </span>
-                  )}
-                  
-                  {activity.duration && (
-                    <span className="flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {activity.duration} min
-                    </span>
-                  )}
-                  
-                  {activity.difficulty && (
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700">
-                      {activity.difficulty}
-                    </span>
-                  )}
-                </div>
-                
-                {activity.description && (
-                  <p className="text-gray-600 mb-4">{activity.description}</p>
-                )}
+            <div className="space-y-4">
+              {/* Materials Needed */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Materials Needed</h3>
+                <ul className="space-y-2">
+                  {materials.map((material, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
+                      <span className="text-gray-700">{material}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              
-              {/* Materials needed */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Materials Needed</h3>
-                {materials.length > 0 ? (
-                  <ul className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {materials.map((material: string, index: number) => (
-                      <li key={index} className="flex items-start mb-2 last:mb-0">
-                        <span className="inline-block w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full text-xs flex items-center justify-center mr-2 mt-0.5">
-                          •
-                        </span>
-                        <span>{material}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No specific materials listed.</p>
-                )}
-              </div>
-              
+
               {/* Setup Steps */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Setup Steps</h3>
-                {activity.setupSteps && activity.setupSteps.length > 0 ? (
-                  <ol className="space-y-2">
-                    {activity.setupSteps.map((step, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-800 font-medium text-sm mr-3 shrink-0">
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Setup Steps</h3>
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <ul className="divide-y divide-gray-200">
+                    {activity.setupSteps?.map((step, index) => (
+                      <li key={index} className="p-4 flex items-start">
+                        <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 mt-0.5">
                           {index + 1}
                         </span>
                         <span className="text-gray-700">{step}</span>
                       </li>
                     ))}
-                  </ol>
-                ) : (
-                  <p className="text-gray-500 italic">No specific setup steps provided.</p>
-                )}
+                  </ul>
+                </div>
               </div>
             </div>
           )}
           
           {tab === 'instructions' && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">How to Demonstrate This Activity</h3>
-              
-              {activity.demonstrationSteps && activity.demonstrationSteps.length > 0 ? (
-                <ol className="space-y-4 mb-6">
-                  {activity.demonstrationSteps.map((step, index) => (
-                    <li key={index} className="flex">
-                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-800 font-medium text-sm mr-3 shrink-0">
+            <div className="space-y-4">
+              <div className="bg-emerald-50 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-medium text-emerald-800 mb-2">How to Present This Activity</h3>
+                <p className="text-sm text-emerald-700">
+                  Follow these steps to introduce the activity to your child for the first time:
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200">
+                <ul className="divide-y divide-gray-200">
+                  {activity.demonstrationSteps?.map((step, index) => (
+                    <li key={index} className="p-4 flex items-start">
+                      <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 mt-0.5">
                         {index + 1}
                       </span>
                       <span className="text-gray-700">{step}</span>
                     </li>
                   ))}
-                </ol>
-              ) : (
-                <p className="text-gray-500 italic mb-4">No specific demonstration steps provided.</p>
-              )}
-              
-              {/* Common Challenges */}
-              {activity.commonChallenges && activity.commonChallenges.length > 0 && (
-                <div className="bg-yellow-50 p-4 rounded-md border border-yellow-100 mb-6">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Common Challenges</h4>
-                  <ul className="text-sm text-yellow-700 space-y-2">
-                    {activity.commonChallenges.map((challenge, index) => (
-                      <li key={index}>• {challenge}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                </ul>
+              </div>
             </div>
           )}
           
           {tab === 'observation' && (
-            <div>
-              {/* What to Observe */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">What to Observe</h3>
-                {activity.observationPoints && activity.observationPoints.length > 0 ? (
-                  <ul className="space-y-2">
-                    {activity.observationPoints.map((point, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="inline-block w-4 h-4 bg-blue-100 text-blue-600 rounded-full text-xs flex items-center justify-center mr-2 mt-0.5">
-                          •
-                        </span>
-                        <span className="text-gray-700">{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No specific observation points provided.</p>
-                )}
+            <div className="space-y-4">
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-emerald-800 mb-2">What to Watch For</h3>
+                <p className="text-sm text-emerald-700">
+                  Observe these key points as your child works with the activity:
+                </p>
               </div>
               
-              {/* Success Indicators */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Success Indicators</h3>
-                {activity.successIndicators && activity.successIndicators.length > 0 ? (
-                  <ul className="space-y-2">
-                    {activity.successIndicators.map((indicator, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="inline-block w-4 h-4 bg-green-100 text-green-600 rounded-full text-xs flex items-center justify-center mr-2 mt-0.5">
-                          ✓
-                        </span>
-                        <span className="text-gray-700">{indicator}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No specific success indicators provided.</p>
-                )}
-              </div>
-              
-              {/* Tips */}
-              <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                <h4 className="text-sm font-medium text-blue-800 mb-2">Tips for Success</h4>
-                <ul className="text-sm text-blue-700 space-y-2">
-                  <li>• Observe your child's level of interest and engagement</li>
-                  <li>• Let your child lead the activity at their own pace</li>
-                  <li>• It's okay if the activity doesn't go exactly as planned</li>
-                  <li>• Focus on the process, not the end result</li>
-                  <li>• Provide minimal assistance - let your child self-correct</li>
-                  <li>• Notice when your child needs a break or is ready to move on</li>
-                </ul>
-              </div>
+              <ul className="space-y-3">
+                {activity.observationPoints?.map((point, index) => (
+                  <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                    <Eye className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
+                    <span className="text-gray-700">{point}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
           {tab === 'extensions' && (
             <div className="space-y-4">
               <div className="bg-emerald-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-emerald-800 mb-2">Activity Extensions</h3>
+                <h3 className="text-sm font-medium text-emerald-800 mb-2">Next Steps</h3>
                 <p className="text-sm text-emerald-700">
-                  Try these variations to extend the learning and keep the activity engaging:
+                  When your child shows mastery, try these variations to extend the learning:
                 </p>
               </div>
               
               <ul className="space-y-3">
                 {activity.extensions?.map((extension, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
+                  <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                    <ArrowRight className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
                     <span className="text-gray-700">{extension}</span>
                   </li>
-                )) || (
-                  <li className="text-gray-500 italic">
-                    No extensions available for this activity yet.
-                  </li>
-                )}
+                ))}
               </ul>
             </div>
           )}
