@@ -138,16 +138,23 @@ async function addMissingMaterials() {
           const materialType = determineMaterialType(materialName);
           const householdAlternative = getHouseholdAlternative(materialName);
           
-          materialsToAdd.set(normalizedName, {
+          const newMaterial = {
             name: materialName,
-            normalizedName,
-            materialType,
-            description: `Used in various Montessori activities`,
-            isEssential: materialType === 'basic',
-            householdAlternative: householdAlternative || null,
-            activities: [activityId],
-            activityCount: 1
-          });
+            normalizedName: materialName.toLowerCase().trim(),
+            materialType: determineMaterialType(materialName),
+            description: '',
+            category: 'Other',
+            isEssential: false,
+            householdAlternative: getHouseholdAlternative(materialName),
+            amazonLink: '',
+            affiliateLink: '',
+            activities: [],
+            alternativeNames: [],
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          };
+          
+          materialsToAdd.set(normalizedName, newMaterial);
         }
       }
     }

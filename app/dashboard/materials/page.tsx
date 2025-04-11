@@ -125,29 +125,23 @@ export default function MaterialsInventory() {
   // Fetch both materials and upcoming activities when the component mounts
   useEffect(() => {
     if (currentUser) {
-      Promise.all([
-        fetchUpcomingActivities(),
-        fetchMaterials()
-      ]).catch(error => {
-        console.error('Error in initial data fetch:', error);
-        setError('Failed to load data');
-      });
+      const fetchData = async () => {
+        try {
+          await fetchUpcomingActivities();
+          await fetchMaterials();
+        } catch (error) {
+          console.error('Error in initial data fetch:', error);
+          setError('Failed to load data');
+        }
+      };
+      fetchData();
     }
   }, [currentUser]);
 
   // Update materials when upcoming activities change
   useEffect(() => {
     if (materials.length > 0 && upcomingActivities.length > 0) {
-      const neededMaterialIds = new Set(
-        upcomingActivities.flatMap(activity => activity.materialsNeeded)
-      );
-
-      setMaterials(prevMaterials => 
-        prevMaterials.map(material => ({
-          ...material,
-          isNeededForUpcoming: neededMaterialIds.has(material.id) && !material.isOwned
-        }))
-      );
+      fetchMaterials(); // Re-fetch materials to update their status
     }
   }, [upcomingActivities]);
 
