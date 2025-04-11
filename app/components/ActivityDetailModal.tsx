@@ -149,12 +149,23 @@ const ActivityDetailModal = memo(({
     setPlanEvolutionStep(1);
     setPlanEvolutionMessage('Analyzing recent observations...');
     
-    // Show the updating plans message for a bit longer
-    setTimeout(() => {
-      setShowSuccess(false);
-      onClose();
-    }, 3000);
-  }, [onClose]);
+    // Don't close the modal immediately
+    // Instead, let the user see the success message and plan evolution status
+    // The modal will be closed when the plan evolution is complete
+  }, []);
+
+  // Add effect to handle plan evolution completion
+  useEffect(() => {
+    if (isUpdatingPlans && planEvolutionStep === 3) {
+      // Plan evolution is complete, close the modal after a short delay
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+        onClose();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isUpdatingPlans, planEvolutionStep, onClose]);
 
   const getAreaColor = (area?: string) => {
     const areaColors: Record<string, string> = {
