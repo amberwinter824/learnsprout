@@ -4,9 +4,9 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Package, ArrowLeft, Info, Calendar } from 'lucide-react';
+import { Package, ArrowLeft, Info, Calendar, Hammer } from 'lucide-react';
 import Link from 'next/link';
-import { commonHouseholdItems } from '@/lib/materialsData';
+import { commonHouseholdItems, essentialStarterKit } from '@/lib/materialsData';
 
 export default function HouseholdItemsPage() {
   const { currentUser } = useAuth();
@@ -55,10 +55,11 @@ export default function HouseholdItemsPage() {
        'fruit', 'vegetable', 'grain', 'seed', 'nut', 'raisin', 'cracker', 'cookie', 
        'bread'].includes(item)
     ),
-    'Educational Items': commonHouseholdItems.filter(item => 
+    'Tools & Educational Items': commonHouseholdItems.filter(item => 
       ['book', 'paper', 'pencil', 'pen', 'marker', 'crayon', 'chalk', 'board', 'card', 
-       'puzzle', 'block', 'bead', 'button', 'coin', 'key', 'lock', 'magnet', 'mirror', 
-       'magnifying glass'].includes(item)
+       'block', 'bead', 'button', 'coin', 'key', 'lock', 'magnet', 'mirror', 
+       'magnifying glass', 'hammer', 'screwdriver', 'pliers', 'scissors', 'knife', 
+       'spoon', 'fork', 'tongs', 'clamp'].includes(item)
     )
   };
 
@@ -109,6 +110,32 @@ export default function HouseholdItemsPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-start">
+          <Hammer className="h-5 w-5 text-emerald-500 mt-0.5 mr-3 flex-shrink-0" />
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Montessori Materials You Can Make</h2>
+            <p className="text-gray-700 mb-4">
+              Here are some Montessori materials you can make at home using common items:
+            </p>
+            <div className="space-y-4">
+              {essentialStarterKit.map((material) => (
+                <div key={material.id} className="bg-emerald-50 rounded-lg p-4">
+                  <h3 className="font-medium text-emerald-800">{material.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{material.description}</p>
+                  <div className="mt-2 flex items-start">
+                    <Hammer className="h-4 w-4 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" />
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">Make it with:</span> {material.householdAlternative}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
