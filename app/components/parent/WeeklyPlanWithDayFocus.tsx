@@ -429,7 +429,7 @@ export default function WeeklyPlanWithDayFocus({
   
   // Get activities for the selected day
   const getSelectedDayActivities = () => {
-    const selectedDayOfWeek = format(selectedDate, 'EEEE').toLowerCase();
+    const selectedDayOfWeek = format(selectedDate, 'EEE').toLowerCase();
     const selectedDay = weekActivities.find(day => 
       day.dayOfWeek.toLowerCase() === selectedDayOfWeek
     );
