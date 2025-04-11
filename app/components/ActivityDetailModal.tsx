@@ -145,6 +145,11 @@ const ActivityDetailModal = memo(({
   const handleObservationSuccess = useCallback(() => {
     setShowSuccess(true);
     setSuccessMessage('Observation recorded successfully!');
+    setIsUpdatingPlans(true);
+    setPlanEvolutionStep(1);
+    setPlanEvolutionMessage('Analyzing recent observations...');
+    
+    // Show the updating plans message for a bit longer
     setTimeout(() => {
       setShowSuccess(false);
       onClose();
