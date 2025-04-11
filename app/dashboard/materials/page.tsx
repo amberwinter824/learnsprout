@@ -43,6 +43,9 @@ export default function MaterialsInventory() {
   const [updatingMaterial, setUpdatingMaterial] = useState<string | null>(null);
   const [children, setChildren] = useState<{ id: string; name: string; age: number; ageGroup: string }[]>([]);
   const [upcomingActivities, setUpcomingActivities] = useState<Activity[]>([]);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['household']));
+  const [isCompactView, setIsCompactView] = useState(false);
+  const [showOnlyNeeded, setShowOnlyNeeded] = useState(false);
 
   const fetchUpcomingActivities = async () => {
     if (!currentUser?.uid) return;
@@ -212,32 +215,42 @@ export default function MaterialsInventory() {
     }
   };
 
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(section)) {
+        newSet.delete(section);
+      } else {
+        newSet.add(section);
+      }
+      return newSet;
+    });
+  };
+
   const filteredMaterials = materials.filter(material => {
-    return material.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      material.alternativeNames?.some(name => name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesNeeded = !showOnlyNeeded || material.isNeededForUpcoming;
+    return matchesSearch && matchesNeeded;
   });
 
   const groupedMaterials = filteredMaterials.reduce((acc, material) => {
     const type = material.materialType || 'other';
-    if (!acc[type]) {
-      acc[type] = [];
-    }
+    if (!acc[type]) acc[type] = [];
     acc[type].push(material);
     return acc;
   }, {} as Record<string, Material[]>);
 
-  // Define the order of material types
-  const materialTypeOrder = ['household', 'basic', 'advanced', 'other'];
-
   // Sort materials within each group
-  Object.keys(groupedMaterials).forEach(type => {
-    groupedMaterials[type].sort((a, b) => {
-      // Sort by whether they're needed for upcoming activities
+  Object.values(groupedMaterials).forEach(group => {
+    group.sort((a, b) => {
+      // Sort by needed status first
       if (a.isNeededForUpcoming && !b.isNeededForUpcoming) return -1;
       if (!a.isNeededForUpcoming && b.isNeededForUpcoming) return 1;
-      // Then by ownership status
+      // Then by ownership
       if (a.isOwned && !b.isOwned) return -1;
       if (!a.isOwned && b.isOwned) return 1;
-      // Then alphabetically
+      // Finally alphabetically
       return a.name.localeCompare(b.name);
     });
   });
@@ -262,88 +275,136 @@ export default function MaterialsInventory() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Materials Inventory</h1>
+      <h1 className="text-3xl font-bold mb-6">Materials Inventory</h1>
       
-      <div className="mb-6">
-        <div className="relative">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
             placeholder="Search materials..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg"
+            className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+        </div>
+        
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isCompactView}
+              onChange={(e) => setIsCompactView(e.target.checked)}
+              className="rounded"
+            />
+            Compact view
+          </label>
+          
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showOnlyNeeded}
+              onChange={(e) => setShowOnlyNeeded(e.target.checked)}
+              className="rounded"
+            />
+            Show only needed
+          </label>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="animate-spin" size={32} />
+        </div>
+      ) : error ? (
+        <div className="text-red-500">{error}</div>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(groupedMaterials).map(([type, materials]) => (
+            <div key={type} className="border rounded-lg overflow-hidden">
+              <button
+                className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100"
+                onClick={() => toggleSection(type)}
+              >
+                <h2 className="text-xl font-semibold capitalize">
+                  {type === 'household' ? 'Household Items' :
+                   type === 'basic' ? 'Basic Montessori Materials' :
+                   type === 'advanced' ? 'Advanced Montessori Materials' : 
+                   'Other Materials'}
+                  <span className="ml-2 text-gray-500">({materials.length})</span>
+                </h2>
+                <span className="transform transition-transform duration-200" style={{
+                  transform: expandedSections.has(type) ? 'rotate(180deg)' : 'rotate(0deg)'
+                }}>▼</span>
+              </button>
+              
+              {expandedSections.has(type) && (
+                <div className="divide-y">
+                  {materials.map((material) => (
+                    <div
+                      key={material.id}
+                      className={`p-4 ${isCompactView ? 'py-2' : ''} ${
+                        material.isNeededForUpcoming ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="font-medium">
+                            {material.name}
+                            {material.isNeededForUpcoming && (
+                              <span className="ml-2 text-blue-600 text-sm">Needed for upcoming activity</span>
+                            )}
+                          </h3>
+                          {!isCompactView && material.description && (
+                            <p className="text-gray-600 mt-1">{material.description}</p>
+                          )}
+                          {!isCompactView && material.householdAlternative && material.householdAlternative !== "Used in various Montessori activities" && (
+                            <p className="text-gray-600 mt-1">
+                              Alternative: {material.householdAlternative}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          {material.amazonLink && (
+                            <a
+                              href={material.amazonLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <ExternalLink size={20} />
+                            </a>
+                          )}
+                          
+                          <button
+                            onClick={() => toggleMaterialOwnership(material.id, material.isOwned)}
+                            disabled={!!updatingMaterial}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                              material.isOwned
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {updatingMaterial === material.id ? (
+                              <Loader2 className="animate-spin" size={20} />
+                            ) : material.isOwned ? (
+                              <CheckCircle size={20} />
+                            ) : (
+                              <Plus size={20} />
+                            )}
+                            {!isCompactView && (material.isOwned ? 'Owned' : 'Add')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
-
-      {materialTypeOrder.map(type => {
-        if (!groupedMaterials[type]?.length) return null;
-        
-        return (
-          <div key={type} className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">{materialTypeLabels[type]}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {groupedMaterials[type].map(material => (
-                <div
-                  key={material.id}
-                  className={`p-4 rounded-lg border ${
-                    material.isOwned ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-medium">{material.name}</h3>
-                    <button
-                      onClick={() => toggleMaterialOwnership(material.id, material.isOwned)}
-                      disabled={!!updatingMaterial}
-                      className="ml-2 text-sm"
-                    >
-                      {updatingMaterial === material.id ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : material.isOwned ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-gray-300" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  {material.isNeededForUpcoming && !material.isOwned && (
-                    <div className="mb-2 text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded inline-block">
-                      Needed for upcoming activity
-                    </div>
-                  )}
-                  
-                  <p className="text-sm text-gray-600 mb-2">{material.description}</p>
-                  
-                  {material.householdAlternative && material.description !== 'Used in various Montessori activities' && (
-                    <p className="text-sm text-blue-600 mb-2">
-                      Alternative: {material.householdAlternative}
-                    </p>
-                  )}
-                  
-                  {material.amazonLink && (
-                    <a
-                      href={material.amazonLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:text-blue-700 flex items-center gap-1"
-                    >
-                      View on Amazon <ExternalLink className="h-4 w-4" />
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 } 
