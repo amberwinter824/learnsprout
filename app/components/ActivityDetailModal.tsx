@@ -1,12 +1,14 @@
 // app/components/ActivityDetailModal.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, ArrowRight, BookOpen, ClipboardCheck, Lightbulb } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { X, Loader2, ArrowRight, BookOpen, ClipboardCheck, Lightbulb, CheckCircle } from 'lucide-react';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ActivityObservationForm } from './ActivityObservationForm';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface ActivityDetailModalProps {
   activityId: string;
@@ -39,7 +41,7 @@ interface Skill {
   area: string;
 }
 
-export default function ActivityDetailModal({
+const ActivityDetailModal = memo(({
   activityId,
   childId,
   isOpen,
@@ -47,7 +49,7 @@ export default function ActivityDetailModal({
   onObservationRecorded,
   weeklyPlanId,
   dayOfWeek
-}: ActivityDetailModalProps) {
+}: ActivityDetailModalProps) => {
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,12 @@ export default function ActivityDetailModal({
   const [mounted, setMounted] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
+  const [isUpdatingPlans, setIsUpdatingPlans] = useState<boolean>(false);
+  const [planEvolutionStep, setPlanEvolutionStep] = useState<number | null>(null);
+  const [planEvolutionMessage, setPlanEvolutionMessage] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const { currentUser } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -62,76 +70,86 @@ export default function ActivityDetailModal({
   }, []);
 
   useEffect(() => {
-    const fetchActivity = async () => {
-      if (!activityId) return;
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const activityRef = doc(db, 'activities', activityId);
-        const activityDoc = await getDoc(activityRef);
-        
-        if (!activityDoc.exists()) {
-          setError('Activity not found');
-          setLoading(false);
-          return;
-        }
-        
-        const activityData = {
-          id: activityDoc.id,
-          ...activityDoc.data()
-        } as ActivityData;
-        
-        setActivity(activityData);
+    if (!childId) return;
 
-        // Fetch related skills if they exist
-        if (activityData.skillsAddressed?.length) {
-          const skillPromises = activityData.skillsAddressed.map(
-            (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
-          );
-
-          const skillDocs = await Promise.all(skillPromises);
-          const skills = skillDocs
-            .filter((doc) => doc.exists())
-            .map((doc) => ({
-              id: doc.id,
-              ...doc.data()
-            } as Skill));
-
-          setActivitySkills(skills);
-        }
-      } catch (err) {
-        console.error('Error fetching activity:', err);
-        setError('Failed to load activity details');
-      } finally {
-        setLoading(false);
+    const childRef = doc(db, 'children', childId);
+    const unsubscribe = onSnapshot(childRef, (doc) => {
+      const data = doc.data();
+      if (data) {
+        setIsUpdatingPlans(data.isEvolvingPlans || false);
+        setPlanEvolutionStep(data.planEvolutionStep || null);
+        setPlanEvolutionMessage(data.planEvolutionMessage || null);
       }
-    };
+    });
+
+    return () => unsubscribe();
+  }, [childId]);
+
+  const fetchActivity = useCallback(async () => {
+    if (!activityId) return;
     
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const activityRef = doc(db, 'activities', activityId);
+      const activityDoc = await getDoc(activityRef);
+      
+      if (!activityDoc.exists()) {
+        setError('Activity not found');
+        setLoading(false);
+        return;
+      }
+      
+      const activityData = {
+        id: activityDoc.id,
+        ...activityDoc.data()
+      } as ActivityData;
+      
+      setActivity(activityData);
+
+      // Fetch related skills if they exist
+      if (activityData.skillsAddressed?.length) {
+        const skillPromises = activityData.skillsAddressed.map(
+          (skillId: string) => getDoc(doc(db, 'developmentalSkills', skillId))
+        );
+
+        const skillDocs = await Promise.all(skillPromises);
+        const skills = skillDocs
+          .filter((doc) => doc.exists())
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          } as Skill));
+
+        setActivitySkills(skills);
+      }
+    } catch (err) {
+      console.error('Error fetching activity:', err);
+      setError('Failed to load activity details');
+    } finally {
+      setLoading(false);
+    }
+  }, [activityId]);
+
+  useEffect(() => {
     if (isOpen && activityId) {
       fetchActivity();
     }
-  }, [activityId, isOpen]);
+  }, [isOpen, activityId, fetchActivity]);
 
-  const handleTabChange = (tab: 'details' | 'observation') => {
+  const handleTabChange = useCallback((tab: 'details' | 'observation') => {
     setActiveTab(tab);
-  };
+  }, []);
 
-  const handleObservationSuccess = () => {
-    // Show success message
+  const handleObservationSuccess = useCallback(() => {
+    setShowSuccess(true);
     setSuccessMessage('Observation recorded successfully!');
-    
-    // Call the parent callback if provided
-    if (onObservationRecorded) {
-      onObservationRecorded();
-    }
-    
-    // Close the modal after a short delay to show success message
     setTimeout(() => {
+      setShowSuccess(false);
       onClose();
-    }, 1500);
-  };
+    }, 3000);
+  }, [onClose]);
 
   const getAreaColor = (area?: string) => {
     const areaColors: Record<string, string> = {
@@ -182,10 +200,30 @@ export default function ActivityDetailModal({
         </div>
         
         {/* Success message if present */}
-        {successMessage && (
-          <div className="bg-green-50 text-green-700 p-4 border-b border-green-100 flex items-center">
-            <Loader2 className="h-5 w-5 mr-2 flex-shrink-0 animate-spin" />
+        {showSuccess && (
+          <div className="bg-emerald-50 text-emerald-700 p-4 border-b border-emerald-100 flex items-center">
+            <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
             {successMessage}
+          </div>
+        )}
+        
+        {/* Plan Evolution Status */}
+        {isUpdatingPlans && (
+          <div className="bg-emerald-50 p-4 border-b border-emerald-100">
+            <div className="flex items-center">
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-500 mr-3" />
+              <div>
+                <p className="text-emerald-700 font-medium">{planEvolutionMessage}</p>
+                {planEvolutionStep !== null && (
+                  <div className="mt-2 w-full bg-emerald-200 rounded-full h-2">
+                    <div
+                      className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(planEvolutionStep / 3) * 100}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
         
@@ -325,4 +363,6 @@ export default function ActivityDetailModal({
     </div>,
     document.body
   );
-}
+});
+
+export default ActivityDetailModal;

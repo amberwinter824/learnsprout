@@ -551,21 +551,49 @@ export async function evolvePlansBasedOnObservations(childId: string, userId: st
     if (recentObsSnapshot.size >= 3) {
       console.log(`Found ${recentObsSnapshot.size} new observations, evolving plans`);
       
+      // Set the plan evolution status to show loading state
+      await updateDoc(childRef, {
+        isEvolvingPlans: true,
+        planEvolutionStep: 0,
+        planEvolutionMessage: "Analyzing new observations and progress"
+      });
+      
       // Get current and next week plans
       const today = new Date();
       const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
       
+      // Update evolution step
+      await updateDoc(childRef, {
+        planEvolutionStep: 1,
+        planEvolutionMessage: "Updating current week's activities"
+      });
+      
       // Evolve current week plan
       await generateWeeklyPlan(childId, userId, currentWeekStart);
+      
+      // Update evolution step
+      await updateDoc(childRef, {
+        planEvolutionStep: 2,
+        planEvolutionMessage: "Planning next week's activities"
+      });
       
       // Evolve next week plan
       const nextWeek = new Date(currentWeekStart);
       nextWeek.setDate(nextWeek.getDate() + 7);
       await generateWeeklyPlan(childId, userId, nextWeek);
       
-      // Update the last evolved timestamp
+      // Update evolution step
       await updateDoc(childRef, {
-        lastPlanEvolved: serverTimestamp()
+        planEvolutionStep: 3,
+        planEvolutionMessage: "Finalizing personalized plans"
+      });
+      
+      // Update the last evolved timestamp and clear evolution status
+      await updateDoc(childRef, {
+        lastPlanEvolved: serverTimestamp(),
+        isEvolvingPlans: false,
+        planEvolutionStep: null,
+        planEvolutionMessage: null
       });
       
       console.log('Plans evolved based on new observations');
@@ -574,7 +602,13 @@ export async function evolvePlansBasedOnObservations(childId: string, userId: st
     }
   } catch (error) {
     console.error('Error evolving plans:', error);
-    // Don't throw - this should fail silently
+    // Clear evolution status on error
+    const childRef = doc(db, 'children', childId);
+    await updateDoc(childRef, {
+      isEvolvingPlans: false,
+      planEvolutionStep: null,
+      planEvolutionMessage: null
+    });
   }
 }
 
