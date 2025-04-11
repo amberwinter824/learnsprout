@@ -79,7 +79,7 @@ export default function Dashboard() {
   const [children, setChildren] = useState<Child[]>([]);
   const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
   const materialsForecastRef = useRef<{ fetchMaterialsNeeded: () => void }>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Update URL when date changes
   const updateUrlParams = useCallback((date?: Date) => {
