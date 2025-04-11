@@ -365,4 +365,6 @@ const ActivityDetailModal = memo(({
   );
 });
 
+ActivityDetailModal.displayName = 'ActivityDetailModal';
+
 export default ActivityDetailModal;
