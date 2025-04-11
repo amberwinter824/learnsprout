@@ -324,18 +324,21 @@ export default function Dashboard() {
                 {/* Materials Needed */}
                 <div className="bg-white rounded-lg shadow-sm p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Materials Needed</h2>
-                    <button
-                      onClick={() => materialsForecastRef.current?.fetchMaterialsNeeded()}
-                      className="text-sm text-emerald-600 hover:text-emerald-700"
+                    <h2 className="text-lg font-medium text-gray-900">Materials Needed This Week</h2>
+                    <Link
+                      href="/dashboard/materials"
+                      className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
                     >
-                      Refresh
-                    </button>
+                      View All Materials
+                      <ArrowUpRight className="h-4 w-4 ml-1" />
+                    </Link>
                   </div>
                   <div className="space-y-2">
                     <AllChildrenMaterialsForecast
                       ref={materialsForecastRef}
                       onMarkMaterialOwned={handleMarkMaterialOwned}
+                      limit={5} // Only show top 5 most needed materials
+                      showActions={false} // Hide the mark as owned button
                     />
                   </div>
                 </div>

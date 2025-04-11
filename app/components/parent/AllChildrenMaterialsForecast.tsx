@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase';
 import { startOfDay, addDays, format } from 'date-fns';
 import { Loader2, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 interface Activity {
   id: string;
@@ -24,6 +25,8 @@ interface Material {
 interface AllChildrenMaterialsForecastProps {
   onMarkMaterialOwned: (materialId: string) => Promise<void>;
   selectedChildId?: string;
+  limit?: number;
+  showActions?: boolean;
 }
 
 const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => void }, AllChildrenMaterialsForecastProps>(
