@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
-import AllChildrenWeeklyView from '@/app/components/parent/AllChildrenWeeklyView';
+import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
 import { ErrorBoundary } from 'react-error-boundary';
 
 export default function WeeklyPlanPage() {
@@ -54,10 +54,7 @@ export default function WeeklyPlanPage() {
           </div>
         }
       >
-        <AllChildrenWeeklyView 
-          parentId={currentUser.uid}
-          onDailyViewRequest={() => window.history.back()}
-        />
+        <WeeklyPlanWithDayFocus />
       </ErrorBoundary>
     </div>
   );

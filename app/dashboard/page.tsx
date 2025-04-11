@@ -27,7 +27,6 @@ import {
 import Link from 'next/link';
 import { format, subMonths } from 'date-fns';
 import WeeklyPlanWithDayFocus from '@/app/components/parent/WeeklyPlanWithDayFocus';
-import AllChildrenWeeklyView from '@/app/components/parent/AllChildrenWeeklyView';
 import AllChildrenMaterialsForecast from '@/app/components/parent/AllChildrenMaterialsForecast';
 import SchedulePreferencesSidebar from '@/app/components/parent/SchedulePreferencesSidebar';
 import { ErrorBoundary } from 'react-error-boundary';

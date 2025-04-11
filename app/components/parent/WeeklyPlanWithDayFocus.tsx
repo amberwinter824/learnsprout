@@ -1,7 +1,7 @@
 // app/components/parent/WeeklyPlanWithDayFocus.tsx
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -81,6 +81,14 @@ interface WeeklyPlanWithDayFocusProps {
   onGeneratePlan?: (childId: string, weekStartDate?: Date) => Promise<any>;
 }
 
+// Add cache interface
+interface WeeklyPlanCache {
+  [key: string]: {
+    data: DayActivities[];
+    timestamp: number;
+  };
+}
+
 export default function WeeklyPlanWithDayFocus({ 
   selectedDate: initialDate,
   onGeneratePlan
@@ -107,6 +115,9 @@ export default function WeeklyPlanWithDayFocus({
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [isShuffling, setIsShuffling] = useState<{[key: string]: boolean}>({});
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
+  
+  // Add cache state
+  const [planCache, setPlanCache] = useState<WeeklyPlanCache>({});
   
   // Check if schedule preferences are set
   const hasSchedulePreferences = useMemo(() => {
@@ -219,7 +230,127 @@ export default function WeeklyPlanWithDayFocus({
     }
   }, [currentUser]);
   
-  // Fetch activities when selectedChild changes
+  // Optimize fetchWeekActivities
+  const fetchWeekActivitiesRef = useCallback(async () => {
+    if (!currentUser || !selectedChild) {
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const cacheKey = `${selectedChild.id}_${format(weekStartDate, 'yyyy-MM-dd')}`;
+      
+      // Check cache first
+      const cachedData = planCache[cacheKey];
+      if (cachedData && Date.now() - cachedData.timestamp < 5 * 60 * 1000) { // 5 minute cache
+        setWeekActivities(cachedData.data);
+        setWeekHasPlan(cachedData.data.some(day => day.hasPlan));
+        setLoading(false);
+        return;
+      }
+      
+      // Initialize week structure
+      const weekDays: DayActivities[] = Array.from({ length: 7 }, (_, i) => {
+        const date = addDays(weekStartDate, i);
+        return {
+          date,
+          dayName: format(date, 'EEEE'),
+          dayOfWeek: format(date, 'EEE'),
+          activities: [],
+          hasPlan: false,
+          isRestDay: false
+        };
+      });
+      
+      // Fetch the weekly plan
+      const planId = `${selectedChild.id}_${format(weekStartDate, 'yyyy-MM-dd')}`;
+      const planDocRef = doc(db, 'weeklyPlans', planId);
+      const planDoc = await getDoc(planDocRef);
+      
+      if (planDoc.exists()) {
+        const planData = planDoc.data();
+        const activityIds = new Set<string>();
+        
+        // Collect all activity IDs
+        Object.values(planData).forEach((dayData: any) => {
+          if (Array.isArray(dayData)) {
+            dayData.forEach((activity: any) => {
+              activityIds.add(activity.activityId);
+            });
+          }
+        });
+        
+        // Batch fetch all activities
+        const activityPromises = Array.from(activityIds).map(id => 
+          getDoc(doc(db, 'activities', id))
+        );
+        const activitySnapshots = await Promise.all(activityPromises);
+        const activitiesMap = new Map(
+          activitySnapshots.map(snap => [snap.id, snap.data()])
+        );
+        
+        // Process each day's activities
+        Object.entries(planData).forEach(([dayKey, dayActivities]: [string, any]) => {
+          if (!Array.isArray(dayActivities)) return;
+          
+          const dayIndex = weekDays.findIndex(d => 
+            d.dayName.toLowerCase() === dayKey.toLowerCase()
+          );
+          if (dayIndex === -1) return;
+          
+          const processedActivities = dayActivities.map((activity: any) => {
+            const activityData = activitiesMap.get(activity.activityId);
+            if (!activityData) return null;
+            
+            return {
+              id: `${planId}_${dayKey}_${activity.activityId}`,
+              activityId: activity.activityId,
+              childId: selectedChild.id,
+              childName: selectedChild.name,
+              title: activityData.title || 'Unknown Activity',
+              description: activityData.description,
+              duration: activityData.duration || 15,
+              area: activityData.area,
+              status: activity.status || 'suggested',
+              isHomeSchoolConnection: activityData.isHomeSchoolConnection,
+              timeSlot: activity.timeSlot,
+              order: activity.order || 0,
+              lastObservedDate: activity.lastObservedDate,
+              materialsNeeded: activityData.materialsNeeded,
+              skillsAddressed: activityData.skillsAddressed,
+              tags: activityData.tags,
+              keywords: activityData.keywords
+            } as Activity;
+          }).filter((activity): activity is Activity => activity !== null);
+          
+          weekDays[dayIndex].activities = processedActivities;
+          weekDays[dayIndex].hasPlan = processedActivities.length > 0;
+        });
+      }
+      
+      // Update cache
+      setPlanCache(prev => ({
+        ...prev,
+        [cacheKey]: {
+          data: weekDays,
+          timestamp: Date.now()
+        }
+      }));
+      
+      setWeekActivities(weekDays);
+      setWeekHasPlan(weekDays.some(day => day.hasPlan));
+    } catch (error) {
+      console.error('Error fetching weekly plan:', error);
+      setError('Failed to load weekly plan');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser, selectedChild, weekStartDate, planCache]);
+  
+  // Update useEffect to use the optimized fetch function
   useEffect(() => {
     let isMounted = true;
     
@@ -238,318 +369,7 @@ export default function WeeklyPlanWithDayFocus({
     return () => {
       isMounted = false;
     };
-  }, [selectedChild, weekStartDate, refreshTrigger]);
-  
-  // Create a function reference for fetchWeekActivities
-  const fetchWeekActivitiesRef = async () => {
-    if (!currentUser || !selectedChild) {
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const weekStartString = format(weekStartDate, 'yyyy-MM-dd');
-      console.log('Fetching weekly plan for week starting:', weekStartString);
-      
-      // Get child/user preferences for schedule
-      const childPreferences = selectedChild.preferences?.activityPreferences?.scheduleByDay || {};
-      const userPreferences = currentUser.preferences?.activityPreferences?.scheduleByDay || {};
-      
-      // Use whatever preferences are available, prioritizing child-specific ones
-      const schedulePreferences = Object.keys(childPreferences).length > 0 
-        ? childPreferences 
-        : userPreferences;
-      
-      console.log('Using schedule preferences:', schedulePreferences);
-      
-      // First try to fetch by the plan ID format (childId_date)
-      const planId = `${selectedChild.id}_${weekStartString}`;
-      console.log('Looking for plan with ID:', planId);
-      
-      // Try to get the plan directly by ID first
-      const planDocRef = doc(db, 'weeklyPlans', planId);
-      const planDocSnap = await getDoc(planDocRef);
-      
-      let planData: any = null;
-      let foundPlanId: string = '';
-      let hasPlan = false;
-      
-      if (planDocSnap.exists()) {
-        console.log('Found plan by direct ID lookup');
-        planData = planDocSnap.data();
-        foundPlanId = planDocSnap.id;
-        hasPlan = true;
-      } else {
-        console.log('Plan not found by ID, trying query approach');
-        // If not found by ID, try the query approach
-        const plansQuery = query(
-          collection(db, 'weeklyPlans'),
-          where('childId', '==', selectedChild.id),
-          where('weekStarting', '==', weekStartString)
-        );
-        
-        const plansSnapshot = await getDocs(plansQuery);
-        
-        if (plansSnapshot.empty) {
-          console.log('No weekly plan found via query');
-          hasPlan = false;
-        } else {
-          console.log(`Found ${plansSnapshot.docs.length} plans via query`);
-          // Use the first plan (should only be one per week)
-          const planDoc = plansSnapshot.docs[0];
-          planData = planDoc.data();
-          foundPlanId = planDoc.id;
-          hasPlan = true;
-        }
-      }
-      
-      // Array to hold activities for each day of the week
-      const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-      const weekDays: DayActivities[] = [];
-      
-      setWeekHasPlan(hasPlan);
-      
-      if (!hasPlan) {
-        // No plan exists, set up empty days with rest day indicators
-        daysOfWeek.forEach((dayName, index) => {
-          const dayDate = addDays(weekStartDate, index);
-          const preferredActivityCount = schedulePreferences[dayName] || 0;
-          
-          console.log(`Day ${dayName}: preferred activity count = ${preferredActivityCount}`);
-          
-          weekDays.push({
-            date: dayDate,
-            dayName: format(dayDate, 'EEEE'),
-            dayOfWeek: dayName,
-            activities: [],
-            hasPlan: false,
-            isRestDay: preferredActivityCount === 0 // If preference is 0, it's a rest day
-          });
-        });
-      } else {
-        // Process each day of the week from the plan
-        const activitiesPromises: Promise<any>[] = [];
-        
-        daysOfWeek.forEach((dayName, index) => {
-          const dayDate = addDays(weekStartDate, index);
-          const preferredActivityCount = schedulePreferences[dayName] || 0;
-          
-          console.log(`Processing ${dayName}, preferred count: ${preferredActivityCount}`);
-          
-          // Get activities for this day
-          const dayActivities = planData[dayName] || [];
-          
-          // Check if this is a rest day (0 activities by preference)
-          const isRestDay = preferredActivityCount === 0 && dayActivities.length === 0;
-          
-          if (dayActivities.length === 0) {
-            // No activities for this day
-            weekDays.push({
-              date: dayDate,
-              dayName: format(dayDate, 'EEEE'),
-              dayOfWeek: dayName,
-              activities: [],
-              hasPlan: true,
-              isRestDay
-            });
-          } else {
-            // Process activities for this day similar to WeekAtAGlanceView
-            const formattedDayName = format(dayDate, 'EEEE');
-            
-            const dayPromise = Promise.all(
-              dayActivities.map(async (activity: any) => {
-                try {
-                  // Check if there are observations for this activity
-                  let lastObservedDate = null;
-                  let lastObservation: Activity['lastObservation'] = {};
-                  if (activity.observationIds && activity.observationIds.length > 0) {
-                    lastObservedDate = activity.lastObservedDate || null;
-                  } else {
-                    try {
-                      const observationsQuery = query(
-                        collection(db, 'progressRecords'),
-                        where('childId', '==', selectedChild.id),
-                        where('activityId', '==', activity.activityId)
-                      );
-                      
-                      const observationsSnapshot = await getDocs(observationsQuery);
-                      if (!observationsSnapshot.empty) {
-                        // Sort observations by date (most recent first)
-                        const sortedObservations = observationsSnapshot.docs
-                          .map(doc => doc.data())
-                          .sort((a, b) => {
-                            const dateA = a.date?.seconds ? new Date(a.date.seconds * 1000) : new Date(a.date);
-                            const dateB = b.date?.seconds ? new Date(b.date.seconds * 1000) : new Date(b.date);
-                            return dateB.getTime() - dateA.getTime();
-                          });
-                          
-                        if (sortedObservations.length > 0) {
-                          lastObservedDate = sortedObservations[0].date;
-                          const latestObservation = sortedObservations[0];
-                          
-                          // Get skill details if available
-                          let skillNames: string[] = [];
-                          if (latestObservation.skillsDemonstrated?.length > 0) {
-                            try {
-                              // Extract skill IDs from the skill objects
-                              const validSkillIds = latestObservation.skillsDemonstrated
-                                .map((skill: any) => {
-                                  // Handle both string IDs and skill objects
-                                  if (typeof skill === 'string') return skill;
-                                  if (typeof skill === 'object' && skill !== null && 'skillId' in skill) {
-                                    return skill.skillId;
-                                  }
-                                  console.warn('Invalid skill format:', skill);
-                                  return null;
-                                })
-                                .filter((skillId: unknown): skillId is string => typeof skillId === 'string');
-
-                              if (validSkillIds.length === 0) {
-                                console.warn('No valid skill IDs found in:', latestObservation.skillsDemonstrated);
-                                skillNames = [];
-                              } else {
-                                const skillPromises = validSkillIds.map(async (skillId: string) => {
-                                  try {
-                                    const skillDoc = await getDoc(doc(db, 'developmentalSkills', skillId));
-                                    if (skillDoc.exists()) {
-                                      const data = skillDoc.data();
-                                      return data.name || 'Unnamed Skill';
-                                    }
-                                    console.warn('Skill document not found:', skillId);
-                                    return 'Unnamed Skill';
-                                  } catch (error) {
-                                    console.error('Error fetching individual skill:', skillId, error);
-                                    return 'Unnamed Skill';
-                                  }
-                                });
-                                
-                                skillNames = await Promise.all(skillPromises);
-                              }
-                            } catch (error) {
-                              console.error('Error fetching skill details:', error);
-                              skillNames = [];
-                            }
-                          } else {
-                            console.log('No skills demonstrated for activity:', activity.title);
-                          }
-                          
-                          // Store the last observation details
-                          lastObservation = {
-                            engagementLevel: latestObservation.engagementLevel,
-                            interestLevel: latestObservation.interestLevel,
-                            completionDifficulty: latestObservation.completionDifficulty,
-                            notes: latestObservation.notes,
-                            skillsDemonstrated: skillNames.length > 0 ? skillNames : undefined
-                          };
-                        }
-                      }
-                    } catch (observationError) {
-                      console.error('Error fetching observations:', observationError);
-                    }
-                  }
-                  
-                  // Get activity details
-                  const activityDocRef = doc(db, 'activities', activity.activityId);
-                  const activityDoc = await getDoc(activityDocRef);
-                  
-                  if (activityDoc.exists()) {
-                    const activityData = activityDoc.data();
-                    return {
-                      id: `${foundPlanId}_${dayName}_${activity.activityId}`,
-                      activityId: activity.activityId,
-                      childId: selectedChild.id,
-                      childName: selectedChild.name,
-                      title: activityData.title || 'Untitled Activity',
-                      description: activityData.description || '',
-                      area: activityData.area || '',
-                      duration: activityData.duration || 15,
-                      status: lastObservedDate ? 'completed' : (activity.status || 'suggested'),
-                      timeSlot: activity.timeSlot || '',
-                      order: activity.order || 0,
-                      lastObservedDate,
-                      lastObservation
-                    };
-                  }
-                  
-                  // If activity not found, return with basic info
-                  return {
-                    id: `${foundPlanId}_${dayName}_${activity.activityId}`,
-                    activityId: activity.activityId,
-                    childId: selectedChild.id,
-                    childName: selectedChild.name,
-                    title: 'Unknown Activity',
-                    status: activity.status || 'suggested',
-                    timeSlot: activity.timeSlot || '',
-                    order: activity.order || 0,
-                    lastObservedDate: null,
-                    lastObservation: null
-                  };
-                } catch (error) {
-                  console.error(`Error fetching activity ${activity.activityId}:`, error);
-                  return {
-                    id: `${foundPlanId}_${dayName}_${activity.activityId}`,
-                    activityId: activity.activityId,
-                    childId: selectedChild.id,
-                    childName: selectedChild.name,
-                    title: 'Error Loading Activity',
-                    status: activity.status || 'suggested',
-                    order: activity.order || 0,
-                    lastObservedDate: null,
-                    lastObservation: null
-                  };
-                }
-              })
-            );
-            
-            activitiesPromises.push(
-              dayPromise.then(activitiesWithDetails => {
-                const sortedActivities = activitiesWithDetails.sort((a, b) => 
-                  (a.order || 0) - (b.order || 0)
-                );
-                
-                weekDays.push({
-                  date: dayDate,
-                  dayName: formattedDayName,
-                  dayOfWeek: dayName,
-                  activities: sortedActivities,
-                  hasPlan: true,
-                  isRestDay: false
-                });
-              })
-            );
-          }
-        });
-        
-        // Wait for all activity promises to resolve
-        await Promise.all(activitiesPromises);
-        
-        // Sort the days in correct order (Monday to Sunday)
-        weekDays.sort((a, b) => {
-          const order: Record<string, number> = {
-            'monday': 0,
-            'tuesday': 1,
-            'wednesday': 2,
-            'thursday': 3,
-            'friday': 4,
-            'saturday': 5,
-            'sunday': 6
-          };
-          return order[a.dayOfWeek.toLowerCase()] - order[b.dayOfWeek.toLowerCase()];
-        });
-      }
-      
-      console.log('Processed weekDays:', weekDays);
-      setWeekActivities(weekDays);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching week activities:', error);
-      setError(`Failed to load activities: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setLoading(false);
-    }
-  };
+  }, [selectedChild, weekStartDate, refreshTrigger, fetchWeekActivitiesRef]);
   
   // Add this useEffect to watch for changes in user preferences
   useEffect(() => {
