@@ -430,7 +430,10 @@ export default function WeeklyPlanWithDayFocus({
   // Get activities for the selected day
   const getSelectedDayActivities = () => {
     const selectedDayOfWeek = format(selectedDate, 'EEEE').toLowerCase();
-    return weekActivities.find(day => day.dayOfWeek === selectedDayOfWeek) || null;
+    const selectedDay = weekActivities.find(day => 
+      day.dayOfWeek.toLowerCase() === selectedDayOfWeek
+    );
+    return selectedDay || null;
   };
   
   // Get color for activity area
@@ -797,16 +800,9 @@ export default function WeeklyPlanWithDayFocus({
   const isSelectedDayRestDay = selectedDayActivities?.isRestDay || false;
   
   return (
-    <div className="relative">
-      {isUpdatingPlan && (
-        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">Updating weekly plan...</p>
-          </div>
-        </div>
-      )}
-      <div className="bg-white rounded-lg shadow-sm">
+    <div className="space-y-6">
+      {/* Weekly calendar view */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
