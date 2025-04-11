@@ -371,24 +371,6 @@ export default function WeeklyPlanWithDayFocus({
     };
   }, [selectedChild, weekStartDate, refreshTrigger, fetchWeekActivitiesRef]);
   
-  // Add this useEffect to watch for changes in user preferences
-  useEffect(() => {
-    if (currentUser?.preferences?.activityPreferences?.scheduleByDay && selectedChild) {
-      console.log('Schedule preferences changed, triggering plan regeneration');
-      // Set updating state
-      setIsUpdatingPlan(true);
-      
-      // Reset week activities and plan status
-      setWeekActivities([]);
-      setWeekHasPlan(false);
-      
-      // Generate a new plan
-      handleGeneratePlan().finally(() => {
-        setIsUpdatingPlan(false);
-      });
-    }
-  }, [currentUser?.preferences?.activityPreferences?.scheduleByDay, selectedChild]);
-  
   // Add this useEffect to refresh the plan when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger > 0) {
@@ -397,7 +379,7 @@ export default function WeeklyPlanWithDayFocus({
       setLoading(true);
       fetchWeekActivitiesRef();
     }
-  }, [refreshTrigger, selectedChild, weekStartDate]);
+  }, [refreshTrigger, selectedChild, weekStartDate, fetchWeekActivitiesRef]);
   
   // Add this useEffect to watch for changes in the selected child
   useEffect(() => {
@@ -406,7 +388,7 @@ export default function WeeklyPlanWithDayFocus({
       setLoading(true);
       fetchWeekActivitiesRef();
     }
-  }, [selectedChild]);
+  }, [selectedChild, fetchWeekActivitiesRef]);
   
   // Navigate to previous/next week
   const handleWeekChange = (direction: 'prev' | 'next') => {
@@ -522,12 +504,12 @@ export default function WeeklyPlanWithDayFocus({
     setShowActivityForm(true);
   };
   
-  // Modify handleObservationSuccess to trigger refresh
+  // Modify handleObservationSuccess to trigger refresh only when needed
   const handleObservationSuccess = async () => {
     setShowActivityForm(false);
     setSelectedActivity(null);
     
-    // Trigger refresh
+    // Only trigger refresh if an observation was actually added
     setRefreshTrigger(prev => prev + 1);
   };
   

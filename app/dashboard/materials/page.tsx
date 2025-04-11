@@ -103,7 +103,7 @@ export default function MaterialsInventory() {
 
       // Get materials needed for upcoming activities
       const neededMaterialIds = new Set(
-        upcomingActivities.flatMap(activity => activity.materialsNeeded)
+        upcomingActivities.flatMap(activity => activity.materialsNeeded || [])
       );
 
       // Combine materials with ownership and needed status

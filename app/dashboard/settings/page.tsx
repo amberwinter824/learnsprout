@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Save, User, Bell, Shield, Moon, Smartphone, Calendar, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function UserSettingsPage() {
@@ -117,12 +117,26 @@ export default function UserSettingsPage() {
           onboardingCompleted: true,
           updatedAt: serverTimestamp()
         });
+        
+        // Trigger plan regeneration for all children
+        const { generateWeeklyPlan } = await import('@/lib/planGenerator');
+        const childrenQuery = query(
+          collection(db, 'children'),
+          where('parentId', '==', currentUser.uid)
+        );
+        const childrenSnapshot = await getDocs(childrenQuery);
+        
+        // Generate plans for each child
+        const planPromises = childrenSnapshot.docs.map(doc => 
+          generateWeeklyPlan(doc.id, currentUser.uid)
+        );
+        await Promise.all(planPromises);
       }
       
       // Update local storage preferences
       localStorage.setItem('notifications-enabled', notificationsEnabled.toString());
       
-      setSaveMessage('Settings saved successfully!');
+      setSaveMessage('Settings saved successfully! New schedule will be applied.');
       
       // Clear message after 3 seconds
       setTimeout(() => {
