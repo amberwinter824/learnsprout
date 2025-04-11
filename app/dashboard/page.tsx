@@ -79,6 +79,7 @@ export default function Dashboard() {
   const [children, setChildren] = useState<Child[]>([]);
   const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
   const materialsForecastRef = useRef<{ fetchMaterialsNeeded: () => void }>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
   
   // Update URL when date changes
   const updateUrlParams = useCallback((date?: Date) => {
@@ -216,24 +217,41 @@ export default function Dashboard() {
     }
   };
   
-  const handleSchedulePreferencesUpdated = async () => {
-    // Refresh the current view to reflect new schedule
-    if (selectedDate) {
-      try {
-        // Generate a new plan for each child
-        for (const child of children) {
-          await handleGeneratePlan(child.id, selectedDate);
-        }
-        // Force a refresh of the WeeklyPlanWithDayFocus component
-        if (children.length > 0) {
-          await handleGeneratePlan(children[0].id, selectedDate);
-        }
-      } catch (error) {
-        console.error('Error updating schedule:', error);
-        setError('Failed to update schedule');
-      }
+  const handleSchedulePreferencesUpdated = useCallback(async () => {
+    // Clear any existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
-  };
+
+    // Set a new timeout
+    debounceTimeoutRef.current = setTimeout(async () => {
+      // Refresh the current view to reflect new schedule
+      if (selectedDate) {
+        try {
+          // Generate a new plan for each child
+          for (const child of children) {
+            await handleGeneratePlan(child.id, selectedDate);
+          }
+          // Force a refresh of the WeeklyPlanWithDayFocus component
+          if (children.length > 0) {
+            await handleGeneratePlan(children[0].id, selectedDate);
+          }
+        } catch (error) {
+          console.error('Error updating schedule:', error);
+          setError('Failed to update schedule');
+        }
+      }
+    }, 500); // 500ms debounce delay
+  }, [selectedDate, children, handleGeneratePlan]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Loading state
   if (loading) {

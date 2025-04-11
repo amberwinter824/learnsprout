@@ -106,6 +106,7 @@ export default function WeeklyPlanWithDayFocus({
   const [materialLookup, setMaterialLookup] = useState<Map<string, any>>(new Map());
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [isShuffling, setIsShuffling] = useState<{[key: string]: boolean}>({});
+  const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
   
   // Check if schedule preferences are set
   const hasSchedulePreferences = useMemo(() => {
@@ -554,12 +555,17 @@ export default function WeeklyPlanWithDayFocus({
   useEffect(() => {
     if (currentUser?.preferences?.activityPreferences?.scheduleByDay && selectedChild) {
       console.log('Schedule preferences changed, triggering plan regeneration');
+      // Set updating state
+      setIsUpdatingPlan(true);
+      
       // Reset week activities and plan status
       setWeekActivities([]);
       setWeekHasPlan(false);
       
       // Generate a new plan
-      handleGeneratePlan();
+      handleGeneratePlan().finally(() => {
+        setIsUpdatingPlan(false);
+      });
     }
   }, [currentUser?.preferences?.activityPreferences?.scheduleByDay, selectedChild]);
   
@@ -971,353 +977,363 @@ export default function WeeklyPlanWithDayFocus({
   const isSelectedDayRestDay = selectedDayActivities?.isRestDay || false;
   
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-lg font-medium text-gray-900">Weekly Plan</h2>
-            {allChildren.length > 1 && (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">for</span>
-                <select
-                  value={selectedChild?.id || ''}
-                  onChange={(e) => handleChildSelect(e.target.value)}
-                  className="text-sm font-medium text-gray-900 bg-transparent border-0 focus:ring-0 focus:outline-none"
-                >
-                  {allChildren.map(child => (
-                    <option key={child.id} value={child.id}>
-                      {child.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {allChildren.length === 1 && selectedChild && (
-              <span className="text-sm text-gray-500">
-                for {selectedChild.name}
-              </span>
-            )}
-          </div>
-          
-          {/* Week navigation */}
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handleWeekChange('prev')}
-              className="p-1 rounded-full hover:bg-gray-100"
-            >
-              <ChevronLeft className="h-5 w-5 text-gray-600" />
-            </button>
-            <span className="text-sm text-gray-600">
-              Week of {format(weekStartDate, 'MMM d')}
-            </span>
-            <button
-              onClick={() => handleWeekChange('next')}
-              className="p-1 rounded-full hover:bg-gray-100"
-            >
-              <ChevronRight className="h-5 w-5 text-gray-600" />
-            </button>
+    <div className="relative">
+      {isUpdatingPlan && (
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mx-auto mb-2" />
+            <p className="text-sm text-gray-600">Updating weekly plan...</p>
           </div>
         </div>
-      </div>
-      
-      {/* Weekly calendar strip */}
-      <div className="px-2 py-4 border-b border-gray-200">
-        <div className="flex justify-between">
-          {weekActivities.map((day, index) => (
-            <div 
-              key={day.dayOfWeek}
-              onClick={() => handleDaySelect(day.date)}
-              className={`
-                w-24 mx-0.5 p-1.5 border rounded-lg cursor-pointer transition-colors
-                ${isSameDay(day.date, selectedDate) 
-                  ? 'border-emerald-500 bg-emerald-50' 
-                  : 'border-gray-200 hover:border-emerald-300 bg-white'}
-                ${day.isRestDay ? 'opacity-75 bg-gray-50' : ''}
-              `}
-            >
-              <div className="text-center mb-1">
-                <p className={`text-xs font-medium ${isSameDay(day.date, selectedDate) ? 'text-emerald-700' : 'text-gray-500'}`}>
-                  {day.dayName.substring(0, 3).toUpperCase()}
-                </p>
-                <p className={`text-base font-bold ${isSameDay(day.date, selectedDate) ? 'text-emerald-700' : 'text-gray-700'}`}>
-                  {format(day.date, 'd')}
-                </p>
-              </div>
-              
-              <div className="text-center">
-                {day.isRestDay ? (
-                  <p className="text-xs text-gray-500">Rest</p>
-                ) : day.activities.length === 0 ? (
-                  <p className="text-xs text-gray-500">-</p>
-                ) : (
-                  <div className="flex justify-center space-x-0.5">
-                    {[...Array(Math.min(day.activities.length, 2))].map((_, i) => (
-                      <div 
-                        key={i}
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          isSameDay(day.date, selectedDate) ? 'bg-emerald-500' : 'bg-gray-300'
-                        }`}
-                      />
+      )}
+      <div className="bg-white rounded-lg shadow-sm">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-lg font-medium text-gray-900">Weekly Plan</h2>
+              {allChildren.length > 1 && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">for</span>
+                  <select
+                    value={selectedChild?.id || ''}
+                    onChange={(e) => handleChildSelect(e.target.value)}
+                    className="text-sm font-medium text-gray-900 bg-transparent border-0 focus:ring-0 focus:outline-none"
+                  >
+                    {allChildren.map(child => (
+                      <option key={child.id} value={child.id}>
+                        {child.name}
+                      </option>
                     ))}
-                    {day.activities.length > 2 && (
-                      <span className="text-xs text-gray-500">+{day.activities.length - 2}</span>
-                    )}
-                  </div>
-                )}
-              </div>
+                  </select>
+                </div>
+              )}
+              {allChildren.length === 1 && selectedChild && (
+                <span className="text-sm text-gray-500">
+                  for {selectedChild.name}
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Main content - Selected day activities */}
-      <div className="p-4">
-        {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
-            {error}
+            
+            {/* Week navigation */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleWeekChange('prev')}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <ChevronLeft className="h-5 w-5 text-gray-600" />
+              </button>
+              <span className="text-sm text-gray-600">
+                Week of {format(weekStartDate, 'MMM d')}
+              </span>
+              <button
+                onClick={() => handleWeekChange('next')}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <ChevronRight className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
           </div>
-        )}
+        </div>
         
-        {/* No weekly plan state */}
-        {!weekHasPlan && selectedChild && (
-          <WeeklyPlanEmptyState
-            childId={selectedChild.id}
-            childName={selectedChild.name}
-            onGeneratePlan={handleGeneratePlan}
-            isGenerating={isGeneratingPlan}
-          />
-        )}
+        {/* Weekly calendar strip */}
+        <div className="px-2 py-4 border-b border-gray-200">
+          <div className="flex justify-between">
+            {weekActivities.map((day, index) => (
+              <div 
+                key={day.dayOfWeek}
+                onClick={() => handleDaySelect(day.date)}
+                className={`
+                  w-24 mx-0.5 p-1.5 border rounded-lg cursor-pointer transition-colors
+                  ${isSameDay(day.date, selectedDate) 
+                    ? 'border-emerald-500 bg-emerald-50' 
+                    : 'border-gray-200 hover:border-emerald-300 bg-white'}
+                  ${day.isRestDay ? 'opacity-75 bg-gray-50' : ''}
+                `}
+              >
+                <div className="text-center mb-1">
+                  <p className={`text-xs font-medium ${isSameDay(day.date, selectedDate) ? 'text-emerald-700' : 'text-gray-500'}`}>
+                    {day.dayName.substring(0, 3).toUpperCase()}
+                  </p>
+                  <p className={`text-base font-bold ${isSameDay(day.date, selectedDate) ? 'text-emerald-700' : 'text-gray-700'}`}>
+                    {format(day.date, 'd')}
+                  </p>
+                </div>
+                
+                <div className="text-center">
+                  {day.isRestDay ? (
+                    <p className="text-xs text-gray-500">Rest</p>
+                  ) : day.activities.length === 0 ? (
+                    <p className="text-xs text-gray-500">-</p>
+                  ) : (
+                    <div className="flex justify-center space-x-0.5">
+                      {[...Array(Math.min(day.activities.length, 2))].map((_, i) => (
+                        <div 
+                          key={i}
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            isSameDay(day.date, selectedDate) ? 'bg-emerald-500' : 'bg-gray-300'
+                          }`}
+                        />
+                      ))}
+                      {day.activities.length > 2 && (
+                        <span className="text-xs text-gray-500">+{day.activities.length - 2}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         
-        {/* Selected day heading */}
-        <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900">
-            {isToday(selectedDate) ? 'Today' : format(selectedDate, 'EEEE, MMMM d')}
-          </h3>
+        {/* Main content - Selected day activities */}
+        <div className="p-4">
+          {error && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
+              {error}
+            </div>
+          )}
           
+          {/* No weekly plan state */}
+          {!weekHasPlan && selectedChild && (
+            <WeeklyPlanEmptyState
+              childId={selectedChild.id}
+              childName={selectedChild.name}
+              onGeneratePlan={handleGeneratePlan}
+              isGenerating={isGeneratingPlan}
+            />
+          )}
+          
+          {/* Selected day heading */}
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900">
+              {isToday(selectedDate) ? 'Today' : format(selectedDate, 'EEEE, MMMM d')}
+            </h3>
+            
+            {selectedDayActivities && (
+              <p className="text-sm text-gray-500">
+                {selectedDayActivities.activities.length} {selectedDayActivities.activities.length === 1 ? 'activity' : 'activities'}
+                {selectedDayActivities.activities.filter(a => a.status === 'completed').length > 0 && 
+                 `, ${selectedDayActivities.activities.filter(a => a.status === 'completed').length} completed`}
+              </p>
+            )}
+          </div>
+          
+          {/* Day activities or empty state */}
           {selectedDayActivities && (
-            <p className="text-sm text-gray-500">
-              {selectedDayActivities.activities.length} {selectedDayActivities.activities.length === 1 ? 'activity' : 'activities'}
-              {selectedDayActivities.activities.filter(a => a.status === 'completed').length > 0 && 
-               `, ${selectedDayActivities.activities.filter(a => a.status === 'completed').length} completed`}
-            </p>
+            <div>
+              {selectedDayActivities.activities.length > 0 ? (
+                <div className="space-y-4">
+                  {selectedDayActivities.activities.map(activity => (
+                    <div 
+                      key={activity.id}
+                      className={`border rounded-lg overflow-hidden ${
+                        activity.status === 'completed' ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{activity.title}</h4>
+                            {activity.description && (
+                              <p className="mt-1 text-sm text-gray-600">{activity.description}</p>
+                            )}
+                          </div>
+                          {activity.status === 'completed' && (
+                            <div className="relative group">
+                              <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs cursor-help">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                {activity.lastObservedDate ? (
+                                  <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
+                                ) : (
+                                  <>Observed</>
+                                )}
+                              </span>
+                              {activity.lastObservation && (
+                                <div className="fixed z-[9999] hidden group-hover:block">
+                                  <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 w-[300px]" style={{ position: 'fixed', transform: 'translate(-20px, -100%)' }}>
+                                    <div className="space-y-2">
+                                      {activity.lastObservation.engagementLevel && (
+                                        <div className="flex items-center text-sm">
+                                          <span className="font-medium text-gray-700 min-w-[80px]">Engagement:</span>
+                                          <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.engagementLevel}</span>
+                                        </div>
+                                      )}
+                                      {activity.lastObservation.interestLevel && (
+                                        <div className="flex items-center text-sm">
+                                          <span className="font-medium text-gray-700 min-w-[80px]">Interest:</span>
+                                          <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.interestLevel}</span>
+                                        </div>
+                                      )}
+                                      {activity.lastObservation.completionDifficulty && (
+                                        <div className="flex items-center text-sm">
+                                          <span className="font-medium text-gray-700 min-w-[80px]">Difficulty:</span>
+                                          <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.completionDifficulty}</span>
+                                        </div>
+                                      )}
+                                      {activity.lastObservation.notes && (
+                                        <div className="text-sm">
+                                          <span className="font-medium text-gray-700">Notes:</span>
+                                          <p className="mt-1 text-gray-600 line-clamp-2">{activity.lastObservation.notes}</p>
+                                        </div>
+                                      )}
+                                      {activity.lastObservation.skillsDemonstrated && activity.lastObservation.skillsDemonstrated.length > 0 && (
+                                        <div className="text-sm">
+                                          <span className="font-medium text-gray-700">Skills:</span>
+                                          <div className="mt-1 flex flex-wrap gap-1">
+                                            {activity.lastObservation.skillsDemonstrated.map((skill, index) => (
+                                              <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
+                                                {skill}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-full">
+                                      <div className="w-2 h-2 bg-white rotate-45 transform origin-center -mt-1 border-r border-b border-gray-200"></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center text-xs text-gray-500 space-x-3 mt-2">
+                          {activity.area && (
+                            <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
+                              {activity.area.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                          {activity.duration && (
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {activity.duration} min
+                            </span>
+                          )}
+                          {activity.timeSlot && (
+                            <span className="capitalize">
+                              {activity.timeSlot}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-50 px-4 py-2 flex space-x-4">
+                        <button
+                          onClick={() => openActivityDetails(activity.activityId)}
+                          className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                          type="button"
+                        >
+                          <InfoIcon className="h-3 w-3 mr-1" />
+                          How to
+                        </button>
+                        <button
+                          onClick={() => openObservationForm(activity)}
+                          className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
+                          type="button"
+                        >
+                          <PlusCircle className="h-3 w-3 mr-1" />
+                          {activity.status === 'completed' ? 'Add Another Observation' : 'Add Observation'}
+                        </button>
+                        <button
+                          onClick={() => handleShuffleActivity(activity, selectedDayActivities.dayOfWeek)}
+                          className="text-sm text-purple-600 hover:text-purple-700 flex items-center"
+                          type="button"
+                          disabled={isShuffling[activity.id]}
+                        >
+                          {isShuffling[activity.id] ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Shuffle className="h-3 w-3 mr-1" />
+                          )}
+                          Shuffle
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  {selectedDayActivities.isRestDay ? (
+                    <>
+                      <p className="text-gray-700 font-medium mb-2">
+                        Rest Day
+                      </p>
+                      <p className="text-gray-500 text-sm">
+                        No activities scheduled for {format(selectedDate, 'EEEE')} based on your preferences.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-700 font-medium mb-2">
+                        No activities planned for {format(selectedDate, 'EEEE')}.
+                      </p>
+                      <p className="text-gray-500 text-sm mb-4">
+                        You can add activities to this day or update your weekly preferences.
+                      </p>
+                      <Link
+                        href="/dashboard/settings"
+                        className="text-sm text-emerald-600 hover:text-emerald-700"
+                      >
+                        Update Schedule Preferences
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
         
-        {/* Day activities or empty state */}
-        {selectedDayActivities && (
-          <div>
-            {selectedDayActivities.activities.length > 0 ? (
-              <div className="space-y-4">
-                {selectedDayActivities.activities.map(activity => (
-                  <div 
-                    key={activity.id}
-                    className={`border rounded-lg overflow-hidden ${
-                      activity.status === 'completed' ? 'border-green-300 bg-green-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                          {activity.description && (
-                            <p className="mt-1 text-sm text-gray-600">{activity.description}</p>
-                          )}
-                        </div>
-                        {activity.status === 'completed' && (
-                          <div className="relative group">
-                            <span className="flex items-center text-green-600 bg-green-100 px-2.5 py-0.5 rounded-full text-xs cursor-help">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              {activity.lastObservedDate ? (
-                                <>Last observed: {formatObservedDate(activity.lastObservedDate)}</>
-                              ) : (
-                                <>Observed</>
-                              )}
-                            </span>
-                            {activity.lastObservation && (
-                              <div className="fixed z-[9999] hidden group-hover:block">
-                                <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 w-[300px]" style={{ position: 'fixed', transform: 'translate(-20px, -100%)' }}>
-                                  <div className="space-y-2">
-                                    {activity.lastObservation.engagementLevel && (
-                                      <div className="flex items-center text-sm">
-                                        <span className="font-medium text-gray-700 min-w-[80px]">Engagement:</span>
-                                        <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.engagementLevel}</span>
-                                      </div>
-                                    )}
-                                    {activity.lastObservation.interestLevel && (
-                                      <div className="flex items-center text-sm">
-                                        <span className="font-medium text-gray-700 min-w-[80px]">Interest:</span>
-                                        <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.interestLevel}</span>
-                                      </div>
-                                    )}
-                                    {activity.lastObservation.completionDifficulty && (
-                                      <div className="flex items-center text-sm">
-                                        <span className="font-medium text-gray-700 min-w-[80px]">Difficulty:</span>
-                                        <span className="ml-2 capitalize text-gray-600">{activity.lastObservation.completionDifficulty}</span>
-                                      </div>
-                                    )}
-                                    {activity.lastObservation.notes && (
-                                      <div className="text-sm">
-                                        <span className="font-medium text-gray-700">Notes:</span>
-                                        <p className="mt-1 text-gray-600 line-clamp-2">{activity.lastObservation.notes}</p>
-                                      </div>
-                                    )}
-                                    {activity.lastObservation.skillsDemonstrated && activity.lastObservation.skillsDemonstrated.length > 0 && (
-                                      <div className="text-sm">
-                                        <span className="font-medium text-gray-700">Skills:</span>
-                                        <div className="mt-1 flex flex-wrap gap-1">
-                                          {activity.lastObservation.skillsDemonstrated.map((skill, index) => (
-                                            <span key={index} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
-                                              {skill}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-full">
-                                    <div className="w-2 h-2 bg-white rotate-45 transform origin-center -mt-1 border-r border-b border-gray-200"></div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center text-xs text-gray-500 space-x-3 mt-2">
-                        {activity.area && (
-                          <span className={`px-2 py-0.5 rounded-full ${getAreaColor(activity.area)}`}>
-                            {activity.area.replace(/_/g, ' ')}
-                          </span>
-                        )}
-                        {activity.duration && (
-                          <span className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {activity.duration} min
-                          </span>
-                        )}
-                        {activity.timeSlot && (
-                          <span className="capitalize">
-                            {activity.timeSlot}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gray-50 px-4 py-2 flex space-x-4">
-                      <button
-                        onClick={() => openActivityDetails(activity.activityId)}
-                        className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
-                        type="button"
-                      >
-                        <InfoIcon className="h-3 w-3 mr-1" />
-                        How to
-                      </button>
-                      <button
-                        onClick={() => openObservationForm(activity)}
-                        className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
-                        type="button"
-                      >
-                        <PlusCircle className="h-3 w-3 mr-1" />
-                        {activity.status === 'completed' ? 'Add Another Observation' : 'Add Observation'}
-                      </button>
-                      <button
-                        onClick={() => handleShuffleActivity(activity, selectedDayActivities.dayOfWeek)}
-                        className="text-sm text-purple-600 hover:text-purple-700 flex items-center"
-                        type="button"
-                        disabled={isShuffling[activity.id]}
-                      >
-                        {isShuffling[activity.id] ? (
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        ) : (
-                          <Shuffle className="h-3 w-3 mr-1" />
-                        )}
-                        Shuffle
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                {selectedDayActivities.isRestDay ? (
-                  <>
-                    <p className="text-gray-700 font-medium mb-2">
-                      Rest Day
-                    </p>
-                    <p className="text-gray-500 text-sm">
-                      No activities scheduled for {format(selectedDate, 'EEEE')} based on your preferences.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-700 font-medium mb-2">
-                      No activities planned for {format(selectedDate, 'EEEE')}.
-                    </p>
-                    <p className="text-gray-500 text-sm mb-4">
-                      You can add activities to this day or update your weekly preferences.
-                    </p>
-                    <Link
-                      href="/dashboard/settings"
-                      className="text-sm text-emerald-600 hover:text-emerald-700"
-                    >
-                      Update Schedule Preferences
-                    </Link>
-                  </>
-                )}
-              </div>
-            )}
+        {/* Activity Details Popup */}
+        {showDetailsPopup && detailsActivityId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
+              <ActivityDetailsPopup 
+                activityId={detailsActivityId} 
+                onClose={() => setShowDetailsPopup(false)}
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* Observation Form Modal */}
+        {showActivityForm && selectedActivity && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <QuickObservationForm
+                activityId={selectedActivity.activityId}
+                childId={selectedActivity.childId}
+                activityTitle={selectedActivity.title}
+                onSuccess={handleObservationSuccess}
+                onClose={() => setShowActivityForm(false)}
+              />
+            </div>
+          </div>
+        )}
+        
+        {!hasSchedulePreferences && (
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-6 text-center">
+            <Calendar className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-amber-800 mb-2">
+              Schedule Preferences Required
+            </h3>
+            <p className="text-amber-700 mb-4">
+              To generate a personalized weekly plan, please set your preferred schedule in the sidebar.
+            </p>
+            <div className="flex justify-center">
+              <Link
+                href="/dashboard/settings"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700"
+              >
+                Set Schedule Preferences
+              </Link>
+            </div>
           </div>
         )}
       </div>
-      
-      {/* Activity Details Popup */}
-      {showDetailsPopup && detailsActivityId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <ActivityDetailsPopup 
-              activityId={detailsActivityId} 
-              onClose={() => setShowDetailsPopup(false)}
-            />
-          </div>
-        </div>
-      )}
-      
-      {/* Observation Form Modal */}
-      {showActivityForm && selectedActivity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <QuickObservationForm
-              activityId={selectedActivity.activityId}
-              childId={selectedActivity.childId}
-              activityTitle={selectedActivity.title}
-              onSuccess={handleObservationSuccess}
-              onClose={() => setShowActivityForm(false)}
-            />
-          </div>
-        </div>
-      )}
-      
-      {!hasSchedulePreferences && (
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-6 text-center">
-          <Calendar className="h-12 w-12 text-amber-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-amber-800 mb-2">
-            Schedule Preferences Required
-          </h3>
-          <p className="text-amber-700 mb-4">
-            To generate a personalized weekly plan, please set your preferred schedule in the sidebar.
-          </p>
-          <div className="flex justify-center">
-            <Link
-              href="/dashboard/settings"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700"
-            >
-              Set Schedule Preferences
-            </Link>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

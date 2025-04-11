@@ -32,8 +32,8 @@ export const essentialStarterKit: EssentialMaterial[] = [
     activityCount: 13
   },
   {
-    id: 'small-tray-set',
-    name: 'Small Tray Set',
+    id: 'small-tray',
+    name: 'Small Tray',
     description: 'Used for organizing materials and defining activities. Teaches order and sequence.',
     materialType: 'basic',
     isEssential: true,
@@ -44,28 +44,15 @@ export const essentialStarterKit: EssentialMaterial[] = [
     activityCount: 6
   },
   {
-    id: 'sandpaper-letters',
-    name: 'Sandpaper Letters',
-    description: 'Textured letters for tactile learning of the alphabet and phonetic sounds.',
+    id: 'animal-cards',
+    name: 'Animal Picture Cards',
+    description: 'Used for language development, classification, and matching activities.',
     materialType: 'basic',
     isEssential: true,
-    householdAlternative: 'Letters made with glue and sand on cardstock',
-    amazonLink: 'https://amzn.to/41UzIGR',
+    householdAlternative: 'Pictures of animals from magazines or printed photos, or small animal figurines',
     category: 'Language',
     priority: 3,
-    activityCount: 1
-  },
-  {
-    id: 'number-cards-1-10',
-    name: 'Number Cards 1-10',
-    description: 'Cards for learning number recognition, sequence, and quantity association.',
-    materialType: 'basic',
-    isEssential: true,
-    householdAlternative: 'Hand-drawn number cards on index cards',
-    amazonLink: 'https://amzn.to/41ziT1J',
-    category: 'Mathematics',
-    priority: 4,
-    activityCount: 3
+    activityCount: 2
   },
   {
     id: 'color-tablets',
@@ -76,8 +63,19 @@ export const essentialStarterKit: EssentialMaterial[] = [
     householdAlternative: 'Paint color swatches or colored paper squares',
     amazonLink: 'https://amzn.to/41CZ9u3',
     category: 'Sensorial',
-    priority: 5,
+    priority: 4,
     activityCount: 2
+  },
+  {
+    id: 'object-permanence-box',
+    name: 'Object Permanence Box',
+    description: 'Helps develop understanding that objects continue to exist even when they cannot be seen.',
+    materialType: 'basic',
+    isEssential: true,
+    householdAlternative: 'Small box with a hole in the top and small balls or objects that fit through',
+    category: 'Sensorial',
+    priority: 5,
+    activityCount: 1
   },
   {
     id: 'simple-knobbed-puzzles',
@@ -92,94 +90,126 @@ export const essentialStarterKit: EssentialMaterial[] = [
     activityCount: 1
   },
   {
-    id: 'button-frame',
-    name: 'Button Frame',
-    description: 'Helps develop fine motor skills and independence in dressing.',
+    id: 'three-part-cards',
+    name: 'Three-Part Cards',
+    description: 'Used for vocabulary development, reading preparation, and classification.',
     materialType: 'basic',
     isEssential: true,
-    householdAlternative: 'Fabric pieces with buttons sewn onto them',
-    amazonLink: 'https://amzn.to/4hvIGLM',
-    category: 'Practical Life',
+    householdAlternative: 'Handmade cards with pictures and labels using cardstock',
+    category: 'Language',
     priority: 7,
-    activityCount: 1
-  },
-  {
-    id: 'small-pitchers',
-    name: 'Small Pitchers Set',
-    description: 'Used for pouring activities which develop motor control and concentration.',
-    materialType: 'basic',
-    isEssential: true,
-    householdAlternative: 'Small measuring cups or plastic cups with handles',
-    amazonLink: 'https://amzn.to/4hcljJi',
-    category: 'Practical Life',
-    priority: 8,
     activityCount: 2
   },
   {
-    id: 'sound-cylinders',
-    name: 'Sound Cylinders',
-    description: 'Helps develop auditory discrimination and matching skills.',
+    id: 'season-cards',
+    name: 'Season Cards',
+    description: 'Used for learning about seasons, weather, and time concepts.',
     materialType: 'basic',
     isEssential: true,
-    householdAlternative: 'Small identical containers filled with different materials (rice, beans, etc.)',
-    amazonLink: 'https://amzn.to/4iBIJlf',
-    category: 'Sensorial',
+    householdAlternative: 'Pictures from magazines or handmade cards showing seasonal changes',
+    category: 'Culture',
+    priority: 8,
+    activityCount: 1
+  },
+  {
+    id: 'plant-cards',
+    name: 'Parts of a Plant Cards',
+    description: 'Used for learning plant anatomy and classification.',
+    materialType: 'basic',
+    isEssential: true,
+    householdAlternative: 'Handmade cards with plant parts labeled, or real plants for observation',
+    category: 'Biology',
     priority: 9,
     activityCount: 1
   },
   {
-    id: 'fabric-matching',
-    name: 'Fabric Matching Cards',
-    description: 'Develops tactile discrimination and matching skills.',
+    id: 'number-cards',
+    name: 'Number Cards 1-10',
+    description: 'Cards for learning number recognition, sequence, and quantity association.',
     materialType: 'basic',
     isEssential: true,
-    householdAlternative: 'Different fabric scraps arranged in matching pairs',
-    amazonLink: 'https://amzn.to/4iB2fSX',
-    category: 'Sensorial',
+    householdAlternative: 'Hand-drawn number cards on index cards',
+    amazonLink: 'https://amzn.to/41ziT1J',
+    category: 'Mathematics',
     priority: 10,
-    activityCount: 1
+    activityCount: 3
   },
   {
-    id: 'small-objects-collection',
-    name: 'Small Objects Collection',
-    description: 'Used for counting, sorting, language activities, and more.',
+    id: 'continent-map',
+    name: 'Continent Puzzle Map',
+    description: 'Introduces geography and develops spatial awareness.',
     materialType: 'basic',
-    isEssential: true,
-    householdAlternative: 'Collect small household objects like buttons, shells, or bottle caps',
-    amazonLink: 'https://amzn.to/4hHltbI',
-    category: 'Mathematics',
+    isEssential: false,
+    householdAlternative: 'Printed or drawn continent shapes that can be cut out and used as puzzles',
+    category: 'Geography',
     priority: 11,
     activityCount: 1
   },
   {
-    id: 'moveable-alphabet',
-    name: 'Moveable Alphabet',
-    description: 'Allows children to build words and explore language before writing.',
+    id: 'shape-sorter',
+    name: 'Shape Sorter',
+    description: 'Develops shape recognition and fine motor skills.',
     materialType: 'basic',
     isEssential: true,
-    householdAlternative: 'Handmade letter cards on cardstock or using magnetic letters',
-    amazonLink: 'https://amzn.to/4iysXkp',
-    category: 'Language',
+    householdAlternative: 'Box with cut-out shapes and corresponding wooden or cardboard shapes',
+    category: 'Sensorial',
     priority: 12,
+    activityCount: 1
+  },
+  {
+    id: 'matching-pairs',
+    name: 'Matching Pairs',
+    description: 'Used for visual discrimination and memory development.',
+    materialType: 'basic',
+    isEssential: true,
+    householdAlternative: 'Pairs of identical small objects or picture cards',
+    category: 'Sensorial',
+    priority: 13,
+    activityCount: 2
+  },
+  {
+    id: 'coin-box',
+    name: 'Coin Slot Box',
+    description: 'Develops fine motor skills and hand-eye coordination.',
+    materialType: 'basic',
+    isEssential: true,
+    householdAlternative: 'Container with a slot cut in the lid and flat objects to insert',
+    category: 'Practical Life',
+    priority: 14,
     activityCount: 1
   }
 ];
 
 // Household items that most people already have
 export const commonHouseholdItems = [
-  'water', 'spoon', 'fork', 'knife', 'plate', 'bowl', 'cup', 'mug', 'napkin', 'paper towel',
-  'towel', 'dish soap', 'sponge', 'container', 'basket', 'tray', 'measuring cup', 'measuring spoon',
-  'paper', 'pencil', 'pen', 'marker', 'crayon', 'scissors', 'glue', 'tape', 'paint', 'brush',
-  'coloring book', 'construction paper', 'cardboard', 'box', 'string', 'yarn', 'ribbon',
-  'basket', 'container', 'box', 'bag', 'bottle', 'jar', 'lid', 'cloth', 'fabric', 'tissue',
-  'cotton ball', 'cotton swab', 'sponge', 'brush', 'broom', 'dustpan', 'mop', 'rag',
-  'water', 'sand', 'dirt', 'soil', 'rock', 'stone', 'leaf', 'stick', 'shell', 'seed',
-  'flower', 'grass', 'pinecone', 'acorn', 'feather',
-  'rice', 'bean', 'pasta', 'cereal', 'flour', 'salt', 'sugar', 'spice', 'herb', 'fruit',
-  'vegetable', 'grain', 'seed', 'nut', 'raisin', 'cracker', 'cookie', 'bread',
-  'soap', 'sponge', 'rag', 'towel', 'broom', 'dustpan', 'mop', 'bucket', 'spray bottle',
-  'hammer', 'screwdriver', 'pliers', 'scissors', 'knife', 'spoon', 'fork', 'tongs', 'clamp',
-  'book', 'paper', 'pencil', 'pen', 'marker', 'crayon', 'chalk', 'board', 'card'
+  // Kitchen and Dining
+  'spoon', 'fork', 'knife', 'plate', 'bowl', 'cup', 'mug', 'napkin', 'dish towel',
+  'measuring cup', 'measuring spoon', 'small pitcher', 'tray', 'container',
+  
+  // Cleaning Supplies
+  'sponge', 'spray bottle', 'broom', 'dustpan', 'mop', 'bucket', 'cleaning cloth',
+  'paper towels', 'soap', 'small brush',
+  
+  // Art and Craft Supplies
+  'paper', 'pencil', 'pen', 'marker', 'crayon', 'scissors', 'glue', 'tape',
+  'paint', 'paintbrush', 'construction paper', 'cardboard', 'string', 'yarn',
+  
+  // Storage and Organization
+  'basket', 'box', 'bag', 'jar', 'container with lid',
+  
+  // Personal Care
+  'tissue', 'cotton ball', 'cotton swab', 'small towel',
+  
+  // Natural Materials
+  'water', 'sand', 'soil', 'rock', 'stone', 'leaf', 'stick', 'shell',
+  'seed', 'flower', 'grass', 'pinecone', 'acorn', 'feather',
+  
+  // Food Items
+  'rice', 'dried beans', 'pasta', 'cereal', 'flour', 'salt',
+  'dried herbs', 'dried spices',
+  
+  // Tools
+  'child-safe scissors', 'tongs', 'eyedropper', 'funnel', 'scoop'
 ];
 
 /**
