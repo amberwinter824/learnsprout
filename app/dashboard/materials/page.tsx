@@ -322,15 +322,9 @@ export default function MaterialsInventory() {
                   
                   <p className="text-sm text-gray-600 mb-2">{material.description}</p>
                   
-                  {material.householdAlternative && (
+                  {material.householdAlternative && material.description !== 'Used in various Montessori activities' && (
                     <p className="text-sm text-blue-600 mb-2">
                       Alternative: {material.householdAlternative}
-                    </p>
-                  )}
-                  
-                  {material.alternativeNames && material.alternativeNames.length > 1 && (
-                    <p className="text-sm text-gray-500 mb-2">
-                      Also known as: {material.alternativeNames.filter(name => name !== material.name).join(', ')}
                     </p>
                   )}
                   
