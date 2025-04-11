@@ -16,7 +16,8 @@
     "setup:dev": "npm run init:roles && npm run init:institutions && npm run init:schema && npm run init:standalone",
     "extract-materials": "node scripts/extractMaterials.cjs",
     "import-materials": "node scripts/importMaterialLinks.cjs",
-    "migrate:materials": "node scripts/migrateMaterials.cjs"
+    "migrate:materials": "node scripts/migrateMaterials.cjs",
+    "update:materials": "node scripts/updateMaterialsSimplified.js"
   },
   "dependencies": {
     "csv-parser": "^3.2.0",
@@ -38,7 +39,7 @@
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^20",
+    "@types/node": "^20.17.30",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -52,6 +53,6 @@
     "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
-    "typescript": "^5"
+    "typescript": "^5.8.3"
   }
 }
