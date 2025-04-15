@@ -10,7 +10,8 @@ import {
   ArrowRight, 
   BookOpen,
   ClipboardList,
-  Layers
+  Layers,
+  Eye
 } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -38,6 +39,12 @@ interface ActivityData {
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   ageRanges?: string[];
   skillsAddressed?: string[];
+  setupSteps?: string[];  // Step-by-step setup instructions
+  demonstrationSteps?: string[];  // How to demonstrate the activity to the child
+  observationPoints?: string[];  // What to look for during the activity
+  successIndicators?: string[];  // Signs that the child has mastered the activity
+  commonChallenges?: string[];  // Common issues and how to address them
+  extensions?: string[];  // Ways to extend or vary the activity
   [key: string]: any;
 }
 
@@ -48,7 +55,7 @@ export default function ActivityDetailsPopup({
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'setup' | 'instructions'>('setup');
+  const [tab, setTab] = useState<'setup' | 'instructions' | 'observation' | 'extensions'>('setup');
   const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
 
   useEffect(() => {
@@ -223,73 +230,67 @@ export default function ActivityDetailsPopup({
                 Instructions
               </div>
             </button>
+            <button
+              onClick={() => setTab('observation')}
+              className={`px-4 py-2 text-sm font-medium ${
+                tab === 'observation' 
+                  ? 'text-emerald-600 border-b-2 border-emerald-500' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center">
+                <Eye className="h-4 w-4 mr-2" />
+                Observation
+              </div>
+            </button>
+            <button
+              onClick={() => setTab('extensions')}
+              className={`px-4 py-2 text-sm font-medium ${
+                tab === 'extensions' 
+                  ? 'text-emerald-600 border-b-2 border-emerald-500' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center">
+                <ArrowRight className="h-4 w-4 mr-2" />
+                Extensions
+              </div>
+            </button>
           </div>
         </div>
         
         {/* Content */}
         <div className="p-6">
           {tab === 'setup' && (
-            <div>
-              {/* Activity info and tags */}
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {activity.area && (
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getAreaColor(activity.area)}`}>
-                      {activity.area.replace('_', ' ')}
-                    </span>
-                  )}
-                  
-                  {activity.duration && (
-                    <span className="flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {activity.duration} min
-                    </span>
-                  )}
-                  
-                  {activity.difficulty && (
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700">
-                      {activity.difficulty}
-                    </span>
-                  )}
-                  
-                  {activity.environmentType === 'bridge' && (
-                    <span className="flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-                      <Star className="h-3 w-3 mr-1" />
-                      School Connection
-                    </span>
-                  )}
-                </div>
-                
-                {activity.description && (
-                  <p className="text-gray-600 mb-4">{activity.description}</p>
-                )}
+            <div className="space-y-4">
+              {/* Materials Needed */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Materials Needed</h3>
+                <ul className="space-y-2">
+                  {materials.map((material, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="h-5 w-5 text-emerald-500 mr-2">•</span>
+                      <span className="text-gray-700">{material}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              
-              {/* Materials needed */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Materials Needed</h3>
-                {materials.length > 0 ? (
-                  <ul className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                    {materials.map((material: string, index: number) => (
-                      <li key={index} className="flex items-start mb-2 last:mb-0">
-                        <span className="inline-block w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full text-xs flex items-center justify-center mr-2 mt-0.5">
-                          •
+
+              {/* Setup Steps */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Setup Steps</h3>
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <ul className="divide-y divide-gray-200">
+                    {activity.setupSteps?.map((step, index) => (
+                      <li key={index} className="p-4 flex items-start">
+                        <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 mt-0.5">
+                          {index + 1}
                         </span>
-                        <span>{material}</span>
+                        <span className="text-gray-700">{step}</span>
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No specific materials listed.</p>
-                )}
-              </div>
-              
-              {/* Preparation */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Preparation</h3>
-                <p className="text-gray-600 mb-2">
-                  Before starting this activity, make sure you have all materials ready and create a calm environment.
-                </p>
+                </div>
               </div>
 
               {/* Activity Skills Overview */}
@@ -321,43 +322,66 @@ export default function ActivityDetailsPopup({
           )}
           
           {tab === 'instructions' && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">How to Complete This Activity</h3>
-              
-              {instructionsList.length > 0 ? (
-                <ol className="space-y-4 mb-6">
-                  {instructionsList.map((instruction, index) => (
-                    <li key={index} className="flex">
-                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-800 font-medium text-sm mr-3 shrink-0">
+            <div className="space-y-4">
+              <div className="bg-emerald-50 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-medium text-emerald-800 mb-2">How to Present This Activity</h3>
+                <p className="text-sm text-emerald-700">
+                  Follow these steps to introduce the activity to your child for the first time:
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200">
+                <ul className="divide-y divide-gray-200">
+                  {activity.demonstrationSteps?.map((step, index) => (
+                    <li key={index} className="p-4 flex items-start">
+                      <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 mt-0.5">
                         {index + 1}
                       </span>
-                      <span className="text-gray-700">{instruction}</span>
+                      <span className="text-gray-700">{step}</span>
                     </li>
                   ))}
-                </ol>
-              ) : (
-                <p className="text-gray-500 italic mb-4">No specific instructions provided.</p>
-              )}
-              
-              {/* Tips */}
-              <div className="bg-blue-50 p-4 rounded-md border border-blue-100 mb-6">
-                <h4 className="text-sm font-medium text-blue-800 mb-2">Tips</h4>
-                <ul className="text-sm text-blue-700 space-y-2">
-                  <li>• Observe your child's level of interest and engagement</li>
-                  <li>• Let your child lead the activity at their own pace</li>
-                  <li>• It's okay if the activity doesn't go exactly as planned</li>
-                  <li>• Focus on the process, not the end result</li>
                 </ul>
               </div>
+            </div>
+          )}
+          
+          {tab === 'observation' && (
+            <div className="space-y-4">
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-emerald-800 mb-2">What to Watch For</h3>
+                <p className="text-sm text-emerald-700">
+                  Observe these key points as your child works with the activity:
+                </p>
+              </div>
               
-              {/* Mark complete button */}
-              <button
-                onClick={onClose}
-                className="w-full py-2 bg-emerald-600 text-white rounded-md flex items-center justify-center"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Ready to Start
-              </button>
+              <ul className="space-y-3">
+                {activity.observationPoints?.map((point, index) => (
+                  <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                    <Eye className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
+                    <span className="text-gray-700">{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {tab === 'extensions' && (
+            <div className="space-y-4">
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-emerald-800 mb-2">Next Steps</h3>
+                <p className="text-sm text-emerald-700">
+                  When your child shows mastery, try these variations to extend the learning:
+                </p>
+              </div>
+              
+              <ul className="space-y-3">
+                {activity.extensions?.map((extension, index) => (
+                  <li key={index} className="flex items-start bg-white p-4 rounded-lg border border-gray-200">
+                    <ArrowRight className="h-5 w-5 text-emerald-500 mr-3 mt-0.5" />
+                    <span className="text-gray-700">{extension}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

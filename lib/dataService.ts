@@ -57,6 +57,12 @@ import {
     updatedAt?: Timestamp;
   }
   
+  interface ActivityDataWithOptionalFields extends ActivityData {
+    [key: string]: any;
+    successIndicators?: string[];
+    commonChallenges?: string[];
+  }
+  
   // Add ProgressData and WeeklyPlanData interfaces
   interface ProgressData extends DocumentData {
     id?: string;
@@ -147,6 +153,24 @@ import {
     }
     
     return '';
+  }
+  
+  // Add this type to define which fields should be limited
+  const LIMITED_FIELDS = ['successIndicators', 'commonChallenges'] as const;
+  type LimitedField = typeof LIMITED_FIELDS[number];
+  
+  // Add this function to transform activity data
+  function transformActivityData(data: ActivityDataWithOptionalFields): ActivityData {
+    const transformed = { ...data };
+    
+    // Limit specific fields to 3 items
+    LIMITED_FIELDS.forEach((field) => {
+      if (transformed[field] && Array.isArray(transformed[field])) {
+        transformed[field] = transformed[field].slice(0, 3);
+      }
+    });
+    
+    return transformed;
   }
   
   // ---------- User Functions ----------
@@ -432,7 +456,10 @@ import {
   
   export async function getAllActivities(): Promise<ActivityData[]> {
     const querySnapshot = await getDocs(collection(db, "activities"));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityData));
+    return querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    } as ActivityData));
   }
   
   export async function getActivitiesByAgeGroup(ageGroup: string): Promise<ActivityData[]> {
@@ -442,7 +469,10 @@ import {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityData));
+    return querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    } as ActivityData));
   }
   
   export async function getActivitiesByArea(area: string): Promise<ActivityData[]> {
@@ -452,7 +482,10 @@ import {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityData));
+    return querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    } as ActivityData));
   }
   
   // ---------- Progress Functions ----------

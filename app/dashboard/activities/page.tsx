@@ -122,7 +122,11 @@ export default function ActivitiesPage() {
     activities
       .flatMap(a => a.ageRanges || [])
       .filter(Boolean)
-  ));
+  )).sort((a, b) => {
+    // Extract the first number from each age range (e.g. "0-1" -> 0, "3-4" -> 3)
+    const getFirstNumber = (str: string) => parseInt(str.split('-')[0]);
+    return getFirstNumber(a) - getFirstNumber(b);
+  });
   
   const difficultyLevels = Array.from(new Set(
     activities.map(a => a.difficulty).filter(Boolean)
