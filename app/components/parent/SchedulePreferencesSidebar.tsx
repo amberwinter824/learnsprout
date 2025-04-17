@@ -91,7 +91,7 @@ export default function SchedulePreferencesSidebar({ onPreferencesUpdated }: Sch
           )}
           {!hasSchedulePreferences && (
             <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-              Required
+              Using Default
             </span>
           )}
           <ChevronRight 
@@ -109,9 +109,9 @@ export default function SchedulePreferencesSidebar({ onPreferencesUpdated }: Sch
               <p>Up to {maxActivitiesPerDay} activities per day</p>
             </div>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2">
-              <p className="text-sm text-amber-800">
-                Set your preferred schedule to generate personalized weekly plans for your child.
+            <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3 mt-2">
+              <p className="text-sm text-emerald-800">
+                Using default schedule: 2 activities on Monday, Wednesday, and Friday. Click to customize.
               </p>
             </div>
           )}

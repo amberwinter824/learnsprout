@@ -186,6 +186,29 @@ export default function Dashboard() {
     try {
       setIsGeneratingPlan(true);
       
+      // Check if user has schedule preferences
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      const hasSchedulePreferences = userData?.preferences?.activityPreferences?.scheduleByDay;
+      
+      // If no schedule preferences exist, set default preferences
+      if (!hasSchedulePreferences) {
+        const defaultSchedule = {
+          monday: 2,
+          tuesday: 0,
+          wednesday: 2,
+          thursday: 0,
+          friday: 2,
+          saturday: 0,
+          sunday: 0
+        };
+        
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          'preferences.activityPreferences.scheduleByDay': defaultSchedule,
+          updatedAt: new Date()
+        });
+      }
+      
       // Import and use your plan generator with the week date
       const { generateWeeklyPlan } = await import('@/lib/planGenerator');
       await generateWeeklyPlan(childId, currentUser.uid, weekDate);
