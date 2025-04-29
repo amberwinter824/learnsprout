@@ -44,6 +44,48 @@ export default function DevelopmentAssessment({
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [showPrioritized, setShowPrioritized] = useState(true);
 
+  // Group skills by area
+  const skillsByArea = skills.reduce((acc, skill) => {
+    if (!acc[skill.area]) {
+      acc[skill.area] = [];
+    }
+    acc[skill.area].push(skill);
+    return acc;
+  }, {} as Record<string, DevelopmentalSkill[]>);
+
+  // Get available areas
+  const areas = Object.keys(skillsByArea);
+
+  // Filter skills based on selected area and prioritization
+  const filteredSkills = skills.filter(skill => {
+    if (!skill || !skill.area) return false;
+    return (selectedArea === 'all' || skill.area === selectedArea) &&
+           (!showPrioritized || isSkillPrioritized(skill, parentInput));
+  });
+
+  const isSkillPrioritized = (skill: DevelopmentalSkill, parentInput: ParentInput) => {
+    if (!skill || !parentInput) return false;
+    const text = `${skill.name} ${skill.description} ${skill.area}`.toLowerCase();
+    const concernKeywords = parentInput.concerns?.flatMap(concern => concern.toLowerCase().split(' ')) || [];
+    const goalKeywords = parentInput.goals?.flatMap(goal => goal.toLowerCase().split(' ')) || [];
+    
+    return concernKeywords.some(keyword => text.includes(keyword)) ||
+           goalKeywords.some(keyword => text.includes(keyword));
+  };
+
+  const currentSkill = filteredSkills[currentSkillIndex] || null;
+  const totalSkills = filteredSkills.length;
+  const completedSkills = assessmentData.length;
+
+  // Get the count of assessed skills in current area
+  const getAreaProgress = (area: string) => {
+    if (!skills.length) return 0;
+    const areaSkills = area === 'all' ? skills : skills.filter(s => s.area === area);
+    return areaSkills.filter(skill => 
+      assessmentData.some(result => result.skillId === skill.id)
+    ).length;
+  };
+
   useEffect(() => {
     const fetchDevelopmentalSkills = async () => {
       try {
@@ -92,6 +134,11 @@ export default function DevelopmentAssessment({
     fetchDevelopmentalSkills();
   }, [birthDate, parentInput]);
 
+  // Reset currentSkillIndex when filtered skills change
+  useEffect(() => {
+    setCurrentSkillIndex(0);
+  }, [selectedArea, showPrioritized]);
+
   const sortSkillsByPriority = (skills: DevelopmentalSkill[], parentInput: ParentInput) => {
     const concernKeywords = parentInput.concerns.flatMap(concern => concern.toLowerCase().split(' '));
     const goalKeywords = parentInput.goals.flatMap(goal => goal.toLowerCase().split(' '));
@@ -115,45 +162,6 @@ export default function DevelopmentAssessment({
     });
   };
 
-  // Group skills by area
-  const skillsByArea = skills.reduce((acc, skill) => {
-    if (!acc[skill.area]) {
-      acc[skill.area] = [];
-    }
-    acc[skill.area].push(skill);
-    return acc;
-  }, {} as Record<string, DevelopmentalSkill[]>);
-
-  // Get available areas
-  const areas = Object.keys(skillsByArea);
-
-  // Filter skills based on selected area and prioritization
-  const filteredSkills = skills.filter(skill => 
-    (selectedArea === 'all' || skill.area === selectedArea) &&
-    (!showPrioritized || isSkillPrioritized(skill, parentInput))
-  );
-
-  const isSkillPrioritized = (skill: DevelopmentalSkill, parentInput: ParentInput) => {
-    const text = `${skill.name} ${skill.description} ${skill.area}`.toLowerCase();
-    const concernKeywords = parentInput.concerns.flatMap(concern => concern.toLowerCase().split(' '));
-    const goalKeywords = parentInput.goals.flatMap(goal => goal.toLowerCase().split(' '));
-    
-    return concernKeywords.some(keyword => text.includes(keyword)) ||
-           goalKeywords.some(keyword => text.includes(keyword));
-  };
-
-  const currentSkill = filteredSkills[currentSkillIndex];
-  const totalSkills = filteredSkills.length;
-  const completedSkills = assessmentData.length;
-
-  // Get the count of assessed skills in current area
-  const getAreaProgress = (area: string) => {
-    const areaSkills = area === 'all' ? skills : skills.filter(s => s.area === area);
-    return areaSkills.filter(skill => 
-      assessmentData.some(result => result.skillId === skill.id)
-    ).length;
-  };
-
   const handleAnswer = (skillId: string, status: 'emerging' | 'developing' | 'mastered') => {
     setAssessmentData(prev => {
       const existingIndex = prev.findIndex(r => r.skillId === skillId);
@@ -166,7 +174,7 @@ export default function DevelopmentAssessment({
     });
 
     // Move to next skill if not at the end
-    if (currentSkillIndex < skills.length - 1) {
+    if (currentSkillIndex < filteredSkills.length - 1) {
       setCurrentSkillIndex(prev => prev + 1);
     }
   };
@@ -264,156 +272,164 @@ export default function DevelopmentAssessment({
       </div>
 
       {/* Area selection and filters */}
-      <div className="mb-6">
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setSelectedArea('all')}
-            className={`px-3 py-1 rounded-full text-sm ${
-              selectedArea === 'all'
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            All Areas ({getAreaProgress('all')}/{skills.length})
-          </button>
-          {areas.map(area => (
+      {!loading && !error && skills.length > 0 && (
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
-              key={area}
-              onClick={() => setSelectedArea(area)}
+              onClick={() => setSelectedArea('all')}
               className={`px-3 py-1 rounded-full text-sm ${
-                selectedArea === area
+                selectedArea === 'all'
                   ? 'bg-emerald-100 text-emerald-800'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {area} ({getAreaProgress(area)}/{skillsByArea[area].length})
+              All Areas ({getAreaProgress('all')}/{skills.length})
             </button>
-          ))}
+            {areas.map(area => (
+              <button
+                key={area}
+                onClick={() => setSelectedArea(area)}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  selectedArea === area
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {area} ({getAreaProgress(area)}/{skillsByArea[area].length})
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowPrioritized(!showPrioritized)}
+            className={`px-3 py-1 rounded-full text-sm ${
+              showPrioritized
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-gray-100 text-gray-700'
+            }`}
+          >
+            {showPrioritized ? '✓ Showing Priority Skills' : 'Show All Skills'}
+          </button>
         </div>
-        <button
-          onClick={() => setShowPrioritized(!showPrioritized)}
-          className={`px-3 py-1 rounded-full text-sm ${
-            showPrioritized
-              ? 'bg-amber-100 text-amber-800'
-              : 'bg-gray-100 text-gray-700'
-          }`}
-        >
-          {showPrioritized ? '✓ Showing Priority Skills' : 'Show All Skills'}
-        </button>
-      </div>
+      )}
 
       {/* Progress bar */}
-      <div className="mb-6">
-        <div className="bg-gray-100 rounded-full h-2">
-          <div
-            className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(completedSkills / totalSkills) * 100}%` }}
-          />
+      {!loading && !error && filteredSkills.length > 0 && (
+        <div className="mb-6">
+          <div className="bg-gray-100 rounded-full h-2">
+            <div
+              className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(completedSkills / totalSkills) * 100}%` }}
+            />
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Progress: {completedSkills} of {totalSkills} skills assessed
+          </p>
         </div>
-        <p className="text-sm text-gray-600 mt-2">
-          Progress: {completedSkills} of {totalSkills} skills assessed
-        </p>
-      </div>
+      )}
 
       {/* Current skill assessment */}
-      <div className="space-y-6">
-        <div key={currentSkill.id} className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-gray-100 rounded text-sm text-gray-600">
-              {currentSkill.area}
-            </span>
-            <h3 className="text-lg font-medium text-gray-900">
-              {currentSkill.name}
-            </h3>
-          </div>
-          <p className="text-sm text-gray-600">
-            {currentSkill.description}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={() => handleAnswer(currentSkill.id, 'emerging')}
-              className={`p-4 rounded-lg border ${
-                assessmentData.find(r => r.skillId === currentSkill.id)?.status === 'emerging'
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-emerald-300'
-              }`}
-            >
-              <div className="text-left">
-                <div className="font-medium mb-1">Starting to Show</div>
-                <div className="text-sm text-gray-600">
-                  Beginning to demonstrate this skill with support
+      {!loading && !error && currentSkill && (
+        <div className="space-y-6">
+          <div key={currentSkill.id} className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-gray-100 rounded text-sm text-gray-600">
+                {currentSkill.area}
+              </span>
+              <h3 className="text-lg font-medium text-gray-900">
+                {currentSkill.name}
+              </h3>
+            </div>
+            <p className="text-sm text-gray-600">
+              {currentSkill.description}
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                onClick={() => handleAnswer(currentSkill.id, 'emerging')}
+                className={`p-4 rounded-lg border ${
+                  assessmentData.find(r => r.skillId === currentSkill.id)?.status === 'emerging'
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="text-left">
+                  <div className="font-medium mb-1">Starting to Show</div>
+                  <div className="text-sm text-gray-600">
+                    Beginning to demonstrate this skill with support
+                  </div>
                 </div>
-              </div>
-            </button>
-            <button
-              onClick={() => handleAnswer(currentSkill.id, 'developing')}
-              className={`p-4 rounded-lg border ${
-                assessmentData.find(r => r.skillId === currentSkill.id)?.status === 'developing'
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-emerald-300'
-              }`}
-            >
-              <div className="text-left">
-                <div className="font-medium mb-1">Developing Well</div>
-                <div className="text-sm text-gray-600">
-                  Shows this skill regularly with occasional support
+              </button>
+              <button
+                onClick={() => handleAnswer(currentSkill.id, 'developing')}
+                className={`p-4 rounded-lg border ${
+                  assessmentData.find(r => r.skillId === currentSkill.id)?.status === 'developing'
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="text-left">
+                  <div className="font-medium mb-1">Developing Well</div>
+                  <div className="text-sm text-gray-600">
+                    Shows this skill regularly with occasional support
+                  </div>
                 </div>
-              </div>
-            </button>
-            <button
-              onClick={() => handleAnswer(currentSkill.id, 'mastered')}
-              className={`p-4 rounded-lg border ${
-                assessmentData.find(r => r.skillId === currentSkill.id)?.status === 'mastered'
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-emerald-300'
-              }`}
-            >
-              <div className="text-left">
-                <div className="font-medium mb-1">Mastered</div>
-                <div className="text-sm text-gray-600">
-                  Consistently demonstrates this skill independently
+              </button>
+              <button
+                onClick={() => handleAnswer(currentSkill.id, 'mastered')}
+                className={`p-4 rounded-lg border ${
+                  assessmentData.find(r => r.skillId === currentSkill.id)?.status === 'mastered'
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="text-left">
+                  <div className="font-medium mb-1">Mastered</div>
+                  <div className="text-sm text-gray-600">
+                    Consistently demonstrates this skill independently
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Navigation buttons */}
-      <div className="mt-8 flex justify-between">
-        <button
-          onClick={() => setCurrentSkillIndex(prev => Math.max(0, prev - 1))}
-          disabled={currentSkillIndex === 0}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <div className="flex gap-2">
-          {currentSkillIndex === filteredSkills.length - 1 ? (
-            <button
-              onClick={handleSubmit}
-              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
-            >
-              Complete Assessment
-            </button>
-          ) : (
-            <>
+      {!loading && !error && currentSkill && (
+        <div className="mt-8 flex justify-between">
+          <button
+            onClick={() => setCurrentSkillIndex(prev => Math.max(0, prev - 1))}
+            disabled={currentSkillIndex === 0}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <div className="flex gap-2">
+            {currentSkillIndex === filteredSkills.length - 1 ? (
               <button
-                onClick={() => setCurrentSkillIndex(prev => Math.min(filteredSkills.length - 1, prev + 1))}
-                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Skip This Skill
-              </button>
-              <button
-                onClick={() => setCurrentSkillIndex(prev => Math.min(filteredSkills.length - 1, prev + 1))}
+                onClick={handleSubmit}
                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
               >
-                Save & Continue
+                Complete Assessment
               </button>
-            </>
-          )}
+            ) : (
+              <>
+                <button
+                  onClick={() => setCurrentSkillIndex(prev => Math.min(filteredSkills.length - 1, prev + 1))}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Skip This Skill
+                </button>
+                <button
+                  onClick={() => setCurrentSkillIndex(prev => Math.min(filteredSkills.length - 1, prev + 1))}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
+                >
+                  Save & Continue
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 } 
