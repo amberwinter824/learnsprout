@@ -13,12 +13,60 @@ import {
   getAgeAppropriateInterests,
   getAllAgeGroups
 } from '@/lib/ageUtils';
-import { query, collection, getDocs } from 'firebase/firestore';
+import DevelopmentAssessment from '@/components/DevelopmentAssessment';
+import DevelopmentPlan from '@/components/DevelopmentPlan';
+import { query, collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Interest {
   value: string;
   label: string;
+}
+
+interface ParentInput {
+  concerns: string[];
+  goals: string[];
+  notes: string;
+}
+
+interface DevelopmentalSkill {
+  id: string;
+  name: string;
+  description: string;
+  area: string;
+  ageGroups: string[];
+  category: string;
+}
+
+interface AssessmentResult {
+  skillId: string;
+  status: 'emerging' | 'developing' | 'mastered';
+  notes?: string;
+}
+
+interface Activity {
+  id: string;
+  title: string;
+  description: string;
+  area: string;
+  skillsAddressed: string[];
+  duration: number;
+  difficulty: string;
+}
+
+interface DevelopmentPlan {
+  strengths: {
+    skill: DevelopmentalSkill;
+    activities: Activity[];
+  }[];
+  growthAreas: {
+    skill: DevelopmentalSkill;
+    activities: Activity[];
+  }[];
+  maintenance: {
+    skill: DevelopmentalSkill;
+    activities: Activity[];
+  }[];
 }
 
 export default function AddChildPage() {
@@ -32,6 +80,8 @@ export default function AddChildPage() {
   const [formattedAge, setFormattedAge] = useState('');
   const [interests, setInterests] = useState<Interest[]>([]);
   const [notes, setNotes] = useState('');
+  const [assessmentResults, setAssessmentResults] = useState<AssessmentResult[]>([]);
+  const [developmentPlan, setDevelopmentPlan] = useState<DevelopmentPlan | null>(null);
   
   // UI state
   const [error, setError] = useState('');
@@ -40,6 +90,9 @@ export default function AddChildPage() {
   const [availableInterests, setAvailableInterests] = useState<Interest[]>([]);
   const [birthdateError, setBirthdateError] = useState('');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [showAssessment, setShowAssessment] = useState(false);
+  const [showDevelopmentPlan, setShowDevelopmentPlan] = useState(false);
+  const [step, setStep] = useState('assessment');
 
   // Add an effect to wait for the auth state to be properly loaded
   useEffect(() => {
@@ -88,6 +141,19 @@ export default function AddChildPage() {
     );
   };
 
+  const handleAssessmentComplete = (results: AssessmentResult[]) => {
+    setAssessmentResults(results);
+    setStep('development-plan');
+  };
+
+  const handleGenerateWeeklyPlan = (plan: DevelopmentPlan) => {
+    // Store the plan in state for later use
+    setDevelopmentPlan(plan);
+    setShowDevelopmentPlan(false);
+    // Continue with child creation
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -120,7 +186,27 @@ export default function AddChildPage() {
         updatedAt: new Date()
       };
 
-      await createChild(currentUser.uid, childData);
+      const childId = await createChild(currentUser.uid, childData);
+      
+      // Create child skills records from assessment results
+      if (assessmentResults.length > 0) {
+        const batch = writeBatch(db);
+        
+        assessmentResults.forEach(result => {
+          const skillRef = doc(collection(db, 'childSkills'));
+          batch.set(skillRef, {
+            childId,
+            skillId: result.skillId,
+            status: result.status,
+            lastAssessed: new Date(),
+            notes: result.notes || '',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        });
+        
+        await batch.commit();
+      }
       
       // Redirect to dashboard after adding a child
       router.push('/dashboard');
@@ -166,6 +252,30 @@ export default function AddChildPage() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (step === 'assessment' && birthDate) {
+    return (
+      <DevelopmentAssessment
+        childName={name}
+        birthDate={birthDate}
+        onComplete={handleAssessmentComplete}
+      />
+    );
+  }
+
+  if (showDevelopmentPlan && assessmentResults.length > 0) {
+    return (
+      <DevelopmentPlan
+        childName={name}
+        assessmentResults={assessmentResults}
+        onBack={() => {
+          setShowDevelopmentPlan(false);
+          setShowAssessment(true);
+        }}
+        onGenerateWeeklyPlan={handleGenerateWeeklyPlan}
+      />
     );
   }
 
@@ -263,7 +373,14 @@ export default function AddChildPage() {
               />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={() => setShowAssessment(true)}
+                className="inline-flex items-center px-4 py-2 border border-emerald-600 text-sm font-medium rounded-md text-emerald-600 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              >
+                Complete Developmental Assessment
+              </button>
               <button
                 type="submit"
                 disabled={loading}
