@@ -127,6 +127,9 @@ export default function AddChildPage() {
         // Get age-appropriate interests
         const ageInterests = getAgeAppropriateInterests(group);
         setAvailableInterests(ageInterests);
+        
+        // Clear any previous errors
+        setBirthdateError('');
       } catch (err) {
         console.error('Error calculating age:', err);
         setBirthdateError('Error calculating age. Please try again.');
@@ -159,6 +162,18 @@ export default function AddChildPage() {
     setShowDevelopmentPlan(false);
     // Continue with child creation
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  };
+
+  const handleStartAssessment = () => {
+    if (!birthDate) {
+      setBirthdateError('Please enter a birth date before starting the assessment');
+      return;
+    }
+    if (!name.trim()) {
+      setError('Please enter a name before starting the assessment');
+      return;
+    }
+    setShowAssessment(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -262,17 +277,6 @@ export default function AddChildPage() {
     );
   }
 
-  if (step === 'assessment' && birthDate) {
-    return (
-      <DevelopmentAssessment
-        childName={name}
-        birthDate={birthDate}
-        parentInput={parentInput}
-        onComplete={handleAssessmentComplete}
-      />
-    );
-  }
-
   if (showDevelopmentPlan && assessmentResults.length > 0) {
     return (
       <DevelopmentPlan
@@ -290,7 +294,7 @@ export default function AddChildPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-6">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Link
             href="/dashboard"
@@ -301,106 +305,121 @@ export default function AddChildPage() {
           </Link>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a Child</h1>
-
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Child's Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">
-                Birth Date
-              </label>
-              <input
-                type="date"
-                id="birthDate"
-                value={formatDateForInput(birthDate)}
-                onChange={handleBirthDateChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                required
-              />
-              {birthdateError && (
-                <p className="mt-1 text-sm text-red-600">{birthdateError}</p>
-              )}
-              {formattedAge && (
-                <p className="mt-1 text-sm text-gray-500">
-                  Age: {formattedAge} ({getAgeGroupDescription(ageGroup)})
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Interests
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {availableInterests.map((interest) => (
-                  <button
-                    key={interest.value}
-                    type="button"
-                    onClick={() => toggleInterest(interest.value)}
-                    className={`p-2 rounded-md text-sm ${
-                      selectedInterests.includes(interest.value)
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                    }`}
-                  >
-                    {interest.label}
-                  </button>
-                ))}
+        {showAssessment ? (
+          <DevelopmentAssessment
+            childName={name}
+            birthDate={birthDate!}
+            parentInput={parentInput}
+            onComplete={handleAssessmentComplete}
+          />
+        ) : (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a Child</h1>
+            
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+              {/* Name Input */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  Child's Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                />
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                Notes (Optional)
-              </label>
-              <textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-              />
-            </div>
+              {/* Birth Date Input */}
+              <div>
+                <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">
+                  Birth Date
+                </label>
+                <input
+                  type="date"
+                  id="birthDate"
+                  onChange={handleBirthDateChange}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                />
+                {birthdateError && (
+                  <p className="mt-2 text-sm text-red-600">{birthdateError}</p>
+                )}
+                {formattedAge && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    Age: {formattedAge} ({getAgeGroupDescription(ageGroup)})
+                  </p>
+                )}
+              </div>
 
-            <div className="flex justify-between pt-6">
-              <button
-                type="button"
-                onClick={() => setStep('assessment')}
-                disabled={!birthDate}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-emerald-700 bg-emerald-100 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
-              >
-                Complete Development Assessment
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
-              >
-                {loading ? 'Saving...' : 'Save Child'}
-              </button>
-            </div>
-          </form>
-        </div>
+              {/* Interests Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Interests
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {availableInterests.map((interest) => (
+                    <button
+                      key={interest.value}
+                      type="button"
+                      onClick={() => toggleInterest(interest.value)}
+                      className={`p-2 text-sm rounded-md ${
+                        selectedInterests.includes(interest.value)
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {interest.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes Input */}
+              <div>
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                />
+              </div>
+
+              {error && (
+                <div className="rounded-md bg-red-50 p-4">
+                  <div className="flex">
+                    <AlertCircle className="h-5 w-5 text-red-400" />
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <button
+                  type="button"
+                  onClick={handleStartAssessment}
+                  className="inline-flex items-center px-4 py-2 border border-emerald-300 text-sm font-medium rounded-md text-emerald-700 bg-emerald-50 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                >
+                  Complete Development Assessment
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                >
+                  Save Child
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
