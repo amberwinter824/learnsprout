@@ -293,133 +293,235 @@ export default function AddChildPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center text-emerald-600 hover:text-emerald-500"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Dashboard
-          </Link>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-3xl mx-auto px-4">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Dashboard
+        </Link>
+
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a Child</h1>
+
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+          <h2 className="text-lg font-semibold text-emerald-800 mb-2">Welcome to LearnSprout!</h2>
+          <p className="text-emerald-700 mb-2">
+            We're here to help you track and support your child's development journey. Let's start by gathering some basic information about your child.
+          </p>
+          <p className="text-emerald-700">
+            After entering your child's details, you'll have the option to complete a development assessment. This will help us understand your child's current skills and create a personalized learning plan.
+          </p>
         </div>
 
-        {showAssessment ? (
-          <DevelopmentAssessment
-            childName={name}
-            birthDate={birthDate!}
-            parentInput={parentInput}
-            onComplete={handleAssessmentComplete}
-          />
-        ) : (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a Child</h1>
-            
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-              {/* Name Input */}
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  Child's Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                />
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 rounded-md">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
               </div>
+            </div>
+          </div>
+        )}
 
-              {/* Birth Date Input */}
-              <div>
-                <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">
-                  Birth Date
-                </label>
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Child's Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">
+                Birth Date
+              </label>
+              <div className="mt-1 relative">
                 <input
                   type="date"
                   id="birthDate"
+                  value={formatDateForInput(birthDate)}
                   onChange={handleBirthDateChange}
-                  max={new Date().toISOString().split('T')[0]}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  required
                 />
-                {birthdateError && (
-                  <p className="mt-2 text-sm text-red-600">{birthdateError}</p>
-                )}
-                {formattedAge && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    Age: {formattedAge} ({getAgeGroupDescription(ageGroup)})
-                  </p>
-                )}
+                <Calendar className="absolute right-3 top-2 h-5 w-5 text-gray-400" />
               </div>
-
-              {/* Interests Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Interests
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {availableInterests.map((interest) => (
-                    <button
-                      key={interest.value}
-                      type="button"
-                      onClick={() => toggleInterest(interest.value)}
-                      className={`p-2 text-sm rounded-md ${
-                        selectedInterests.includes(interest.value)
-                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {interest.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Notes Input */}
-              <div>
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                  Notes (Optional)
-                </label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                />
-              </div>
-
-              {error && (
-                <div className="rounded-md bg-red-50 p-4">
-                  <div className="flex">
-                    <AlertCircle className="h-5 w-5 text-red-400" />
-                    <div className="ml-3">
-                      <p className="text-sm text-red-700">{error}</p>
-                    </div>
-                  </div>
-                </div>
+              {birthdateError && (
+                <p className="mt-1 text-sm text-red-600">{birthdateError}</p>
               )}
+              {formattedAge && (
+                <p className="mt-1 text-sm text-gray-500">
+                  Age: {formattedAge} ({getAgeGroupDescription(ageGroup)})
+                </p>
+              )}
+            </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Parent's Concerns
+              </label>
+              <p className="text-gray-600 text-sm mb-3">
+                Share any concerns you have about your child's development. This helps us focus on areas that matter most to you.
+              </p>
+              <div className="space-y-2">
+                {parentInput.concerns.map((concern, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-md px-3 py-2">
+                      {concern}
+                    </span>
+                    <button
+                      onClick={() => setParentInput(prev => ({
+                        ...prev,
+                        concerns: prev.concerns.filter((_, i) => i !== index)
+                      }))}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newConcern}
+                    onChange={(e) => setNewConcern(e.target.value)}
+                    placeholder="Enter a concern"
+                    className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newConcern.trim()) {
+                        setParentInput(prev => ({
+                          ...prev,
+                          concerns: [...prev.concerns, newConcern.trim()]
+                        }));
+                        setNewConcern('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Development Goals
+              </label>
+              <p className="text-gray-600 text-sm mb-3">
+                What would you like your child to achieve in the next few months? Your goals help us create a more personalized development plan.
+              </p>
+              <div className="space-y-2">
+                {parentInput.goals.map((goal, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-md px-3 py-2">
+                      {goal}
+                    </span>
+                    <button
+                      onClick={() => setParentInput(prev => ({
+                        ...prev,
+                        goals: prev.goals.filter((_, i) => i !== index)
+                      }))}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newGoal}
+                    onChange={(e) => setNewGoal(e.target.value)}
+                    placeholder="Enter a goal"
+                    className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newGoal.trim()) {
+                        setParentInput(prev => ({
+                          ...prev,
+                          goals: [...prev.goals, newGoal.trim()]
+                        }));
+                        setNewGoal('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                Additional Notes (Optional)
+              </label>
+              <p className="text-gray-600 text-sm mb-2">
+                Share any other information that might help us better understand your child's unique needs and personality.
+              </p>
+              <textarea
+                id="notes"
+                value={parentInput.notes}
+                onChange={(e) => setParentInput(prev => ({ ...prev, notes: e.target.value }))}
+                rows={3}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                placeholder="Any additional information about your child's development..."
+              />
+            </div>
+
+            <div className="flex flex-col space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">About the Development Assessment</h3>
+                <p className="text-sm text-gray-600 mb-2">
+                  The development assessment helps us understand your child's current skills across different areas:
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 mb-2 space-y-1">
+                  <li>Motor skills (movement and coordination)</li>
+                  <li>Language and communication</li>
+                  <li>Social and emotional development</li>
+                  <li>Cognitive skills (learning and problem-solving)</li>
+                  <li>Self-help skills (daily living activities)</li>
+                </ul>
+                <p className="text-sm text-gray-600">
+                  This information will help us create a personalized plan to support your child's growth and development.
+                </p>
+              </div>
               <div className="flex justify-between">
                 <button
                   type="button"
                   onClick={handleStartAssessment}
-                  className="inline-flex items-center px-4 py-2 border border-emerald-300 text-sm font-medium rounded-md text-emerald-700 bg-emerald-50 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                  disabled={!birthDate || !name.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Complete Development Assessment
                 </button>
                 <button
-                  type="button"
+                  type="submit"
                   onClick={handleSubmit}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                  disabled={loading || !birthDate || !name.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Child
+                  Save Child Profile
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

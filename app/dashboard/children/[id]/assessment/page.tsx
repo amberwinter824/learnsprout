@@ -6,134 +6,151 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import DevelopmentAssessment from '@/app/components/DevelopmentAssessment';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, writeBatch, collection } from 'firebase/firestore';
+import { doc, getDoc, writeBatch, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface ParentInput {
-  concerns: string[];
-  goals: string[];
-  notes: string;
-}
 
 export default function ChildAssessmentPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { currentUser } = useAuth();
-  const [child, setChild] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [childData, setChildData] = useState<any>(null);
 
   useEffect(() => {
-    const fetchChild = async () => {
-      try {
-        if (!currentUser) {
-          throw new Error('You must be logged in');
-        }
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
 
+    const fetchChildData = async () => {
+      try {
         const childDoc = await getDoc(doc(db, 'children', params.id));
         if (!childDoc.exists()) {
-          throw new Error('Child not found');
+          setError('Child not found');
+          return;
         }
 
-        const childData = childDoc.data();
-        if (childData.userId !== currentUser.uid) {
-          throw new Error('Unauthorized access');
-        }
-
-        setChild(childData);
-        setLoading(false);
-      } catch (err: any) {
-        console.error('Error fetching child:', err);
-        setError(err.message || 'Failed to load child information');
+        const data = childDoc.data();
+        setChildData({
+          id: childDoc.id,
+          ...data,
+        });
+      } catch (err) {
+        console.error('Error fetching child data:', err);
+        setError('Failed to load child data');
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchChild();
-  }, [params.id, currentUser]);
+    fetchChildData();
+  }, [currentUser, params.id, router]);
 
-  const handleAssessmentComplete = async (results: any[]) => {
+  const handleAssessmentComplete = async (assessmentResults: any[]) => {
     try {
-      // Save assessment results to Firestore
+      setLoading(true);
       const batch = writeBatch(db);
-      
-      results.forEach(result => {
-        const skillRef = doc(collection(db, 'childSkills'));
+
+      // Delete existing skills if any
+      const existingSkillsSnapshot = await getDocs(collection(db, 'children', params.id, 'skills'));
+      existingSkillsSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      // Add new skills
+      assessmentResults.forEach((result) => {
+        const skillRef = doc(collection(db, 'children', params.id, 'skills'));
         batch.set(skillRef, {
-          childId: params.id,
-          skillId: result.skillId,
-          status: result.status,
-          lastAssessed: new Date(),
-          notes: result.notes || '',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          ...result,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
       });
-      
+
       await batch.commit();
-      
-      // Redirect to child's progress page
       router.push(`/dashboard/children/${params.id}/progress`);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error saving assessment results:', err);
-      setError(err.message || 'Failed to save assessment results');
+      setError('Failed to save assessment results');
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-          <div className="text-center">
-            <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-            <h2 className="mt-6 text-2xl font-bold text-gray-900">Error</h2>
-            <p className="mt-2 text-sm text-gray-600">{error}</p>
-            <div className="mt-4">
-              <Link
-                href="/dashboard"
-                className="text-emerald-600 hover:text-emerald-500"
-              >
-                Back to Dashboard
-              </Link>
-            </div>
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
           </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-6">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="bg-red-50 rounded-md p-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
           <Link
             href={`/dashboard/children/${params.id}`}
-            className="inline-flex items-center text-emerald-600 hover:text-emerald-500"
+            className="mt-4 inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to Child Profile
           </Link>
         </div>
+      </div>
+    );
+  }
 
-        <div className="bg-white shadow rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Development Assessment for {child.name}
-          </h1>
-
-          <DevelopmentAssessment
-            childName={child.name}
-            birthDate={child.birthDate.toDate()}
-            parentInput={child.parentInput || { concerns: [], goals: [], notes: '' }}
-            onComplete={handleAssessmentComplete}
-          />
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="flex justify-between items-center mb-6">
+          <Link
+            href={`/dashboard/children/${params.id}`}
+            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Child Profile
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Development Assessment</h1>
         </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">About This Assessment</h2>
+          <p className="text-gray-600 mb-4">
+            This assessment will help us understand {childData.name}'s current developmental progress. We'll look at various skills that are typical for their age group.
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-medium text-blue-900 mb-2">How It Works:</h3>
+            <ul className="list-disc list-inside text-sm text-blue-700 space-y-2">
+              <li>You'll be shown age-appropriate skills one at a time</li>
+              <li>For each skill, indicate if your child is "Emerging" (just starting), "Developing" (making progress), or "Mastered" (consistently shows this skill)</li>
+              <li>Add notes about specific behaviors or observations if you'd like</li>
+              <li>The assessment typically takes 10-15 minutes to complete</li>
+            </ul>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Based on your responses and the concerns/goals you shared, we'll create a personalized development plan to support {childData.name}'s growth.
+          </p>
+        </div>
+
+        <DevelopmentAssessment
+          childName={childData.name}
+          birthDate={childData.birthDate.toDate()}
+          parentInput={childData.parentInput || { concerns: [], goals: [], notes: '' }}
+          onComplete={handleAssessmentComplete}
+        />
       </div>
     </div>
   );
