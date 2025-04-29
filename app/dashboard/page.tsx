@@ -440,14 +440,14 @@ export default function Dashboard() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
               <div className="grid grid-cols-2 gap-2">
                 <Link
-                  href={`/dashboard/activities?childId=${selectedChildId}`}
+                  href="/dashboard/activities"
                   className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
                   Activities
                 </Link>
                 <Link
-                  href={`/dashboard/progress?childId=${selectedChildId}`}
+                  href="/dashboard/progress"
                   className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <BarChart2 className="h-4 w-4 mr-2" />

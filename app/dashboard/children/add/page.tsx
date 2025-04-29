@@ -188,14 +188,14 @@ export default function AddChildPage() {
         birthDate,
         ageGroup,
         interests: selectedInterests,
-        notes: notes.trim(),
+        parentInput,
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
       const childId = await createChild(currentUser.uid, childData);
       
-      // Create child skills records from assessment results
+      // Create child skills records from assessment results if they exist
       if (assessmentResults.length > 0) {
         const batch = writeBatch(db);
         
@@ -382,20 +382,21 @@ export default function AddChildPage() {
               />
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between pt-6">
               <button
                 type="button"
-                onClick={() => setShowAssessment(true)}
-                className="inline-flex items-center px-4 py-2 border border-emerald-600 text-sm font-medium rounded-md text-emerald-600 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                onClick={() => setStep('assessment')}
+                disabled={!birthDate}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-emerald-700 bg-emerald-100 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
               >
-                Complete Developmental Assessment
+                Complete Development Assessment
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
               >
-                {loading ? 'Adding...' : 'Add Child'}
+                {loading ? 'Saving...' : 'Save Child'}
               </button>
             </div>
           </form>
