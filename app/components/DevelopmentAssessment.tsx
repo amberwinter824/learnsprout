@@ -9,7 +9,7 @@ interface DevelopmentalSkill {
   name: string;
   description: string;
   area: string;
-  ageGroups: string[];
+  ageRanges: string[];
   category: string;
 }
 
@@ -47,16 +47,28 @@ export default function DevelopmentAssessment({
       try {
         setLoading(true);
         const ageGroup = calculateAgeGroup(birthDate);
+        console.log('Calculated age group:', ageGroup);
         
         // Fetch developmental skills for this age group
         const skillsQuery = query(
           collection(db, 'developmentalSkills'),
-          where('ageGroups', 'array-contains', ageGroup)
+          where('ageRanges', 'array-contains', ageGroup)
         );
         
+        console.log('Fetching skills for age group:', ageGroup);
         const skillsSnapshot = await getDocs(skillsQuery);
+        console.log('Query results:', {
+          empty: skillsSnapshot.empty,
+          size: skillsSnapshot.size,
+          docs: skillsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ageRanges: doc.data().ageRanges,
+            name: doc.data().name
+          }))
+        });
+
         if (skillsSnapshot.empty) {
-          throw new Error('No developmental skills found for this age group');
+          throw new Error(`No developmental skills found for age group: ${ageGroup}`);
         }
 
         const fetchedSkills = skillsSnapshot.docs.map(doc => ({
@@ -69,7 +81,7 @@ export default function DevelopmentAssessment({
         setSkills(sortedSkills);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching developmental skills:', err);
+        console.error('Error details:', err);
         setError(err instanceof Error ? err.message : 'Failed to load assessment questions');
         setLoading(false);
       }
