@@ -79,6 +79,7 @@ export default function AddChildPage() {
   const [ageGroup, setAgeGroup] = useState('');
   const [formattedAge, setFormattedAge] = useState('');
   const [interests, setInterests] = useState<Interest[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [assessmentResults, setAssessmentResults] = useState<AssessmentResult[]>([]);
   const [developmentPlan, setDevelopmentPlan] = useState<DevelopmentPlan | null>(null);
@@ -89,10 +90,16 @@ export default function AddChildPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [availableInterests, setAvailableInterests] = useState<Interest[]>([]);
   const [birthdateError, setBirthdateError] = useState('');
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [showAssessment, setShowAssessment] = useState(false);
   const [showDevelopmentPlan, setShowDevelopmentPlan] = useState(false);
   const [step, setStep] = useState('assessment');
+  const [parentInput, setParentInput] = useState<ParentInput>({
+    concerns: [],
+    goals: [],
+    notes: ''
+  });
+  const [newConcern, setNewConcern] = useState('');
+  const [newGoal, setNewGoal] = useState('');
 
   // Add an effect to wait for the auth state to be properly loaded
   useEffect(() => {
@@ -260,6 +267,7 @@ export default function AddChildPage() {
       <DevelopmentAssessment
         childName={name}
         birthDate={birthDate}
+        parentInput={parentInput}
         onComplete={handleAssessmentComplete}
       />
     );
@@ -270,6 +278,7 @@ export default function AddChildPage() {
       <DevelopmentPlan
         childName={name}
         assessmentResults={assessmentResults}
+        parentInput={parentInput}
         onBack={() => {
           setShowDevelopmentPlan(false);
           setShowAssessment(true);

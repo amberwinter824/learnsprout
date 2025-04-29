@@ -20,13 +20,21 @@ interface AssessmentResult {
   notes?: string;
 }
 
+interface ParentInput {
+  concerns: string[];
+  goals: string[];
+  notes: string;
+}
+
 export default function DevelopmentAssessment({ 
   childName, 
-  birthDate, 
+  birthDate,
+  parentInput,
   onComplete 
 }: { 
   childName: string;
   birthDate: Date;
+  parentInput: ParentInput;
   onComplete: (results: AssessmentResult[]) => void;
 }) {
   const [assessmentData, setAssessmentData] = useState<AssessmentResult[]>([]);
@@ -51,17 +59,37 @@ export default function DevelopmentAssessment({
           ...doc.data()
         })) as DevelopmentalSkill[];
 
-        setSkills(fetchedSkills);
+        // Prioritize skills that match parent concerns and goals
+        const concernKeywords = parentInput.concerns.flatMap(concern => concern.toLowerCase().split(' '));
+        const goalKeywords = parentInput.goals.flatMap(goal => goal.toLowerCase().split(' '));
+
+        const sortedSkills = fetchedSkills.sort((a, b) => {
+          const aText = `${a.name} ${a.description}`.toLowerCase();
+          const bText = `${b.name} ${b.description}`.toLowerCase();
+          
+          const aMatchesConcerns = concernKeywords.some(keyword => aText.includes(keyword));
+          const bMatchesConcerns = concernKeywords.some(keyword => bText.includes(keyword));
+          const aMatchesGoals = goalKeywords.some(keyword => aText.includes(keyword));
+          const bMatchesGoals = goalKeywords.some(keyword => bText.includes(keyword));
+          
+          if (aMatchesConcerns && !bMatchesConcerns) return -1;
+          if (!aMatchesConcerns && bMatchesConcerns) return 1;
+          if (aMatchesGoals && !bMatchesGoals) return -1;
+          if (!aMatchesGoals && bMatchesGoals) return 1;
+          return 0;
+        });
+
+        setSkills(sortedSkills);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching developmental skills:', err);
-        setError('Failed to load developmental skills');
+        setError('Failed to load assessment questions');
         setLoading(false);
       }
     };
 
     fetchDevelopmentalSkills();
-  }, [birthDate]);
+  }, [birthDate, parentInput]);
 
   const handleAnswer = (skillId: string, status: 'emerging' | 'developing' | 'mastered') => {
     const newResult: AssessmentResult = {
