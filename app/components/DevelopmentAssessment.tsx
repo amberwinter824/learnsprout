@@ -43,26 +43,11 @@ export default function DevelopmentAssessment({
   const [currentSkillIndex, setCurrentSkillIndex] = useState(0);
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [showPrioritized, setShowPrioritized] = useState(true);
+  const [filteredSkills, setFilteredSkills] = useState<DevelopmentalSkill[]>([]);
+  const [skillsByArea, setSkillsByArea] = useState<Record<string, DevelopmentalSkill[]>>({});
+  const [areas, setAreas] = useState<string[]>([]);
 
-  // Group skills by area
-  const skillsByArea = skills.reduce((acc, skill) => {
-    if (!acc[skill.area]) {
-      acc[skill.area] = [];
-    }
-    acc[skill.area].push(skill);
-    return acc;
-  }, {} as Record<string, DevelopmentalSkill[]>);
-
-  // Get available areas
-  const areas = Object.keys(skillsByArea);
-
-  // Filter skills based on selected area and prioritization
-  const filteredSkills = skills.filter(skill => {
-    if (!skill || !skill.area) return false;
-    return (selectedArea === 'all' || skill.area === selectedArea) &&
-           (!showPrioritized || isSkillPrioritized(skill, parentInput));
-  });
-
+  // Define helper functions first
   const isSkillPrioritized = (skill: DevelopmentalSkill, parentInput: ParentInput) => {
     if (!skill || !parentInput) return false;
     const text = `${skill.name} ${skill.description} ${skill.area}`.toLowerCase();
@@ -73,11 +58,28 @@ export default function DevelopmentAssessment({
            goalKeywords.some(keyword => text.includes(keyword));
   };
 
-  const currentSkill = filteredSkills[currentSkillIndex] || null;
-  const totalSkills = filteredSkills.length;
-  const completedSkills = assessmentData.length;
+  const sortSkillsByPriority = (skillsToSort: DevelopmentalSkill[], input: ParentInput) => {
+    const concernKeywords = input.concerns?.flatMap(concern => concern.toLowerCase().split(' ')) || [];
+    const goalKeywords = input.goals?.flatMap(goal => goal.toLowerCase().split(' ')) || [];
 
-  // Get the count of assessed skills in current area
+    return [...skillsToSort].sort((a, b) => {
+      const aText = `${a.name} ${a.description} ${a.area}`.toLowerCase();
+      const bText = `${b.name} ${b.description} ${b.area}`.toLowerCase();
+      
+      const aMatchesConcerns = concernKeywords.some(keyword => aText.includes(keyword));
+      const bMatchesConcerns = concernKeywords.some(keyword => bText.includes(keyword));
+      const aMatchesGoals = goalKeywords.some(keyword => aText.includes(keyword));
+      const bMatchesGoals = goalKeywords.some(keyword => bText.includes(keyword));
+      
+      if (aMatchesConcerns && !bMatchesConcerns) return -1;
+      if (!aMatchesConcerns && bMatchesConcerns) return 1;
+      if (aMatchesGoals && !bMatchesGoals) return -1;
+      if (!aMatchesGoals && bMatchesGoals) return 1;
+      
+      return a.area.localeCompare(b.area);
+    });
+  };
+
   const getAreaProgress = (area: string) => {
     if (!skills.length) return 0;
     const areaSkills = area === 'all' ? skills : skills.filter(s => s.area === area);
@@ -86,6 +88,7 @@ export default function DevelopmentAssessment({
     ).length;
   };
 
+  // Fetch skills
   useEffect(() => {
     const fetchDevelopmentalSkills = async () => {
       try {
@@ -93,7 +96,6 @@ export default function DevelopmentAssessment({
         const ageGroup = calculateAgeGroup(birthDate);
         console.log('Calculated age group:', ageGroup);
         
-        // Fetch developmental skills for this age group
         const skillsQuery = query(
           collection(db, 'developmentalSkills'),
           where('ageRanges', 'array-contains', ageGroup)
@@ -120,7 +122,6 @@ export default function DevelopmentAssessment({
           ...doc.data()
         })) as DevelopmentalSkill[];
 
-        // Sort skills by area and prioritize based on parent input
         const sortedSkills = sortSkillsByPriority(fetchedSkills, parentInput);
         setSkills(sortedSkills);
         setLoading(false);
@@ -134,33 +135,34 @@ export default function DevelopmentAssessment({
     fetchDevelopmentalSkills();
   }, [birthDate, parentInput]);
 
-  // Reset currentSkillIndex when filtered skills change
+  // Update skillsByArea and areas when skills change
   useEffect(() => {
-    setCurrentSkillIndex(0);
-  }, [selectedArea, showPrioritized]);
+    const newSkillsByArea = skills.reduce((acc, skill) => {
+      if (!acc[skill.area]) {
+        acc[skill.area] = [];
+      }
+      acc[skill.area].push(skill);
+      return acc;
+    }, {} as Record<string, DevelopmentalSkill[]>);
+    
+    setSkillsByArea(newSkillsByArea);
+    setAreas(Object.keys(newSkillsByArea));
+  }, [skills]);
 
-  const sortSkillsByPriority = (skills: DevelopmentalSkill[], parentInput: ParentInput) => {
-    const concernKeywords = parentInput.concerns.flatMap(concern => concern.toLowerCase().split(' '));
-    const goalKeywords = parentInput.goals.flatMap(goal => goal.toLowerCase().split(' '));
-
-    return skills.sort((a, b) => {
-      const aText = `${a.name} ${a.description} ${a.area}`.toLowerCase();
-      const bText = `${b.name} ${b.description} ${b.area}`.toLowerCase();
-      
-      const aMatchesConcerns = concernKeywords.some(keyword => aText.includes(keyword));
-      const bMatchesConcerns = concernKeywords.some(keyword => bText.includes(keyword));
-      const aMatchesGoals = goalKeywords.some(keyword => aText.includes(keyword));
-      const bMatchesGoals = goalKeywords.some(keyword => bText.includes(keyword));
-      
-      if (aMatchesConcerns && !bMatchesConcerns) return -1;
-      if (!aMatchesConcerns && bMatchesConcerns) return 1;
-      if (aMatchesGoals && !bMatchesGoals) return -1;
-      if (!aMatchesGoals && bMatchesGoals) return 1;
-      
-      // If no matches, sort by area
-      return a.area.localeCompare(b.area);
+  // Update filtered skills when area or prioritization changes
+  useEffect(() => {
+    const newFilteredSkills = skills.filter(skill => {
+      if (!skill || !skill.area) return false;
+      return (selectedArea === 'all' || skill.area === selectedArea) &&
+             (!showPrioritized || isSkillPrioritized(skill, parentInput));
     });
-  };
+    setFilteredSkills(newFilteredSkills);
+    setCurrentSkillIndex(0);
+  }, [selectedArea, showPrioritized, skills, parentInput]);
+
+  const currentSkill = filteredSkills[currentSkillIndex] || null;
+  const totalSkills = filteredSkills.length;
+  const completedSkills = assessmentData.length;
 
   const handleAnswer = (skillId: string, status: 'emerging' | 'developing' | 'mastered') => {
     setAssessmentData(prev => {
@@ -173,7 +175,6 @@ export default function DevelopmentAssessment({
       return [...prev, { skillId, status }];
     });
 
-    // Move to next skill if not at the end
     if (currentSkillIndex < filteredSkills.length - 1) {
       setCurrentSkillIndex(prev => prev + 1);
     }
