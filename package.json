@@ -9,11 +9,12 @@
     "start": "next start",
     "lint": "eslint --ext .js,.ts .",
     "seed:infant-toddler": "node adminInfantToddlerSeeder.cjs",
+    "seed:dev-skills": "node scripts/seedDevelopmentalSkills.js",
     "init:roles": "node scripts/initializeRoles.js",
     "init:institutions": "node scripts/createDefaultInstitution.js",
     "init:schema": "node scripts/initFirebaseSchema.js",
     "init:standalone": "node scripts/standaloneSchemaInit.js",
-    "setup:dev": "npm run init:roles && npm run init:institutions && npm run init:schema && npm run init:standalone",
+    "setup:dev": "npm run init:roles && npm run init:institutions && npm run init:schema && npm run init:standalone && npm run seed:dev-skills",
     "extract-materials": "node scripts/extractMaterials.cjs",
     "import-materials": "node scripts/importMaterialLinks.cjs"
   },

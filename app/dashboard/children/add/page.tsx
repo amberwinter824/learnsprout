@@ -153,7 +153,9 @@ export default function AddChildPage() {
 
   const handleAssessmentComplete = (results: AssessmentResult[]) => {
     setAssessmentResults(results);
-    setStep('development-plan');
+    setShowAssessment(false);
+    // Continue with child creation
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
   const handleGenerateWeeklyPlan = (plan: DevelopmentPlan) => {
@@ -230,8 +232,8 @@ export default function AddChildPage() {
         await batch.commit();
       }
       
-      // Redirect to dashboard after adding a child
-      router.push('/dashboard');
+      // Redirect to the child's profile page
+      router.push(`/dashboard/children/${childId}`);
     } catch (err: any) {
       console.error('Error adding child:', err);
       setError(err.message || 'Failed to add child');
@@ -289,6 +291,35 @@ export default function AddChildPage() {
         }}
         onGenerateWeeklyPlan={handleGenerateWeeklyPlan}
       />
+    );
+  }
+
+  if (showAssessment) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="flex justify-between items-center mb-6">
+            <button
+              onClick={() => setShowAssessment(false)}
+              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Profile
+            </button>
+          </div>
+
+          <DevelopmentAssessment
+            childName={name}
+            birthDate={birthDate!}
+            parentInput={parentInput}
+            onComplete={(results) => {
+              setAssessmentResults(results);
+              setShowAssessment(false);
+              setShowDevelopmentPlan(true);
+            }}
+          />
+        </div>
+      </div>
     );
   }
 
