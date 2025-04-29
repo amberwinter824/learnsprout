@@ -7,7 +7,7 @@ interface DevelopmentalSkill {
   id: string;
   name: string;
   description: string;
-  area: string;
+  area: 'Practical Life' | 'Sensorial' | 'Language' | 'Mathematics' | 'Cultural' | 'Social & Emotional';
   ageGroups: string[];
   category: string;
 }
@@ -22,7 +22,7 @@ interface Activity {
   id: string;
   title: string;
   description: string;
-  area: string;
+  area: 'Practical Life' | 'Sensorial' | 'Language' | 'Mathematics' | 'Cultural' | 'Social & Emotional';
   skillsAddressed: string[];
   duration: number;
   difficulty: string;

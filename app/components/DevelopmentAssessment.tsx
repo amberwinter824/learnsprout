@@ -8,7 +8,7 @@ interface DevelopmentalSkill {
   id: string;
   name: string;
   description: string;
-  area: string;
+  area: 'Practical Life' | 'Sensorial' | 'Language' | 'Mathematics' | 'Cultural' | 'Social & Emotional';
   ageRanges: string[];
   category: string;
 }

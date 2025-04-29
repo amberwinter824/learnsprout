@@ -306,7 +306,7 @@ export default function AddChildPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a Child</h1>
 
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
-          <h2 className="text-lg font-semibold text-emerald-800 mb-2">Welcome to LearnSprout!</h2>
+          <h2 className="text-lg font-semibold text-emerald-800 mb-2">Welcome to Learn Sprout!</h2>
           <p className="text-emerald-700 mb-2">
             We're here to help you track and support your child's development journey. Let's start by gathering some basic information about your child.
           </p>
@@ -363,6 +363,37 @@ export default function AddChildPage() {
               {formattedAge && (
                 <p className="mt-1 text-sm text-gray-500">
                   Age: {formattedAge} ({getAgeGroupDescription(ageGroup)})
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Child's Interests
+              </label>
+              <p className="text-gray-600 text-sm mb-3">
+                Select activities and topics that your child enjoys or shows interest in. This helps us suggest engaging learning experiences.
+              </p>
+              {birthDate ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {availableInterests.map((interest) => (
+                    <button
+                      key={interest.value}
+                      type="button"
+                      onClick={() => toggleInterest(interest.value)}
+                      className={`p-3 text-sm rounded-lg text-left transition-colors ${
+                        selectedInterests.includes(interest.value)
+                          ? 'bg-emerald-100 text-emerald-800 border-2 border-emerald-500'
+                          : 'bg-gray-50 text-gray-700 border border-gray-200 hover:border-emerald-300'
+                      }`}
+                    >
+                      {interest.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">
+                  Please enter your child's birth date to see age-appropriate interests
                 </p>
               )}
             </div>
@@ -488,17 +519,18 @@ export default function AddChildPage() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-gray-900 mb-2">About the Development Assessment</h3>
                 <p className="text-sm text-gray-600 mb-2">
-                  The development assessment helps us understand your child's current skills across different areas:
+                  The development assessment helps us understand your child's current skills across different developmental domains:
                 </p>
                 <ul className="list-disc list-inside text-sm text-gray-600 mb-2 space-y-1">
-                  <li>Motor skills (movement and coordination)</li>
-                  <li>Language and communication</li>
-                  <li>Social and emotional development</li>
-                  <li>Cognitive skills (learning and problem-solving)</li>
-                  <li>Self-help skills (daily living activities)</li>
+                  <li>Practical Life - Self-care, independence, and fine motor coordination</li>
+                  <li>Sensorial - Refinement of senses and understanding the environment</li>
+                  <li>Language - Communication, vocabulary, and literacy skills</li>
+                  <li>Mathematics - Understanding numbers, quantities, and mathematical concepts</li>
+                  <li>Cultural - Exploring geography, science, art, and music</li>
+                  <li>Social & Emotional - Self-awareness, emotional regulation, and social skills</li>
                 </ul>
                 <p className="text-sm text-gray-600">
-                  This information will help us create a personalized plan to support your child's growth and development.
+                  This information will help us create a personalized plan to support your child's growth and development across all domains.
                 </p>
               </div>
               <div className="flex justify-between">
