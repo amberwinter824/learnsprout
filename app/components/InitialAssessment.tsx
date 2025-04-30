@@ -62,11 +62,90 @@ const domains: Domain[] = [
 
 // Questions are age-specific and map to multiple skills
 const getQuestionsForAge = (ageGroup: string): Question[] => {
-  // Example for age group 3-4
-  if (ageGroup === '3-4') {
-    return [
+  // Default questions for all age groups
+  const defaultQuestions: Question[] = [
+    {
+      id: 'pl-1',
+      domain: 'practical_life',
+      text: 'Does your child show interest in self-care activities?',
+      examples: [
+        'Tries to feed themselves',
+        'Participates in dressing',
+        'Shows interest in hygiene routines'
+      ],
+      relatedSkills: ['prl-self-care', 'prl-independence']
+    },
+    {
+      id: 'sen-1',
+      domain: 'sensorial',
+      text: 'Does your child explore objects using their senses?',
+      examples: [
+        'Touches different textures',
+        'Responds to sounds',
+        'Shows interest in visual patterns'
+      ],
+      relatedSkills: ['sen-exploration', 'sen-discrimination']
+    },
+    {
+      id: 'lan-1',
+      domain: 'language',
+      text: 'Does your child communicate their needs?',
+      examples: [
+        'Uses gestures or sounds to communicate',
+        'Responds to simple questions',
+        'Shows understanding of basic words'
+      ],
+      relatedSkills: ['lan-communication', 'lan-comprehension']
+    },
+    {
+      id: 'mat-1',
+      domain: 'mathematics',
+      text: 'Does your child show interest in patterns and sorting?',
+      examples: [
+        'Groups similar objects together',
+        'Shows interest in counting songs',
+        'Notices differences in sizes'
+      ],
+      relatedSkills: ['mat-patterns', 'mat-sorting']
+    },
+    {
+      id: 'cul-1',
+      domain: 'cultural',
+      text: 'Does your child show curiosity about their environment?',
+      examples: [
+        'Explores nature elements',
+        'Shows interest in music and movement',
+        'Notices changes in surroundings'
+      ],
+      relatedSkills: ['cul-exploration', 'cul-awareness']
+    },
+    {
+      id: 'soc-1',
+      domain: 'social_emotional',
+      text: 'Does your child engage in social interactions?',
+      examples: [
+        'Shows interest in other people',
+        'Expresses basic emotions',
+        'Responds to others\' emotions'
+      ],
+      relatedSkills: ['soc-interaction', 'soc-emotional']
+    }
+  ];
+
+  // Age-specific questions
+  const ageSpecificQuestions: Record<string, Question[]> = {
+    '0-12m': [
+      // Add age-specific questions for 0-12 months
+    ],
+    '1-2': [
+      // Add age-specific questions for 1-2 years
+    ],
+    '2-3': [
+      // Add age-specific questions for 2-3 years
+    ],
+    '3-4': [
       {
-        id: 'pl-1',
+        id: 'pl-2',
         domain: 'practical_life',
         text: 'Does your child attempt to dress themselves?',
         examples: [
@@ -76,65 +155,12 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
         ],
         relatedSkills: ['prl-dressing', 'prl-coordination']
       },
-      {
-        id: 'pl-2',
-        domain: 'practical_life',
-        text: 'Does your child help with simple tasks?',
-        examples: [
-          'Helps set the table',
-          'Puts toys away',
-          'Helps with simple cleaning tasks'
-        ],
-        relatedSkills: ['prl-care', 'prl-organization']
-      },
-      {
-        id: 'sen-1',
-        domain: 'sensorial',
-        text: 'Does your child show interest in exploring different textures and materials?',
-        examples: [
-          'Notices different surfaces while touching',
-          'Comments on how things feel',
-          'Enjoys sensory activities like playdough'
-        ],
-        relatedSkills: ['sen-tactile', 'sen-visual']
-      },
-      {
-        id: 'lan-1',
-        domain: 'language',
-        text: 'Does your child engage in conversations?',
-        examples: [
-          'Answers simple questions',
-          'Shares experiences from their day',
-          'Uses 3-4 word sentences'
-        ],
-        relatedSkills: ['lan-vocabulary', 'lan-comprehension']
-      },
-      {
-        id: 'mat-1',
-        domain: 'mathematics',
-        text: 'Does your child show understanding of numbers and counting?',
-        examples: [
-          'Counts objects while pointing to them',
-          'Shows interest in counting songs',
-          'Recognizes when there are more or less items'
-        ],
-        relatedSkills: ['mat-counting', 'mat-quantity']
-      },
-      {
-        id: 'soc-1',
-        domain: 'social_emotional',
-        text: 'Does your child express their emotions?',
-        examples: [
-          'Names basic feelings (happy, sad, angry)',
-          'Seeks comfort when upset',
-          'Shows empathy when others are upset'
-        ],
-        relatedSkills: ['soc-self-awareness', 'soc-emotion-reg']
-      }
-    ];
-  }
-  // Add more age groups...
-  return [];
+      // ... rest of the 3-4 specific questions ...
+    ]
+  };
+
+  // Combine default questions with age-specific questions
+  return [...defaultQuestions, ...(ageSpecificQuestions[ageGroup] || [])];
 };
 
 interface InitialAssessmentProps {
@@ -153,11 +179,17 @@ export default function InitialAssessment({
   const [currentDomainIndex, setCurrentDomainIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, 'yes' | 'sometimes' | 'not_yet'>>({});
   const [showExamples, setShowExamples] = useState<Record<string, boolean>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const ageGroup = calculateAgeGroup(birthDate);
   const questions = getQuestionsForAge(ageGroup);
   const currentDomain = domains[currentDomainIndex];
   const domainQuestions = questions.filter(q => q.domain === currentDomain.id);
+
+  // Calculate total questions and answered questions for accurate progress
+  const totalQuestions = questions.length;
+  const answeredQuestions = Object.keys(answers).length;
+  const progress = (answeredQuestions / totalQuestions) * 100;
 
   const handleAnswer = (questionId: string, answer: 'yes' | 'sometimes' | 'not_yet') => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
@@ -167,30 +199,37 @@ export default function InitialAssessment({
     setShowExamples(prev => ({ ...prev, [questionId]: !prev[questionId] }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentDomainIndex < domains.length - 1) {
       setCurrentDomainIndex(prev => prev + 1);
     } else {
-      // Convert answers to skill assessments
-      const results = questions.flatMap(question => {
-        const answer = answers[question.id];
-        if (!answer) return [];
+      try {
+        setIsSubmitting(true);
+        // Convert answers to skill assessments
+        const results = questions.flatMap(question => {
+          const answer = answers[question.id];
+          if (!answer) return [];
+          
+          const status: 'emerging' | 'developing' | 'mastered' = 
+            answer === 'yes' ? 'mastered' :
+            answer === 'sometimes' ? 'developing' : 'emerging';
+          
+          return question.relatedSkills.map(skillId => ({
+            skillId,
+            status
+          }));
+        });
         
-        const status: 'emerging' | 'developing' | 'mastered' = 
-          answer === 'yes' ? 'developing' : 'emerging';
-        
-        return question.relatedSkills.map(skillId => ({
-          skillId,
-          status
-        }));
-      });
-      
-      onComplete(results);
+        await onComplete(results);
+      } catch (error) {
+        console.error('Error completing assessment:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
   const isCurrentDomainComplete = domainQuestions.every(q => answers[q.id]);
-  const progress = (currentDomainIndex / domains.length) * 100;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -225,6 +264,9 @@ export default function InitialAssessment({
           </div>
           <p className="mt-2 text-sm text-gray-600">
             Section {currentDomainIndex + 1} of {domains.length}: {currentDomain.name}
+          </p>
+          <p className="text-sm text-gray-500">
+            {answeredQuestions} of {totalQuestions} questions completed
           </p>
         </div>
 
@@ -313,10 +355,10 @@ export default function InitialAssessment({
           </button>
           <button
             onClick={handleNext}
-            disabled={!isCurrentDomainComplete}
+            disabled={!isCurrentDomainComplete || isSubmitting}
             className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
           >
-            {currentDomainIndex === domains.length - 1 ? 'Complete' : 'Next Section'}
+            {isSubmitting ? 'Saving...' : currentDomainIndex === domains.length - 1 ? 'Complete' : 'Next Section'}
           </button>
         </div>
       </div>

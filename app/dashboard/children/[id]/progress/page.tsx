@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
+import DevelopmentGuide from '@/components/DevelopmentGuide';
 
 // Define interfaces
 interface ChildData {
@@ -66,6 +67,12 @@ interface ProgressRecord {
   photoUrls?: string[];
 }
 
+interface AssessmentResult {
+  skillId: string;
+  status: 'emerging' | 'developing' | 'mastered';
+  notes?: string;
+}
+
 export default function ChildProgressPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const childId = params.id;
@@ -85,6 +92,8 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
   const [updateStatus, setUpdateStatus] = useState<'emerging' | 'developing' | 'mastered'>('emerging');
   const [updateNotes, setUpdateNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showDevelopmentGuide, setShowDevelopmentGuide] = useState(false);
+  const [currentAssessmentResults, setCurrentAssessmentResults] = useState<AssessmentResult[]>([]);
   
   // Fetch child and progress data
   useEffect(() => {
@@ -239,6 +248,34 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
       fetchData();
     }
   }, [childId]);
+
+  useEffect(() => {
+    async function fetchAssessmentResults() {
+      try {
+        const skillsQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', '==', params.id)
+        );
+        const skillsSnapshot = await getDocs(skillsQuery);
+        const results: AssessmentResult[] = [];
+        
+        skillsSnapshot.forEach(doc => {
+          const data = doc.data();
+          results.push({
+            skillId: data.skillId,
+            status: data.status,
+            notes: data.notes
+          });
+        });
+        
+        setCurrentAssessmentResults(results);
+      } catch (err) {
+        console.error('Error fetching assessment results:', err);
+      }
+    }
+    
+    fetchAssessmentResults();
+  }, [params.id]);
   
   // Filtered skills based on search and area selection
   const filteredSkills = useMemo(() => {
@@ -526,6 +563,17 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
     );
   }
   
+  if (showDevelopmentGuide) {
+    return (
+      <DevelopmentGuide
+        childName={child?.name || ''}
+        childId={params.id}
+        assessmentResults={currentAssessmentResults}
+        onBack={() => setShowDevelopmentGuide(false)}
+      />
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -537,6 +585,46 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
               Back to {child?.name}'s Profile
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Progress Tracking</h1>
+          </div>
+
+          {/* Add this new section after the child info */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900">Development Guide</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  View and update your child's development activities and progress
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDevelopmentGuide(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              >
+                View Development Guide
+              </button>
+            </div>
+
+            {/* Quick stats about current development status */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-emerald-800">Current Focus Areas</h3>
+                <p className="mt-1 text-sm text-emerald-600">
+                  {getCurrentFocusAreas(currentAssessmentResults)}
+                </p>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-blue-800">Recent Activities</h3>
+                <p className="mt-1 text-sm text-blue-600">
+                  {getRecentActivityCount(progressRecords)} activities completed
+                </p>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-amber-800">Next Steps</h3>
+                <p className="mt-1 text-sm text-amber-600">
+                  {getNextSteps(currentAssessmentResults)}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Main content */}
@@ -1263,4 +1351,41 @@ export default function ChildProgressPage({ params }: { params: { id: string } }
       )}
     </div>
   );
+}
+
+// Helper functions
+function getCurrentFocusAreas(results: AssessmentResult[]): string {
+  const emergingSkills = results.filter(r => r.status === 'emerging').length;
+  const developingSkills = results.filter(r => r.status === 'developing').length;
+  
+  if (emergingSkills > 0 && developingSkills > 0) {
+    return `${emergingSkills} emerging and ${developingSkills} developing skills`;
+  } else if (emergingSkills > 0) {
+    return `${emergingSkills} emerging skills`;
+  } else if (developingSkills > 0) {
+    return `${developingSkills} developing skills`;
+  }
+  return 'All skills mastered';
+}
+
+function getRecentActivityCount(records: ProgressRecord[]): number {
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  
+  return records.filter(record => {
+    const recordDate = record.date.toDate();
+    return recordDate >= oneMonthAgo && record.completionStatus === 'completed';
+  }).length;
+}
+
+function getNextSteps(results: AssessmentResult[]): string {
+  const emergingSkills = results.filter(r => r.status === 'emerging');
+  const developingSkills = results.filter(r => r.status === 'developing');
+  
+  if (emergingSkills.length > 0) {
+    return `Focus on ${emergingSkills.length} emerging skills`;
+  } else if (developingSkills.length > 0) {
+    return `Continue developing ${developingSkills.length} skills`;
+  }
+  return 'All skills are on track';
 }
