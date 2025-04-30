@@ -15,8 +15,10 @@ import {
 } from '@/lib/ageUtils';
 import DevelopmentAssessment from '@/components/DevelopmentAssessment';
 import DevelopmentPlan from '@/components/DevelopmentPlan';
-import { query, collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { query, collection, getDocs, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import InitialAssessment from '@/components/InitialAssessment';
+import DevelopmentGuide from '@/components/DevelopmentGuide';
 
 interface Interest {
   value: string;
@@ -100,6 +102,8 @@ export default function AddChildPage() {
   });
   const [newConcern, setNewConcern] = useState('');
   const [newGoal, setNewGoal] = useState('');
+  const [showDevelopmentGuide, setShowDevelopmentGuide] = useState(false);
+  const [childId, setChildId] = useState<string>('');
 
   // Add an effect to wait for the auth state to be properly loaded
   useEffect(() => {
@@ -151,11 +155,62 @@ export default function AddChildPage() {
     );
   };
 
-  const handleAssessmentComplete = (results: AssessmentResult[]) => {
-    setAssessmentResults(results);
-    setShowAssessment(false);
-    // Continue with child creation
-    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  const handleAssessmentComplete = async (results: AssessmentResult[]) => {
+    try {
+      setLoading(true);
+      
+      if (!currentUser) {
+        throw new Error('You must be logged in to add a child');
+      }
+
+      if (!name.trim()) {
+        throw new Error('Please enter a name');
+      }
+
+      if (!birthDate) {
+        throw new Error('Please enter a birth date');
+      }
+
+      const batch = writeBatch(db);
+      
+      // Create child document
+      const childRef = doc(collection(db, 'children'));
+      batch.set(childRef, {
+        name: name.trim(),
+        birthDateString: birthDate.toISOString().split('T')[0],
+        birthDate: Timestamp.fromDate(birthDate),
+        ageGroup: calculateAgeGroup(birthDate),
+        interests: selectedInterests,
+        parentInput,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
+        userId: currentUser.uid
+      });
+      
+      // Create child skills records
+      results.forEach(result => {
+        const skillRef = doc(collection(db, 'childSkills'));
+        batch.set(skillRef, {
+          childId: childRef.id,
+          skillId: result.skillId,
+          status: result.status,
+          lastAssessed: Timestamp.fromDate(new Date()),
+          notes: result.notes || '',
+          createdAt: Timestamp.fromDate(new Date()),
+          updatedAt: Timestamp.fromDate(new Date())
+        });
+      });
+      
+      await batch.commit();
+      setChildId(childRef.id);
+      setAssessmentResults(results);
+      setShowDevelopmentGuide(true);
+    } catch (err) {
+      console.error('Error saving assessment results:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save assessment results');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGenerateWeeklyPlan = (plan: DevelopmentPlan) => {
@@ -294,32 +349,28 @@ export default function AddChildPage() {
     );
   }
 
+  if (showDevelopmentGuide && assessmentResults.length > 0) {
+    return (
+      <DevelopmentGuide
+        childName={name}
+        childId={childId}
+        assessmentResults={assessmentResults}
+        onBack={() => {
+          setShowDevelopmentGuide(false);
+          setShowAssessment(true);
+        }}
+      />
+    );
+  }
+
   if (showAssessment) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => setShowAssessment(false)}
-              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Profile
-            </button>
-          </div>
-
-          <DevelopmentAssessment
-            childName={name}
-            birthDate={birthDate!}
-            parentInput={parentInput}
-            onComplete={(results) => {
-              setAssessmentResults(results);
-              setShowAssessment(false);
-              setShowDevelopmentPlan(true);
-            }}
-          />
-        </div>
-      </div>
+      <InitialAssessment
+        childName={name}
+        birthDate={birthDate!}
+        onComplete={handleAssessmentComplete}
+        onBack={() => setShowAssessment(false)}
+      />
     );
   }
 
