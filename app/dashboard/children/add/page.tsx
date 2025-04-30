@@ -15,7 +15,7 @@ import {
 } from '@/lib/ageUtils';
 import DevelopmentAssessment from '@/components/DevelopmentAssessment';
 import DevelopmentPlan from '@/components/DevelopmentPlan';
-import { query, collection, getDocs, writeBatch, doc, Timestamp } from 'firebase/firestore';
+import { query, collection, getDocs, writeBatch, doc, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import InitialAssessment from '@/components/InitialAssessment';
 import DevelopmentGuide from '@/components/DevelopmentGuide';
@@ -171,11 +171,9 @@ export default function AddChildPage() {
         throw new Error('Please enter a birth date');
       }
 
-      const batch = writeBatch(db);
-      
-      // Create child document
+      // Create child document first
       const childRef = doc(collection(db, 'children'));
-      batch.set(childRef, {
+      const childData = {
         name: name.trim(),
         birthDateString: birthDate.toISOString().split('T')[0],
         birthDate: Timestamp.fromDate(birthDate),
@@ -185,13 +183,21 @@ export default function AddChildPage() {
         createdAt: Timestamp.fromDate(new Date()),
         updatedAt: Timestamp.fromDate(new Date()),
         userId: currentUser.uid
-      });
+      };
       
-      // Create child skills records
+      // Set the child document first
+      await setDoc(childRef, childData);
+      
+      // Store the childId
+      const newChildId = childRef.id;
+      setChildId(newChildId);
+      
+      // Now create child skills records in a separate batch
+      const batch = writeBatch(db);
       results.forEach(result => {
         const skillRef = doc(collection(db, 'childSkills'));
         batch.set(skillRef, {
-          childId: childRef.id,
+          childId: newChildId,
           skillId: result.skillId,
           status: result.status,
           lastAssessed: Timestamp.fromDate(new Date()),
@@ -201,8 +207,9 @@ export default function AddChildPage() {
         });
       });
       
+      // Commit the skills batch
       await batch.commit();
-      setChildId(childRef.id);
+      
       setAssessmentResults(results);
       setShowDevelopmentGuide(true);
     } catch (err) {
@@ -367,6 +374,7 @@ export default function AddChildPage() {
     return (
       <InitialAssessment
         childName={name}
+        childId={childId}
         birthDate={birthDate!}
         onComplete={handleAssessmentComplete}
         onBack={() => setShowAssessment(false)}

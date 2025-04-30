@@ -18,6 +18,7 @@ import {
   isValidBirthdate,
   getAgeAppropriateInterests 
 } from '@/lib/ageUtils';
+import InitialAssessment from '@/components/InitialAssessment';
 
 interface ParentInput {
   concerns: string[];
@@ -206,17 +207,9 @@ export default function EditChildPage({ params }: { params: { id: string } }) {
   const handleAssessmentComplete = async (results: AssessmentResult[]) => {
     try {
       setLoading(true);
+      
+      // Create child skills records in a batch
       const batch = writeBatch(db);
-      
-      // Delete existing skills
-      const existingSkills = await getDocs(
-        query(collection(db, 'childSkills'), where('childId', '==', params.id))
-      );
-      existingSkills.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-      
-      // Add new skills
       results.forEach(result => {
         const skillRef = doc(collection(db, 'childSkills'));
         batch.set(skillRef, {
@@ -230,7 +223,9 @@ export default function EditChildPage({ params }: { params: { id: string } }) {
         });
       });
       
+      // Commit the skills batch
       await batch.commit();
+      
       setAssessmentResults(results);
       setShowDevelopmentGuide(true);
     } catch (err) {
@@ -265,26 +260,13 @@ export default function EditChildPage({ params }: { params: { id: string } }) {
 
   if (showAssessment) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => setShowAssessment(false)}
-              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Profile
-            </button>
-          </div>
-
-          <DevelopmentAssessment
-            childName={name}
-            birthDate={birthDate!}
-            parentInput={parentInput}
-            onComplete={handleAssessmentComplete}
-          />
-        </div>
-      </div>
+      <InitialAssessment
+        childName={name}
+        childId={params.id}
+        birthDate={birthDate!}
+        onComplete={handleAssessmentComplete}
+        onBack={() => setShowAssessment(false)}
+      />
     );
   }
 

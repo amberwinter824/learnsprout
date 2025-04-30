@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { ArrowLeft, Info } from 'lucide-react';
 import { calculateAgeGroup } from '@/lib/ageUtils';
+import { writeBatch, collection, query, where, doc } from 'firebase/firestore';
+import { getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface Question {
   id: string;
@@ -165,6 +168,7 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
 
 interface InitialAssessmentProps {
   childName: string;
+  childId: string;
   birthDate: Date;
   onComplete: (results: { skillId: string; status: 'emerging' | 'developing' | 'mastered' }[]) => void;
   onBack: () => void;
@@ -172,6 +176,7 @@ interface InitialAssessmentProps {
 
 export default function InitialAssessment({ 
   childName, 
+  childId,
   birthDate, 
   onComplete,
   onBack 
@@ -216,13 +221,52 @@ export default function InitialAssessment({
           
           return question.relatedSkills.map(skillId => ({
             skillId,
-            status
+            status,
+            childId: childId, // Add childId to each skill record
+            lastAssessed: new Date(),
+            notes: `Initial assessment: ${answer}`,
+            updatedAt: new Date()
           }));
         });
         
+        // Save each skill assessment to Firestore
+        const batch = writeBatch(db);
+        
+        for (const result of results) {
+          // Check if skill already exists
+          const skillQuery = query(
+            collection(db, 'childSkills'),
+            where('childId', '==', result.childId),
+            where('skillId', '==', result.skillId)
+          );
+          
+          const skillSnapshot = await getDocs(skillQuery);
+          
+          if (skillSnapshot.empty) {
+            // Create new skill record
+            const newSkillRef = doc(collection(db, 'childSkills'));
+            batch.set(newSkillRef, result);
+          } else {
+            // Update existing skill record
+            const skillDoc = skillSnapshot.docs[0];
+            batch.update(skillDoc.ref, {
+              status: result.status,
+              lastAssessed: result.lastAssessed,
+              notes: result.notes,
+              updatedAt: result.updatedAt
+            });
+          }
+        }
+        
+        // Commit all changes
+        await batch.commit();
+        
+        // Call onComplete with the results
         await onComplete(results);
       } catch (error) {
         console.error('Error completing assessment:', error);
+        // Show error to user
+        alert('There was an error saving the assessment. Please try again.');
       } finally {
         setIsSubmitting(false);
       }

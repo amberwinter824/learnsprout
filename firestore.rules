@@ -202,19 +202,31 @@ service cloud.firestore {
       );
       
       allow create: if isSignedIn() && (
-        isChildData(request.resource.data) || 
+        // Allow creating skills for a new child
+        (request.resource.data.keys().hasAll(['childId', 'skillId', 'status']) &&
+         exists(/databases/$(database)/documents/children/$(request.resource.data.childId)) &&
+         get(/databases/$(database)/documents/children/$(request.resource.data.childId)).data.userId == request.auth.uid) ||
+        // Or if they have educator/admin role
         hasRole('educator') || 
         hasRole('admin')
       );
       
       allow update: if isSignedIn() && (
-        (isChildData(resource.data) && isChildData(request.resource.data)) || 
+        // Allow updating skills for an existing child
+        (request.resource.data.keys().hasAll(['childId', 'skillId', 'status']) &&
+         exists(/databases/$(database)/documents/children/$(request.resource.data.childId)) &&
+         get(/databases/$(database)/documents/children/$(request.resource.data.childId)).data.userId == request.auth.uid) ||
+        // Or if they have educator/admin role
         hasRole('educator') || 
         hasRole('admin')
       );
       
       allow delete: if isSignedIn() && (
-        isChildData(resource.data) || 
+        // Allow deleting skills for an existing child
+        (resource.data.childId != null &&
+         exists(/databases/$(database)/documents/children/$(resource.data.childId)) &&
+         get(/databases/$(database)/documents/children/$(resource.data.childId)).data.userId == request.auth.uid) ||
+        // Or if they have admin role
         hasRole('admin')
       );
     }
