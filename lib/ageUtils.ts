@@ -71,6 +71,13 @@ export function getAgeGroupDescription(ageGroup: string): string {
 }
 
 /**
+ * Get a list of all supported age groups
+ */
+export function getAllAgeGroups(): string[] {
+  return ["0-1", "1-2", "2-3", "3-4", "4-5", "5-6", "6+"];
+}
+
+/**
  * Format age for display (e.g., "2 years, 3 months")
  */
 export function formatAge(birthDate: Date | null): string {

@@ -9,7 +9,23 @@ import {
 import PediatricVisitPrep from './PediatricVisitPrep';
 import EnhancedActivityDetail from './EnhancedActivityDetail';
 import { DevelopmentalSkill } from '../../../lib/types/enhancedSchema';
-import { calculateAgeInMonths } from '../../../lib/ageUtils';
+import * as ageUtils from '../../../lib/ageUtils';
+
+// Fallback function in case import fails
+function calculateChildAgeInMonths(birthDate: Date): number {
+  const today = new Date();
+  
+  let months = (today.getFullYear() - birthDate.getFullYear()) * 12;
+  months -= birthDate.getMonth();
+  months += today.getMonth();
+  
+  // Adjust for day of month
+  if (today.getDate() < birthDate.getDate()) {
+    months--;
+  }
+  
+  return Math.max(0, months);
+}
 
 interface Child {
   id: string;
@@ -25,6 +41,9 @@ interface DevelopmentJourneyDashboardProps {
 export default function DevelopmentJourneyDashboard({ child }: DevelopmentJourneyDashboardProps) {
   const [selectedTab, setSelectedTab] = useState('journey');
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+  
+  // Use imported function if available, otherwise use fallback
+  const calculateAgeInMonths = ageUtils.calculateAgeInMonths || calculateChildAgeInMonths;
   const childAgeMonths = calculateAgeInMonths(child.birthDate);
   
   const handleActivitySelect = (activityId: string) => {
