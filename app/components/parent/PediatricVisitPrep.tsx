@@ -45,6 +45,9 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   const [showAllObservations, setShowAllObservations] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
+  // Ensure childAge is a valid number
+  const safeChildAge = typeof childAge === 'number' && !isNaN(childAge) ? childAge : 0;
+  
   // Get the visit type based on age
   const getVisitTypeForAge = (ageMonths: number): `${PediatricVisitMonth}m` => {
     // Find next upcoming visit
@@ -61,7 +64,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
         // 1. Get or create pediatric visit
         let visitData: Partial<PediatricVisit> = {
           childId: childId,
-          visitType: getVisitTypeForAge(childAge),
+          visitType: getVisitTypeForAge(safeChildAge),
           scheduledDate: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // Dummy date 30 days in future
           asqPreparation: {
             communication: { activities: [], observations: [], status: 'not_started' },
@@ -280,7 +283,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
     }
     
     fetchVisitPreparation();
-  }, [childId, childAge]);
+  }, [childId, safeChildAge]);
   
   // Function to generate mock child skills for preview mode
   function generateMockChildSkills(childId: string): EnhancedChildSkill[] {

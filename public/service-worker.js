@@ -3,17 +3,7 @@
 const CACHE_NAME = 'learn-sprout-v1';
 const STATIC_ASSETS = [
   '/',
-  '/dashboard',
-  '/globals.css',
-  '/offline.html',
-  // Add icon and splash screen assets
-  '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png',
-  '/icons/apple-touch-icon.png',
-  '/icons/favicon-16x16.png',
-  '/icons/favicon-32x32.png',
-  // Add manifest file
+  '/favicon.ico',
   '/manifest.json'
 ];
 
@@ -31,8 +21,13 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Service Worker: Caching static files');
-        return cache.addAll(STATIC_ASSETS);
+        console.log('Service Worker: Attempting to cache static files');
+        // Use individual file caching instead of addAll to avoid failing if one file is problematic
+        return Promise.all(
+          STATIC_ASSETS.map(url => 
+            cache.add(url).catch(err => console.warn(`Failed to cache ${url}: ${err}`))
+          )
+        );
       })
       .then(() => {
         // Create other caches
@@ -40,6 +35,11 @@ self.addEventListener('install', event => {
           caches.open(ACTIVITY_CACHE_NAME),
           caches.open(API_CACHE_NAME)
         ]);
+      })
+      .catch(err => {
+        console.error('Service Worker installation had some errors:', err);
+        // Continue installation despite errors
+        return Promise.resolve();
       })
   );
 });

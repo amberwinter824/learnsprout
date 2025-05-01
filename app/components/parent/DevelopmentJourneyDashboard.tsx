@@ -10,7 +10,7 @@ import {
 import PediatricVisitPrep from './PediatricVisitPrep';
 import EnhancedActivityDetail from './EnhancedActivityDetail';
 import { DevelopmentalSkill } from '../../../lib/types/enhancedSchema';
-import * as ageUtils from '../../../lib/ageUtils';
+import { calculateAgeInMonths } from '../../../lib/ageUtils.js';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { getRecommendedActivities } from '../../../lib/planGenerator';
@@ -42,12 +42,45 @@ export default function DevelopmentJourneyDashboard({ child }: DevelopmentJourne
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Make sure we're always working with a Date object
-  const birthDate = child.birthDate instanceof Date 
-    ? child.birthDate 
-    : new Date(child.birthDate);
+  // Make sure we're always working with a valid Date object
+  let birthDate: Date;
+  try {
+    if (!child.birthDate) {
+      // Default to current date minus 2 years if no birthdate
+      birthDate = new Date();
+      birthDate.setFullYear(birthDate.getFullYear() - 2);
+    } else if (child.birthDate instanceof Date) {
+      birthDate = child.birthDate;
+    } else if (typeof child.birthDate === 'string') {
+      birthDate = new Date(child.birthDate);
+    } else {
+      // Try to handle Firestore Timestamp or any other object with toDate method
+      try {
+        // Check if it has a toDate method
+        const anyBirthDate = child.birthDate as any;
+        if (typeof anyBirthDate.toDate === 'function') {
+          birthDate = anyBirthDate.toDate();
+        } else {
+          // Default fallback
+          birthDate = new Date();
+          birthDate.setFullYear(birthDate.getFullYear() - 2);
+        }
+      } catch (err) {
+        console.error('Error accessing birthDate properties:', err);
+        // Default fallback
+        birthDate = new Date();
+        birthDate.setFullYear(birthDate.getFullYear() - 2);
+      }
+    }
+  } catch (e) {
+    console.error('Error parsing birthdate:', e);
+    // Default fallback
+    birthDate = new Date();
+    birthDate.setFullYear(birthDate.getFullYear() - 2);
+  }
   
-  const childAgeMonths = ageUtils.calculateAgeInMonths(birthDate);
+  // Calculate child's age in months
+  const childAgeMonths = calculateAgeInMonths(birthDate);
   
   // Fetch recommended activities for the child
   useEffect(() => {
