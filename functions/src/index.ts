@@ -3,9 +3,11 @@ import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as dateFns from "date-fns";
 import { UserRecord } from "firebase-functions/v1/auth";
+import { Resend } from "resend";
 
 admin.initializeApp();
 const db = admin.firestore();
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Type definitions
 interface UserData {
@@ -981,3 +983,298 @@ if (!suggestionsQuery.empty) {
   console.log(`Updated suggestion status for activity ${activityId}`);
 }
 });
+
+/**
+ * Sends weekly plan emails to users every Friday at noon
+ * Emails include activities for the upcoming week (starting next Monday)
+ */
+export const sendWeeklyPlanEmails = functions.scheduler.onSchedule({
+  schedule: "0 12 * * 5", // Every Friday at 12:00 PM
+  timeZone: "America/New_York"
+}, async (context) => {
+  console.log('Starting weekly plan email job');
+  
+  // Calculate the date for next Monday (start of next week)
+  const today = new Date();
+  const nextMonday = new Date(today);
+  nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
+  nextMonday.setHours(0, 0, 0, 0);
+  
+  const nextMondayTimestamp = admin.firestore.Timestamp.fromDate(nextMonday);
+  console.log(`Preparing weekly plans for week starting ${nextMonday.toISOString()}`);
+  
+  try {
+    // Get all users with emailNotifications and weeklyDigest preferences enabled
+    const usersSnapshot = await db.collection("users")
+      .where("preferences.emailNotifications", "==", true)
+      .where("preferences.weeklyDigest", "==", true)
+      .get();
+    
+    if (usersSnapshot.empty) {
+      console.log("No users with email notifications enabled");
+      return;
+    }
+    
+    console.log(`Found ${usersSnapshot.size} users with email notifications enabled`);
+    
+    // Process each user
+    const emailPromises = [];
+    
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data() as UserData;
+      const userId = userDoc.id;
+      
+      // Get all active children for this user
+      const childrenSnapshot = await db.collection("children")
+        .where("userId", "==", userId)
+        .where("active", "==", true)
+        .get();
+      
+      if (childrenSnapshot.empty) {
+        console.log(`No active children found for user ${userId}`);
+        continue;
+      }
+      
+      // Process each child's weekly plan
+      for (const childDoc of childrenSnapshot.docs) {
+        const childData = childDoc.data() as ChildData;
+        const childId = childDoc.id;
+        
+        console.log(`Processing weekly plan for child: ${childData.name} (${childId})`);
+        
+        // Get the child's weekly plan for next week
+        const weeklyPlanQuery = await db.collection("weeklyPlans")
+          .where("childId", "==", childId)
+          .where("weekStarting", "==", nextMondayTimestamp)
+          .limit(1)
+          .get();
+        
+        // If no plan exists yet, generate one
+        let weeklyPlanData: WeeklyPlanData;
+        
+        if (weeklyPlanQuery.empty) {
+          console.log(`No weekly plan found for child ${childId}, generating one`);
+          
+          // Generate a plan similar to the generateWeeklyPlans function
+          // This is a simplified version - in production, you might want to call your existing function
+          const newPlanRef = db.collection("weeklyPlans").doc();
+          
+          weeklyPlanData = {
+            childId,
+            userId,
+            weekStarting: nextMondayTimestamp,
+            createdBy: "system",
+            createdAt: admin.firestore.Timestamp.now(),
+            updatedAt: admin.firestore.Timestamp.now(),
+            monday: [],
+            tuesday: [],
+            wednesday: [],
+            thursday: [],
+            friday: [],
+            saturday: [],
+            sunday: []
+          };
+          
+          // Get suggested activities for this child
+          const suggestionsSnapshot = await db.collection("activitySuggestions")
+            .where("childId", "==", childId)
+            .where("status", "==", "pending")
+            .orderBy("priority", "desc")
+            .limit(15)
+            .get();
+          
+          if (!suggestionsSnapshot.empty) {
+            // Distribute activities throughout the week
+            const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+            const timeSlots = ["morning", "afternoon"];
+            
+            let activityIndex = 0;
+            suggestionsSnapshot.forEach(doc => {
+              const suggestion = doc.data() as ActivitySuggestion;
+              
+              if (activityIndex < 10) { // Limit to 10 activities per week
+                const dayIndex = activityIndex % 5;
+                const day = daysOfWeek[dayIndex];
+                const timeSlot = timeSlots[Math.floor(activityIndex / 5) % 2];
+                
+                const activity: WeeklyPlanActivity = {
+                  activityId: suggestion.activityId,
+                  timeSlot: timeSlot as "morning" | "afternoon",
+                  status: "suggested",
+                  order: Math.floor(activityIndex / 5),
+                  suggestionId: doc.id
+                };
+                
+                weeklyPlanData[day].push(activity);
+                activityIndex++;
+              }
+            });
+          }
+          
+          // Save the new plan
+          await newPlanRef.set(weeklyPlanData);
+        } else {
+          weeklyPlanData = weeklyPlanQuery.docs[0].data() as WeeklyPlanData;
+        }
+        
+        // Gather all activity IDs from the weekly plan
+        const activityIds = new Set<string>();
+        ["monday", "tuesday", "wednesday", "thursday", "friday"].forEach(day => {
+          weeklyPlanData[day].forEach((activity: WeeklyPlanActivity) => {
+            activityIds.add(activity.activityId);
+          });
+        });
+        
+        // Fetch activity details for all activities in the plan
+        const activitiesDetails: Record<string, any> = {};
+        
+        if (activityIds.size > 0) {
+          const activitiesPromises = Array.from(activityIds).map(async (activityId) => {
+            const activityDoc = await db.collection("activities").doc(activityId).get();
+            if (activityDoc.exists) {
+              activitiesDetails[activityId] = activityDoc.data();
+            }
+          });
+          
+          await Promise.all(activitiesPromises);
+        }
+        
+        // Send the email
+        try {
+          const { data, error } = await resend.emails.send({
+            from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
+            to: userData.email,
+            subject: `${childData.name}'s Weekly Plan: ${dateFns.format(nextMonday, 'MMMM d')} - ${dateFns.format(dateFns.addDays(nextMonday, 4), 'MMMM d')}`,
+            html: generateWeeklyPlanEmailHtml(
+              userData.displayName,
+              childData.name,
+              nextMonday,
+              weeklyPlanData,
+              activitiesDetails
+            )
+          });
+          
+          if (error) {
+            console.error(`Error sending email to ${userData.email}:`, error);
+          } else {
+            console.log(`Successfully sent weekly plan email to ${userData.email} for child ${childData.name}`);
+          }
+        } catch (error) {
+          console.error(`Error sending email to ${userData.email}:`, error);
+        }
+      }
+    }
+    
+    console.log('Weekly plan email job completed');
+  } catch (error) {
+    console.error('Error in sendWeeklyPlanEmails function:', error);
+  }
+});
+
+/**
+ * Generates HTML content for the weekly plan email
+ */
+function generateWeeklyPlanEmailHtml(
+  userName: string,
+  childName: string,
+  weekStartingDate: Date,
+  weeklyPlanData: any,
+  activitiesDetails: Record<string, any>
+): string {
+  // Format the week dates
+  const weekStart = new Date(weekStartingDate);
+  const weekEnd = new Date(weekStartingDate);
+  weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday
+  
+  const dateOptions: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
+  const weekRangeText = `${weekStart.toLocaleDateString('en-US', dateOptions)} - ${weekEnd.toLocaleDateString('en-US', dateOptions)}`;
+
+  // Generate the activities HTML for each day
+  const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+  
+  let activitiesHtml = '';
+  
+  daysOfWeek.forEach(day => {
+    const dayDate = new Date(weekStartingDate);
+    dayDate.setDate(dayDate.getDate() + daysOfWeek.indexOf(day));
+    const formattedDay = dateFns.format(dayDate, 'EEEE, MMM d');
+    
+    activitiesHtml += `
+      <div style="margin-bottom: 25px;">
+        <h3 style="color: #059669; margin: 0 0 10px 0; font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+          ${formattedDay}
+        </h3>
+    `;
+    
+    const dayActivities = weeklyPlanData[day] || [];
+    
+    if (dayActivities.length === 0) {
+      activitiesHtml += `<p style="color: #6b7280; font-style: italic; margin: 0;">No activities scheduled</p>`;
+    } else {
+      dayActivities.forEach((activity: WeeklyPlanActivity) => {
+        const activityDetails = activitiesDetails[activity.activityId] || {};
+        const timeSlot = activity.timeSlot === 'morning' ? 'Morning' : 'Afternoon';
+        
+        activitiesHtml += `
+          <div style="background-color: #f9fafb; border-left: 3px solid #059669; padding: 12px; margin-bottom: 12px; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span style="font-weight: 500; color: #111827;">${activityDetails.title || 'Activity'}</span>
+              <span style="color: #6b7280; font-size: 14px;">${timeSlot}</span>
+            </div>
+            <p style="margin: 5px 0; color: #4b5563; font-size: 14px;">${activityDetails.description || ''}</p>
+            <div style="margin-top: 8px;">
+              <span style="background-color: #d1fae5; color: #065f46; font-size: 12px; padding: 3px 8px; border-radius: 12px;">${activityDetails.area || 'General'}</span>
+              ${activityDetails.difficulty ? `<span style="background-color: #e0f2fe; color: #0369a1; font-size: 12px; padding: 3px 8px; border-radius: 12px; margin-left: 5px;">${activityDetails.difficulty}</span>` : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    activitiesHtml += `</div>`;
+  });
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://learnsprout.vercel.app/icons/icon-192x192.png" alt="Learn Sprout Logo" style="height: 40px; margin-bottom: 20px;">
+        <h1 style="color: #059669; margin: 0; font-size: 24px;">${childName}'s Weekly Plan</h1>
+        <p style="color: #4b5563; margin: 10px 0 0 0;">Week of ${weekRangeText}</p>
+      </div>
+      
+      <div style="background-color: #f3f4f6; padding: 20px; border-radius: 6px; margin-bottom: 30px;">
+        <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 1.5;">Hi ${userName},</p>
+        <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 1.5;">
+          Here is ${childName}'s learning plan for next week. These activities have been selected based on ${childName}'s
+          current skills and interests.
+        </p>
+        <p style="margin: 0; font-size: 16px; line-height: 1.5;">
+          You can modify this plan anytime on the Learn Sprout platform.
+        </p>
+      </div>
+      
+      <div style="margin: 30px 0;">
+        ${activitiesHtml}
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://learnsprout.vercel.app/dashboard/weekly-plans" 
+           style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; font-size: 16px;">
+          View Full Plan
+        </a>
+      </div>
+      
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          If you'd like to adjust your email preferences, please visit your <a href="https://learnsprout.vercel.app/settings" style="color: #059669; text-decoration: none;">account settings</a>.
+        </p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+        <p style="color: #9ca3af; font-size: 12px;">
+          Sent by Learn Sprout • <a href="https://learnsprout.vercel.app" style="color: #059669; text-decoration: none;">Visit Website</a>
+        </p>
+      </div>
+    </div>
+  `;
+}

@@ -36,40 +36,11 @@ export function registerServiceWorker() {
             }
           }
           
-          // Set up push notifications if supported
-          if ('pushManager' in registration) {
-            try {
-              // Check if VAPID key is available
-              const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-              
-              if (!vapidPublicKey) {
-                console.warn('Push subscription skipped: VAPID public key not available');
-                return;
-              }
-              
-              // Check permission before attempting to subscribe
-              if (Notification.permission !== 'granted') {
-                console.log('Push subscription skipped: notification permission not granted');
-                return;
-              }
-              
-              const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-              });
-              
-              // Send the subscription to your server
-              await sendPushSubscriptionToServer(subscription);
-              console.log('Push subscription registered!');
-            } catch (error) {
-              if (error instanceof Error && error.name === 'AbortError') {
-                console.warn('Push subscription failed: Service worker not active yet. Will retry later.');
-                // Optional: Implement retry logic here
-              } else {
-                console.error('Push subscription failed:', error);
-              }
-            }
-          }
+          // Push notification registration is disabled
+          // To enable push notifications:
+          // 1. Generate VAPID keys using the 'web-push' npm package
+          // 2. Add NEXT_PUBLIC_VAPID_PUBLIC_KEY to your environment variables
+          
         } catch (error) {
           console.error('ServiceWorker registration failed:', error);
         }
@@ -97,34 +68,6 @@ export function registerServiceWorker() {
   }
   
   // Helper functions
-  function urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-  
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-  
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  }
-  
-  async function sendPushSubscriptionToServer(subscription: PushSubscription): Promise<void> {
-    try {
-      await fetch('/api/push-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(subscription),
-      });
-    } catch (error) {
-      console.error('Error sending push subscription to server:', error);
-    }
-  }
   
   // Check if service worker is registered and update it if needed
   export async function updateServiceWorker(): Promise<void> {

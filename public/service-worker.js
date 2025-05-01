@@ -230,44 +230,17 @@ function fetchAndUpdateCache(request, cache) {
 
 // Handle push notifications
 self.addEventListener('push', event => {
-  if (!event.data) return;
-  
-  const data = event.data.json();
-  
-  const options = {
-    body: data.body || 'New notification',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/apple-touch-icon.png',
-    data: {
-      url: data.url || '/'
-    }
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Learn Sprout', options)
-  );
+  console.log('Push notification received, but push notifications are disabled');
+  // To enable push notifications:
+  // 1. Generate VAPID keys using the 'web-push' npm package
+  // 2. Add NEXT_PUBLIC_VAPID_PUBLIC_KEY to your environment variables
+  // 3. Update the serviceWorkerRegistration.ts file
 });
 
 // Handle notification click
 self.addEventListener('notificationclick', event => {
+  console.log('Notification click received, but push notifications are disabled');
   event.notification.close();
-  
-  event.waitUntil(
-    clients.matchAll({ type: 'window' })
-      .then(clientList => {
-        // If a window is already open, focus it
-        for (const client of clientList) {
-          if (client.url === event.notification.data.url && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        
-        // Otherwise open a new window
-        if (clients.openWindow) {
-          return clients.openWindow(event.notification.data.url);
-        }
-      })
-  );
 });
 
 // Background sync for offline submissions

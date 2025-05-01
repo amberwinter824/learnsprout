@@ -15,6 +15,7 @@ export default function UserSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(true);
 
   // Activity preferences state
   const [scheduleByDay, setScheduleByDay] = useState<{[key: string]: number}>({});
@@ -40,6 +41,11 @@ export default function UserSettingsPage() {
       const storedNotifications = localStorage.getItem('notifications-enabled');
       
       setNotificationsEnabled(storedNotifications !== 'false');
+      
+      // Load weekly digest preference from user data
+      if (currentUser?.preferences?.weeklyDigest !== undefined) {
+        setWeeklyDigestEnabled(currentUser.preferences.weeklyDigest);
+      }
       
       // Load activity preferences from user data
       if (currentUser?.preferences?.activityPreferences) {
@@ -104,6 +110,8 @@ export default function UserSettingsPage() {
       // Update preferences using the auth context
       await updateUserPreferences({
         ...currentUser.preferences,
+        emailNotifications: notificationsEnabled,
+        weeklyDigest: weeklyDigestEnabled,
         activityPreferences: {
           ...currentUser.preferences?.activityPreferences,
           scheduleByDay
@@ -244,7 +252,7 @@ export default function UserSettingsPage() {
               Notifications
             </h3>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-sm font-medium text-gray-700">Enable notifications</p>
                 <p className="text-xs text-gray-500">Receive updates about your child's activities</p>
@@ -254,6 +262,22 @@ export default function UserSettingsPage() {
                   type="checkbox" 
                   checked={notificationsEnabled}
                   onChange={() => setNotificationsEnabled(!notificationsEnabled)}
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Weekly Plan Emails</p>
+                <p className="text-xs text-gray-500">Receive weekly emails with your child's upcoming activities every Friday</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={weeklyDigestEnabled}
+                  onChange={() => setWeeklyDigestEnabled(!weeklyDigestEnabled)}
                   className="sr-only peer" 
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
