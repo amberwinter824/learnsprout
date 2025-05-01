@@ -16,14 +16,14 @@ interface Activity {
   id: string;
   title: string;
   description: string;
-  instructions: string;
+  instructions?: string;
   area: string;
-  materialsNeeded: string[];
-  duration: number;
-  difficulty: string;
-  ageRanges: string[];
-  skillsAddressed: string[];
-  environmentType: 'home' | 'classroom' | 'bridge';
+  materialsNeeded?: string[];
+  duration?: number;
+  difficulty?: string;
+  ageRanges?: string[];
+  skillsAddressed?: string[];
+  environmentType?: 'home' | 'classroom' | 'bridge';
   imageUrl?: string;
 }
 
@@ -39,32 +39,50 @@ export default function EnhancedActivityDetail({ activityId, childId, onBack }: 
   useEffect(() => {
     async function fetchActivityAndSkills() {
       try {
+        setLoading(true);
+        
         // Fetch activity details
         const activityRef = doc(db, 'activities', activityId);
         const activitySnap = await getDoc(activityRef);
         
         if (!activitySnap.exists()) {
-          setError('Activity not found');
-          setLoading(false);
-          return;
+          throw new Error(`Activity not found: ${activityId}`);
         }
+
+        const activityData = { 
+          id: activitySnap.id, 
+          ...activitySnap.data() 
+        } as Activity;
         
-        const activityData = { id: activitySnap.id, ...activitySnap.data() } as Activity;
         setActivity(activityData);
         
         // Fetch related skills
         if (activityData.skillsAddressed && activityData.skillsAddressed.length > 0) {
-          const skillsQuery = query(
-            collection(db, 'developmentalSkills'),
-            where('id', 'in', activityData.skillsAddressed)
-          );
+          // Using batched approach to handle arrays that may exceed Firestore limits
+          const fetchSkillsBatched = async (skillIds: string[]) => {
+            const batchSize = 10; // Firestore allows up to 10 'in' clauses
+            let allSkills: DevelopmentalSkill[] = [];
+            
+            for (let i = 0; i < skillIds.length; i += batchSize) {
+              const batch = skillIds.slice(i, i + batchSize);
+              const skillsQuery = query(
+                collection(db, 'developmentalSkills'),
+                where('id', 'in', batch)
+              );
+              
+              const skillsSnapshot = await getDocs(skillsQuery);
+              const batchSkills = skillsSnapshot.docs.map(doc => ({ 
+                id: doc.id, 
+                ...doc.data() 
+              })) as DevelopmentalSkill[];
+              
+              allSkills = [...allSkills, ...batchSkills];
+            }
+            
+            return allSkills;
+          };
           
-          const skillsSnapshot = await getDocs(skillsQuery);
-          const skillsData = skillsSnapshot.docs.map(doc => ({ 
-            id: doc.id, 
-            ...doc.data() 
-          })) as DevelopmentalSkill[];
-          
+          const skillsData = await fetchSkillsBatched(activityData.skillsAddressed);
           setSkills(skillsData);
           
           // Group skills by ASQ domain
@@ -72,18 +90,18 @@ export default function EnhancedActivityDetail({ activityId, childId, onBack }: 
           setGroupedSkills(grouped);
         }
         
-        // Fetch next pediatric visit (if available)
-        // This is a placeholder - you would implement this based on your data model
+        // Fetch next pediatric visit information
         const childRef = doc(db, 'children', childId);
         const childSnap = await getDoc(childRef);
         
         if (childSnap.exists()) {
           const childData = childSnap.data();
-          // Dummy data for demo purposes
-          setNextVisit({
-            type: '12m',
-            date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days from now
-          });
+          if (childData.nextVisit) {
+            setNextVisit({
+              type: childData.nextVisit.type || 'checkup',
+              date: childData.nextVisit.date.toDate()
+            });
+          }
         }
         
         setLoading(false);
@@ -106,25 +124,44 @@ export default function EnhancedActivityDetail({ activityId, childId, onBack }: 
       if (childSkillSnap.exists()) {
         // Update existing child skill document
         await updateDoc(childSkillRef, {
-          observations: arrayUnion(observationText),
-          observationDates: arrayUnion(serverTimestamp()),
+          observations: arrayUnion({
+            text: observationText,
+            date: serverTimestamp(),
+            activityId: activityId
+          }),
           updatedAt: serverTimestamp()
         });
       } else {
         // Create new child skill document with observation
-        // This would be implemented based on your data model
-        console.log("Would create new child skill with observation:", observationText);
+        await updateDoc(childSkillRef, {
+          childId,
+          skillId,
+          status: 'emerging',
+          observations: [{
+            text: observationText,
+            date: serverTimestamp(),
+            activityId: activityId
+          }],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
       }
       
-      // You might want to show a success message or update the UI
+      // Show success message
+      alert("Observation recorded successfully!");
     } catch (err) {
       console.error("Error recording observation:", err);
-      // Handle error (e.g., show error message)
+      alert("Failed to record observation. Please try again.");
     }
   };
 
   if (loading) {
-    return <div className="p-4">Loading activity details...</div>;
+    return (
+      <div className="p-4 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+        <p>Loading activity details...</p>
+      </div>
+    );
   }
 
   if (error || !activity) {
@@ -161,22 +198,28 @@ export default function EnhancedActivityDetail({ activityId, childId, onBack }: 
       
       {/* Activity Meta */}
       <div className="p-4 border-b flex flex-wrap gap-3">
-        <div className="flex items-center text-sm text-gray-600">
-          <Clock size={16} className="mr-1" />
-          {activity.duration} minutes
-        </div>
-        <div className="flex items-center text-sm text-gray-600">
-          <Calendar size={16} className="mr-1" />
-          {activity.ageRanges.join(', ')} years
-        </div>
+        {activity.duration && (
+          <div className="flex items-center text-sm text-gray-600">
+            <Clock size={16} className="mr-1" />
+            {activity.duration} minutes
+          </div>
+        )}
+        {activity.ageRanges && activity.ageRanges.length > 0 && (
+          <div className="flex items-center text-sm text-gray-600">
+            <Calendar size={16} className="mr-1" />
+            {activity.ageRanges.join(', ')} years
+          </div>
+        )}
         <div className="flex items-center text-sm text-gray-600">
           <BookOpen size={16} className="mr-1" />
           {activity.area}
         </div>
-        <div className="flex items-center text-sm text-gray-600">
-          <BarChart size={16} className="mr-1" />
-          {activity.difficulty}
-        </div>
+        {activity.difficulty && (
+          <div className="flex items-center text-sm text-gray-600">
+            <BarChart size={16} className="mr-1" />
+            {activity.difficulty}
+          </div>
+        )}
       </div>
       
       {/* Tab Navigation */}
