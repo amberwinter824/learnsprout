@@ -454,6 +454,13 @@ export default function Dashboard() {
                   Progress
                 </Link>
                 <Link
+                  href={`/dashboard/children/${selectedChildId}/development`}
+                  className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <Award className="h-4 w-4 mr-2" />
+                  Development
+                </Link>
+                <Link
                   href="/dashboard/settings"
                   className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >

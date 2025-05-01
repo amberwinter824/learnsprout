@@ -2,15 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-
-interface DevelopmentalSkill {
-  id: string;
-  name: string;
-  description: string;
-  area: 'Practical Life' | 'Sensorial' | 'Language' | 'Mathematics' | 'Cultural' | 'Social & Emotional';
-  ageGroups: string[];
-  category: string;
-}
+import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
 interface AssessmentResult {
   skillId: string;

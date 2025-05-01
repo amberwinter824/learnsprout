@@ -19,6 +19,7 @@ import {
   import { db } from './firebase';
   import offlineStorage from './offlineStorage';
   import { addChildToFamily } from './familyService';
+  import { EnhancedChildSkill } from './types/enhancedSchema';
   
   interface UserData extends DocumentData {
     id?: string;
@@ -106,17 +107,8 @@ import {
   }
   
   // Update ChildSkill interface
-  export interface ChildSkill extends DocumentData {
-    id?: string;
-    childId: string;
-    skillId: string;
-    skillName?: string;
-    category?: string;
-    status: 'not_started' | 'emerging' | 'developing' | 'mastered';
-    lastAssessed?: any;
-    notes?: string;
-    createdAt?: Timestamp;
-    updatedAt?: Timestamp;
+  export interface ChildSkill extends Omit<EnhancedChildSkill, 'observations' | 'observationDates' | 'asqDomain'>, DocumentData {
+    // If there are any specific overrides or additional fields, add them here
   }
   
   // Add ProgressRecord interface

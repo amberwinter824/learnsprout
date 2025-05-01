@@ -1,0 +1,1860 @@
+[
+  {
+    "skillId": "cul-art",
+    "skillName": "Artistic Expression",
+    "asqDomain": "personal_social",
+    "area": "cultural",
+    "description": "Skills related to Artistic Expression",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Interacts appropriately with peers",
+      "Shows awareness of others' feelings"
+    ],
+    "observationPrompts": [
+      "How does your child handle transitions or changes in routine?",
+      "Does your child share toys or materials with others?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "cul-botany",
+    "skillName": "Botany Knowledge",
+    "asqDomain": "problem_solving",
+    "area": "cultural",
+    "description": "Skills related to Botany Knowledge",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "cul-geography",
+    "skillName": "Geographic Awareness",
+    "asqDomain": "problem_solving",
+    "area": "cultural",
+    "description": "Skills related to Geographic Awareness",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "Does your child show persistence when facing obstacles?",
+      "Does your child connect cause and effect during play?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "cul-music",
+    "skillName": "Musical Awareness",
+    "asqDomain": "personal_social",
+    "area": "cultural",
+    "description": "Skills related to Musical Awareness",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Interacts appropriately with peers",
+      "Shows awareness of others' feelings",
+      "Demonstrates independence in daily activities"
+    ],
+    "observationPrompts": [
+      "How does your child respond when things don't go their way?",
+      "What emotions does your child express throughout the day?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "cul-science",
+    "skillName": "Scientific Observation",
+    "asqDomain": "problem_solving",
+    "area": "cultural",
+    "description": "Skills related to Scientific Observation",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Attempts different strategies to solve problems",
+      "Shows curiosity when exploring materials"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "Does your child connect cause and effect during play?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "cul-time",
+    "skillName": "Time Awareness",
+    "asqDomain": "problem_solving",
+    "area": "cultural",
+    "description": "Skills related to Time Awareness",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Attempts different strategies to solve problems",
+      "Shows curiosity when exploring materials"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "Does your child show persistence when facing obstacles?",
+      "Does your child connect cause and effect during play?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "cul-zoology",
+    "skillName": "Zoology Knowledge",
+    "asqDomain": "problem_solving",
+    "area": "cultural",
+    "description": "Skills related to Zoology Knowledge",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Applies previous knowledge to new situations",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "How does your child approach new challenges?",
+      "How does your child sort or categorize objects?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-cause-effect",
+    "skillName": "Cause and Effect",
+    "asqDomain": "problem_solving",
+    "area": "cognitive",
+    "description": "Skills related to Cause and Effect",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      },
+      {
+        "min": 12,
+        "max": 24
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Makes logical connections between concepts",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "How does your child sort or categorize objects?",
+      "What strategies does your child use when something doesn't work?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-grasp-release",
+    "skillName": "Grasping and Releasing",
+    "asqDomain": "problem_solving",
+    "area": "motor",
+    "description": "Skills related to Grasping and Releasing",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      },
+      {
+        "min": 12,
+        "max": 24
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Attempts different strategies to solve problems",
+      "Makes logical connections between concepts"
+    ],
+    "observationPrompts": [
+      "How does your child approach new challenges?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-head-control",
+    "skillName": "Head Control",
+    "asqDomain": "problem_solving",
+    "area": "motor",
+    "description": "Skills related to Head Control",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Applies previous knowledge to new situations",
+      "Persists when challenged by difficult tasks"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "What strategies does your child use when something doesn't work?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-object-permanence",
+    "skillName": "Object Permanence",
+    "asqDomain": "problem_solving",
+    "area": "cognitive",
+    "description": "Skills related to Object Permanence",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      },
+      {
+        "min": 12,
+        "max": 24
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "Does your child show persistence when facing obstacles?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-reaching",
+    "skillName": "Reaching for Objects",
+    "asqDomain": "problem_solving",
+    "area": "motor",
+    "description": "Skills related to Reaching for Objects",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Applies previous knowledge to new situations",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "Does your child connect cause and effect during play?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-sensory-exploration",
+    "skillName": "Sensory Exploration",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Sensory Exploration",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      },
+      {
+        "min": 12,
+        "max": 24
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Attempts different strategies to solve problems",
+      "Persists when challenged by difficult tasks",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-social-engagement",
+    "skillName": "Social Engagement",
+    "asqDomain": "problem_solving",
+    "area": "language",
+    "description": "Skills related to Social Engagement",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      },
+      {
+        "min": 12,
+        "max": 24
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Shows curiosity when exploring materials"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "Does your child connect cause and effect during play?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "inf-visual-tracking",
+    "skillName": "Visual Tracking",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Visual Tracking",
+    "ageRanges": [
+      {
+        "min": 0,
+        "max": 12
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Attempts different strategies to solve problems",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "lan-comprehension",
+    "skillName": "Reading Comprehension",
+    "asqDomain": "communication",
+    "area": "language",
+    "description": "Skills related to Reading Comprehension",
+    "ageRanges": [
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "lan-reading"
+    ],
+    "indicators": [
+      "Responds to verbal instructions",
+      "Engages in back-and-forth conversation",
+      "Uses age-appropriate vocabulary"
+    ],
+    "observationPrompts": [
+      "How does your child express wants and needs?",
+      "What kinds of words does your child use regularly?"
+    ],
+    "developmentalImportance": "This skill supports language development, which is essential for expressing needs, building relationships, and later academic success. Strong communication skills enable children to connect with others and navigate social situations effectively."
+  },
+  {
+    "skillId": "lan-letter",
+    "skillName": "Letter Recognition",
+    "asqDomain": "communication",
+    "area": "language",
+    "description": "Skills related to Letter Recognition",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Engages in back-and-forth conversation",
+      "Responds to verbal instructions"
+    ],
+    "observationPrompts": [
+      "How does your child express wants and needs?",
+      "How does your child respond when you ask questions?"
+    ],
+    "developmentalImportance": "This skill supports language development, which is essential for expressing needs, building relationships, and later academic success. Strong communication skills enable children to connect with others and navigate social situations effectively."
+  },
+  {
+    "skillId": "lan-phonics",
+    "skillName": "Phonetic Awareness",
+    "asqDomain": "communication",
+    "area": "language",
+    "description": "Skills related to Phonetic Awareness",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "lan-letter"
+    ],
+    "indicators": [
+      "Responds to verbal instructions",
+      "Uses age-appropriate vocabulary"
+    ],
+    "observationPrompts": [
+      "What kinds of words does your child use regularly?",
+      "Does your child show interest in books and stories?"
+    ],
+    "developmentalImportance": "This skill supports language development, which is essential for expressing needs, building relationships, and later academic success. Strong communication skills enable children to connect with others and navigate social situations effectively."
+  },
+  {
+    "skillId": "lan-reading",
+    "skillName": "Pre-Reading Skills",
+    "asqDomain": "communication",
+    "area": "language",
+    "description": "Skills related to Pre-Reading Skills",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "lan-letter",
+      "lan-phonics"
+    ],
+    "indicators": [
+      "Engages in back-and-forth conversation",
+      "Shows interest in books and stories",
+      "Uses age-appropriate vocabulary"
+    ],
+    "observationPrompts": [
+      "How does your child express wants and needs?",
+      "What kinds of words does your child use regularly?",
+      "Does your child follow simple directions?"
+    ],
+    "developmentalImportance": "This skill supports language development, which is essential for expressing needs, building relationships, and later academic success. Strong communication skills enable children to connect with others and navigate social situations effectively."
+  },
+  {
+    "skillId": "lan-vocabulary",
+    "skillName": "Vocabulary Development",
+    "asqDomain": "communication",
+    "area": "language",
+    "description": "Skills related to Vocabulary Development",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows interest in books and stories",
+      "Uses age-appropriate vocabulary"
+    ],
+    "observationPrompts": [
+      "Does your child follow simple directions?",
+      "What kinds of words does your child use regularly?",
+      "Does your child show interest in books and stories?"
+    ],
+    "developmentalImportance": "This skill supports language development, which is essential for expressing needs, building relationships, and later academic success. Strong communication skills enable children to connect with others and navigate social situations effectively."
+  },
+  {
+    "skillId": "lan-writing",
+    "skillName": "Pre-Writing Skills",
+    "asqDomain": "fine_motor",
+    "area": "language",
+    "description": "Skills related to Pre-Writing Skills",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "prl-coordination"
+    ],
+    "indicators": [
+      "Uses precise finger and hand movements",
+      "Can manipulate small objects"
+    ],
+    "observationPrompts": [
+      "Can your child stack or arrange small objects?",
+      "How does your child hold writing or drawing tools?"
+    ],
+    "developmentalImportance": "This skill is crucial for self-care activities, tool use, and later writing abilities. Developing fine motor control helps children gain independence in daily tasks and prepares them for academic activities that require precision."
+  },
+  {
+    "skillId": "mat-counting",
+    "skillName": "Counting to 10",
+    "asqDomain": "problem_solving",
+    "area": "mathematics",
+    "description": "Skills related to Counting to 10",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Attempts different strategies to solve problems",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "How does your child approach new challenges?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "mat-decimal",
+    "skillName": "Decimal System",
+    "asqDomain": "problem_solving",
+    "area": "mathematics",
+    "description": "Skills related to Decimal System",
+    "ageRanges": [
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "mat-quantity"
+    ],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Persists when challenged by difficult tasks"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "How does your child sort or categorize objects?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "mat-measurement",
+    "skillName": "Measurement Concepts",
+    "asqDomain": "problem_solving",
+    "area": "mathematics",
+    "description": "Skills related to Measurement Concepts",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "mat-quantity"
+    ],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "How does your child approach new challenges?",
+      "What strategies does your child use when something doesn't work?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "mat-numeral",
+    "skillName": "Numeral Recognition",
+    "asqDomain": "problem_solving",
+    "area": "mathematics",
+    "description": "Skills related to Numeral Recognition",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Makes logical connections between concepts",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "Does your child connect cause and effect during play?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "mat-operations",
+    "skillName": "Basic Operations",
+    "asqDomain": "problem_solving",
+    "area": "mathematics",
+    "description": "Skills related to Basic Operations",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "mat-quantity"
+    ],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Shows curiosity when exploring materials"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "What strategies does your child use when something doesn't work?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "mat-quantity",
+    "skillName": "Quantity Association",
+    "asqDomain": "problem_solving",
+    "area": "mathematics",
+    "description": "Skills related to Quantity Association",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "mat-counting",
+      "mat-numeral"
+    ],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "prl-cleaning",
+    "skillName": "Cleaning and Maintenance",
+    "asqDomain": "personal_social",
+    "area": "practical_life",
+    "description": "Skills related to Cleaning and Maintenance",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Manages emotions in challenging situations",
+      "Shows awareness of others' feelings",
+      "Demonstrates independence in daily activities"
+    ],
+    "observationPrompts": [
+      "How does your child respond when things don't go their way?",
+      "Does your child share toys or materials with others?",
+      "How does your child interact with other children?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "prl-coordination",
+    "skillName": "Fine Motor Coordination",
+    "asqDomain": "fine_motor",
+    "area": "practical_life",
+    "description": "Skills related to Fine Motor Coordination",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Uses precise finger and hand movements",
+      "Shows hand-eye coordination",
+      "Can manipulate small objects"
+    ],
+    "observationPrompts": [
+      "Does your child show control when using tools like scissors?",
+      "Can your child stack or arrange small objects?"
+    ],
+    "developmentalImportance": "This skill is crucial for self-care activities, tool use, and later writing abilities. Developing fine motor control helps children gain independence in daily tasks and prepares them for academic activities that require precision."
+  },
+  {
+    "skillId": "prl-dressing",
+    "skillName": "Dressing Skills",
+    "asqDomain": "personal_social",
+    "area": "practical_life",
+    "description": "Skills related to Dressing Skills",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Interacts appropriately with peers",
+      "Manages emotions in challenging situations",
+      "Demonstrates independence in daily activities"
+    ],
+    "observationPrompts": [
+      "What emotions does your child express throughout the day?",
+      "How does your child handle transitions or changes in routine?",
+      "How does your child interact with other children?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "prl-food-prep",
+    "skillName": "Food Preparation",
+    "asqDomain": "personal_social",
+    "area": "practical_life",
+    "description": "Skills related to Food Preparation",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows awareness of others' feelings",
+      "Follows social rules and expectations"
+    ],
+    "observationPrompts": [
+      "How does your child handle transitions or changes in routine?",
+      "Does your child share toys or materials with others?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "prl-pouring",
+    "skillName": "Pouring",
+    "asqDomain": "fine_motor",
+    "area": "practical_life",
+    "description": "Skills related to Pouring",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Can manipulate small objects",
+      "Controls tools appropriately for age",
+      "Shows hand preference for detailed tasks"
+    ],
+    "observationPrompts": [
+      "What small objects can your child pick up and manipulate?",
+      "Can your child stack or arrange small objects?",
+      "How does your child handle buttons, zippers, or snaps on clothing?"
+    ],
+    "developmentalImportance": "This skill is crucial for self-care activities, tool use, and later writing abilities. Developing fine motor control helps children gain independence in daily tasks and prepares them for academic activities that require precision."
+  },
+  {
+    "skillId": "prl-self-care",
+    "skillName": "Self-Care",
+    "asqDomain": "personal_social",
+    "area": "practical_life",
+    "description": "Skills related to Self-Care",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Interacts appropriately with peers",
+      "Shows awareness of others' feelings",
+      "Manages emotions in challenging situations"
+    ],
+    "observationPrompts": [
+      "Does your child share toys or materials with others?",
+      "What emotions does your child express throughout the day?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "sen-auditory",
+    "skillName": "Auditory Discrimination",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Auditory Discrimination",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Makes logical connections between concepts"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "What strategies does your child use when something doesn't work?",
+      "How does your child sort or categorize objects?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "sen-color",
+    "skillName": "Color Discrimination",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Color Discrimination",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Applies previous knowledge to new situations",
+      "Attempts different strategies to solve problems",
+      "Persists when challenged by difficult tasks"
+    ],
+    "observationPrompts": [
+      "How does your child approach new challenges?",
+      "How does your child sort or categorize objects?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "sen-spatial",
+    "skillName": "Spatial Awareness",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Spatial Awareness",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Attempts different strategies to solve problems",
+      "Shows curiosity when exploring materials"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "sen-tactile",
+    "skillName": "Tactile Discrimination",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Tactile Discrimination",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Shows curiosity when exploring materials"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "What strategies does your child use when something doesn't work?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "sen-visual",
+    "skillName": "Visual Discrimination",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Visual Discrimination",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Attempts different strategies to solve problems",
+      "Applies previous knowledge to new situations",
+      "Shows curiosity when exploring materials"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "What strategies does your child use when something doesn't work?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "soc-boundaries",
+    "skillName": "Personal Boundaries",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Personal Boundaries",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "soc-relationships"
+    ],
+    "indicators": [
+      "Manages emotions in challenging situations",
+      "Interacts appropriately with peers"
+    ],
+    "observationPrompts": [
+      "What emotions does your child express throughout the day?",
+      "How does your child handle transitions or changes in routine?",
+      "How does your child interact with other children?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "soc-conflict",
+    "skillName": "Conflict Resolution",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Conflict Resolution",
+    "ageRanges": [
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "soc-empathy",
+      "soc-emotion-reg"
+    ],
+    "indicators": [
+      "Shows awareness of others' feelings",
+      "Follows social rules and expectations"
+    ],
+    "observationPrompts": [
+      "How does your child interact with other children?",
+      "How does your child respond when things don't go their way?",
+      "How does your child handle transitions or changes in routine?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "soc-cooperation",
+    "skillName": "Cooperation",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Cooperation",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "soc-relationships"
+    ],
+    "indicators": [
+      "Manages emotions in challenging situations",
+      "Follows social rules and expectations"
+    ],
+    "observationPrompts": [
+      "How does your child handle transitions or changes in routine?",
+      "How does your child respond when things don't go their way?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "soc-emotion-reg",
+    "skillName": "Emotional Regulation",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Emotional Regulation",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "soc-self-awareness"
+    ],
+    "indicators": [
+      "Manages emotions in challenging situations",
+      "Interacts appropriately with peers"
+    ],
+    "observationPrompts": [
+      "How does your child interact with other children?",
+      "Does your child share toys or materials with others?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "soc-empathy",
+    "skillName": "Empathy",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Empathy",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "soc-self-awareness"
+    ],
+    "indicators": [
+      "Shows awareness of others' feelings",
+      "Demonstrates independence in daily activities",
+      "Manages emotions in challenging situations"
+    ],
+    "observationPrompts": [
+      "How does your child interact with other children?",
+      "How does your child handle transitions or changes in routine?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "soc-independence",
+    "skillName": "Independence",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Independence",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [
+      "soc-self-awareness"
+    ],
+    "indicators": [
+      "Follows social rules and expectations",
+      "Interacts appropriately with peers",
+      "Manages emotions in challenging situations"
+    ],
+    "observationPrompts": [
+      "What emotions does your child express throughout the day?",
+      "How does your child interact with other children?",
+      "Does your child share toys or materials with others?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "soc-relationships",
+    "skillName": "Building Relationships",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Building Relationships",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows awareness of others' feelings",
+      "Follows social rules and expectations"
+    ],
+    "observationPrompts": [
+      "How does your child interact with other children?",
+      "How does your child handle transitions or changes in routine?",
+      "What emotions does your child express throughout the day?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "soc-self-awareness",
+    "skillName": "Self-Awareness",
+    "asqDomain": "personal_social",
+    "area": "social_emotional",
+    "description": "Skills related to Self-Awareness",
+    "ageRanges": [
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      },
+      {
+        "min": 60,
+        "max": 72
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Demonstrates independence in daily activities",
+      "Shows awareness of others' feelings"
+    ],
+    "observationPrompts": [
+      "Does your child share toys or materials with others?",
+      "How does your child respond when things don't go their way?",
+      "What emotions does your child express throughout the day?"
+    ],
+    "developmentalImportance": "This skill enables healthy relationships, emotional regulation, and social confidence. Strong personal-social skills help children navigate group settings, develop empathy, and build the foundation for lifelong social-emotional wellness."
+  },
+  {
+    "skillId": "tod-basic-pouring",
+    "skillName": "Beginning Pouring",
+    "asqDomain": "problem_solving",
+    "area": "practical_life",
+    "description": "Skills related to Beginning Pouring",
+    "ageRanges": [
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [
+      "inf-grasp-release",
+      "tod-hand-eye"
+    ],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-concentration",
+    "skillName": "Concentration",
+    "asqDomain": "problem_solving",
+    "area": "practical_life",
+    "description": "Skills related to Concentration",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      },
+      {
+        "min": 48,
+        "max": 60
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-gross-motor",
+    "skillName": "Gross Motor Coordination",
+    "asqDomain": "problem_solving",
+    "area": "motor",
+    "description": "Skills related to Gross Motor Coordination",
+    "ageRanges": [
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "How does your child sort or categorize objects?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-hand-eye",
+    "skillName": "Hand-Eye Coordination",
+    "asqDomain": "problem_solving",
+    "area": "motor",
+    "description": "Skills related to Hand-Eye Coordination",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [
+      "inf-grasp-release"
+    ],
+    "indicators": [
+      "Makes logical connections between concepts",
+      "Persists when challenged by difficult tasks",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "What strategies does your child use when something doesn't work?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-imitation",
+    "skillName": "Imitation",
+    "asqDomain": "problem_solving",
+    "area": "language",
+    "description": "Skills related to Imitation",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Shows curiosity when exploring materials",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "Does your child connect cause and effect during play?",
+      "How does your child sort or categorize objects?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-independence",
+    "skillName": "Self-Help Skills",
+    "asqDomain": "problem_solving",
+    "area": "practical_life",
+    "description": "Skills related to Self-Help Skills",
+    "ageRanges": [
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [
+      "tod-hand-eye"
+    ],
+    "indicators": [
+      "Attempts different strategies to solve problems",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-object-function",
+    "skillName": "Object Function",
+    "asqDomain": "problem_solving",
+    "area": "practical_life",
+    "description": "Skills related to Object Function",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      }
+    ],
+    "prerequisites": [
+      "inf-cause-effect"
+    ],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Persists when challenged by difficult tasks",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "How does your child approach new challenges?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-pincer-grasp",
+    "skillName": "Pincer Grasp",
+    "asqDomain": "problem_solving",
+    "area": "motor",
+    "description": "Skills related to Pincer Grasp",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      }
+    ],
+    "prerequisites": [
+      "inf-grasp-release"
+    ],
+    "indicators": [
+      "Applies previous knowledge to new situations",
+      "Persists when challenged by difficult tasks"
+    ],
+    "observationPrompts": [
+      "Does your child connect cause and effect during play?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-sensory-awareness",
+    "skillName": "Sensory Awareness",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Sensory Awareness",
+    "ageRanges": [
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [
+      "inf-sensory-exploration"
+    ],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Attempts different strategies to solve problems",
+      "Makes logical connections between concepts"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "Does your child connect cause and effect during play?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-sequencing",
+    "skillName": "Simple Sequencing",
+    "asqDomain": "problem_solving",
+    "area": "cognitive",
+    "description": "Skills related to Simple Sequencing",
+    "ageRanges": [
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [
+      "tod-size-discrimination"
+    ],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "Does your child show persistence when facing obstacles?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-shape-recognition",
+    "skillName": "Shape Recognition",
+    "asqDomain": "problem_solving",
+    "area": "cognitive",
+    "description": "Skills related to Shape Recognition",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Shows curiosity when exploring materials",
+      "Makes logical connections between concepts"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "How does your child approach new challenges?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-size-discrimination",
+    "skillName": "Size Discrimination",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Size Discrimination",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Persists when challenged by difficult tasks",
+      "Attempts different strategies to solve problems",
+      "Applies previous knowledge to new situations"
+    ],
+    "observationPrompts": [
+      "How does your child approach new challenges?",
+      "What strategies does your child use when something doesn't work?",
+      "Does your child connect cause and effect during play?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-sorting",
+    "skillName": "Basic Sorting",
+    "asqDomain": "problem_solving",
+    "area": "cognitive",
+    "description": "Skills related to Basic Sorting",
+    "ageRanges": [
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [
+      "tod-visual-discrimination"
+    ],
+    "indicators": [
+      "Applies previous knowledge to new situations",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "Does your child show persistence when facing obstacles?",
+      "How does your child approach new challenges?",
+      "Does your child connect cause and effect during play?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-spatial",
+    "skillName": "Spatial Relationships",
+    "asqDomain": "problem_solving",
+    "area": "cognitive",
+    "description": "Skills related to Spatial Relationships",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Applies previous knowledge to new situations",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "What strategies does your child use when something doesn't work?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-visual-discrimination",
+    "skillName": "Visual Discrimination",
+    "asqDomain": "problem_solving",
+    "area": "sensorial",
+    "description": "Skills related to Visual Discrimination",
+    "ageRanges": [
+      {
+        "min": 24,
+        "max": 36
+      },
+      {
+        "min": 36,
+        "max": 48
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Applies previous knowledge to new situations",
+      "Shows curiosity when exploring materials",
+      "Persists when challenged by difficult tasks"
+    ],
+    "observationPrompts": [
+      "What strategies does your child use when something doesn't work?",
+      "How does your child sort or categorize objects?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  },
+  {
+    "skillId": "tod-vocabulary",
+    "skillName": "Early Vocabulary",
+    "asqDomain": "problem_solving",
+    "area": "language",
+    "description": "Skills related to Early Vocabulary",
+    "ageRanges": [
+      {
+        "min": 12,
+        "max": 24
+      },
+      {
+        "min": 24,
+        "max": 36
+      }
+    ],
+    "prerequisites": [],
+    "indicators": [
+      "Applies previous knowledge to new situations",
+      "Attempts different strategies to solve problems"
+    ],
+    "observationPrompts": [
+      "How does your child sort or categorize objects?",
+      "Does your child connect cause and effect during play?"
+    ],
+    "developmentalImportance": "This skill fosters critical thinking, persistence, and creativity when approaching challenges. Strong problem-solving abilities help children adapt to new situations, find solutions independently, and develop confidence in their own abilities."
+  }
+]

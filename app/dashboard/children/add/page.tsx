@@ -19,6 +19,7 @@ import { query, collection, getDocs, writeBatch, doc, Timestamp, setDoc } from '
 import { db } from '@/lib/firebase';
 import InitialAssessment from '@/components/InitialAssessment';
 import DevelopmentGuide from '@/components/DevelopmentGuide';
+import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
 interface Interest {
   value: string;
@@ -29,15 +30,6 @@ interface ParentInput {
   concerns: string[];
   goals: string[];
   notes: string;
-}
-
-interface DevelopmentalSkill {
-  id: string;
-  name: string;
-  description: string;
-  area: string;
-  ageGroups: string[];
-  category: string;
 }
 
 interface AssessmentResult {

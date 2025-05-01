@@ -207,3 +207,113 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "create_observations"
   ]
 };
+
+/**
+ * Enhanced DevelopmentalSkill Type with ASQ domain integration
+ */
+export interface DevelopmentalSkill {
+  id: string;
+  name: string;
+  description: string;
+  area: string;      // "practical_life", "sensorial", "language", etc.
+  ageRanges: string[]; // Original string format for backward compatibility
+  prerequisites?: string[];
+  category?: string;
+  
+  // New fields from the pivot strategy enhancement
+  asqDomain?: 'communication' | 'gross_motor' | 'fine_motor' | 'problem_solving' | 'personal_social';
+  ageRangesMonths?: { min: number; max: number }[]; // Age ranges in months
+  indicators?: string[]; // Observable behaviors related to this skill
+  observationPrompts?: string[]; // Questions to guide parent observation
+  developmentalImportance?: string; // Why this skill matters for development
+  enhancedWithASQ?: boolean; // Flag indicating this skill has been enhanced
+  
+  // Metadata
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  lastUpdated?: Timestamp;
+}
+
+/**
+ * Enhanced ChildSkill Type with observation fields
+ */
+export interface EnhancedChildSkill {
+  id?: string;
+  childId: string;
+  skillId: string;
+  skillName?: string;
+  category?: string;
+  status: 'not_started' | 'emerging' | 'developing' | 'mastered';
+  
+  // New fields for the pivot
+  asqDomain?: 'communication' | 'gross_motor' | 'fine_motor' | 'problem_solving' | 'personal_social';
+  observations?: string[];
+  observationDates?: Timestamp[];
+  
+  // Existing fields
+  lastAssessed?: Timestamp;
+  notes?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+/**
+ * NEW: Pediatric Visit Type - for tracking visit preparation
+ */
+export interface PediatricVisit {
+  id?: string;
+  childId: string;
+  scheduledDate: Timestamp;
+  visitType: '2m' | '4m' | '6m' | '9m' | '12m' | '15m' | '18m' | '24m' | '30m' | '36m' | '48m' | '60m';
+  
+  // ASQ preparation tracking by domain
+  asqPreparation: {
+    communication: {
+      activities: string[];  // Activity IDs
+      observations: string[];
+      status: 'not_started' | 'in_progress' | 'ready';
+    };
+    grossMotor: {
+      activities: string[];
+      observations: string[];
+      status: 'not_started' | 'in_progress' | 'ready';
+    };
+    fineMotor: {
+      activities: string[];
+      observations: string[];
+      status: 'not_started' | 'in_progress' | 'ready';
+    };
+    problemSolving: {
+      activities: string[];
+      observations: string[];
+      status: 'not_started' | 'in_progress' | 'ready';
+    };
+    personalSocial: {
+      activities: string[];
+      observations: string[];
+      status: 'not_started' | 'in_progress' | 'ready';
+    };
+  };
+  
+  notes?: string;
+  parentConcerns?: string[];
+  questionsForDoctor?: string[];
+  completedDate?: Timestamp;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+/**
+ * NEW: ASQ Milestone Type - for specific age-related milestones
+ */
+export interface ASQMilestone {
+  id?: string;
+  asqDomain: 'communication' | 'gross_motor' | 'fine_motor' | 'problem_solving' | 'personal_social';
+  ageMonth: number; // Specific age in months
+  description: string;
+  observableBehaviors: string[];
+  relatedSkills: string[]; // References to developmentalSkills
+  supportingActivities: string[]; // References to activities
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}

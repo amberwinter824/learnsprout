@@ -4,19 +4,10 @@ import { Camera, Smile, Frown, Meh, CheckCircle, X, ChevronDown, ChevronUp, Load
 import { addDoc, collection, doc, serverTimestamp, getDoc, updateDoc, getDocs, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
+import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
 // Define simple types
 type EngagementLevel = 'low' | 'medium' | 'high';
-
-interface Skill {
-  id: string;
-  name: string;
-  description: string;
-  area: string;
-  ageRanges: string[];
-  prerequisites: string[];
-  status?: 'not_started' | 'emerging' | 'developing' | 'mastered';
-}
 
 interface QuickObservationFormProps {
   activityId?: string;
@@ -52,7 +43,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
+  const [activitySkills, setActivitySkills] = useState<DevelopmentalSkill[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Fetch activity skills when component mounts
@@ -85,7 +76,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
             .map(doc => ({
               id: doc.id,
               ...doc.data()
-            } as Skill));
+            } as DevelopmentalSkill));
 
           setActivitySkills(skills);
         } else {
@@ -95,7 +86,7 @@ const QuickObservationForm: React.FC<QuickObservationFormProps> = (props) => {
           const skills = skillsSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-          } as Skill));
+          } as DevelopmentalSkill));
           setActivitySkills(skills);
         }
       } catch (err) {

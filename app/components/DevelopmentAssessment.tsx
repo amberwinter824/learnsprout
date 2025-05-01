@@ -3,16 +3,9 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { calculateAgeGroup } from '@/lib/ageUtils';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
-interface DevelopmentalSkill {
-  id: string;
-  name: string;
-  description: string;
-  area: 'Practical Life' | 'Sensorial' | 'Language' | 'Mathematics' | 'Cultural' | 'Social & Emotional';
-  ageRanges: string[];
-  category: string;
-}
-
+// Keep the local AssessmentResult interface
 interface AssessmentResult {
   skillId: string;
   status: 'emerging' | 'developing' | 'mastered';

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, DocumentData } from 'firebase/firestore';
-import { Sprout, Home, Users, BookOpen, BarChart2, LogOut, Menu, X, Settings, Package } from 'lucide-react';
+import { Sprout, Home, Users, BookOpen, BarChart2, LogOut, Menu, X, Settings, Package, Award } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Cookies from 'js-cookie';
 
@@ -62,6 +62,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Children', href: '/dashboard/children', icon: Users },
     { name: 'Activities', href: '/dashboard/activities', icon: BookOpen },
+    { name: 'Development', href: '/dashboard/development', icon: Award },
     { name: 'Progress', href: '/dashboard/progress', icon: BarChart2 },
     { name: 'Materials', href: '/dashboard/materials', icon: Package },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
