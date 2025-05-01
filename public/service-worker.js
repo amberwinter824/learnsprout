@@ -3,9 +3,7 @@
 const CACHE_NAME = 'learn-sprout-v1';
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
   '/dashboard',
-  '/dashboard/activities',
   '/globals.css',
   '/offline.html',
   // Add icon and splash screen assets
@@ -15,13 +13,6 @@ const STATIC_ASSETS = [
   '/icons/apple-touch-icon.png',
   '/icons/favicon-16x16.png',
   '/icons/favicon-32x32.png',
-  // Add splash screens for iOS devices
-  '/splash/apple-splash-1125x2436.png',
-  '/splash/apple-splash-1242x2208.png',
-  '/splash/apple-splash-750x1334.png',
-  '/splash/apple-splash-2048x2732.png',
-  '/splash/apple-splash-1668x2224.png',
-  '/splash/apple-splash-1536x2048.png',
   // Add manifest file
   '/manifest.json'
 ];

@@ -39,16 +39,35 @@ export function registerServiceWorker() {
           // Set up push notifications if supported
           if ('pushManager' in registration) {
             try {
+              // Check if VAPID key is available
+              const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+              
+              if (!vapidPublicKey) {
+                console.warn('Push subscription skipped: VAPID public key not available');
+                return;
+              }
+              
+              // Check permission before attempting to subscribe
+              if (Notification.permission !== 'granted') {
+                console.log('Push subscription skipped: notification permission not granted');
+                return;
+              }
+              
               const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''),
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
               });
               
               // Send the subscription to your server
               await sendPushSubscriptionToServer(subscription);
               console.log('Push subscription registered!');
             } catch (error) {
-              console.error('Push subscription failed:', error);
+              if (error instanceof Error && error.name === 'AbortError') {
+                console.warn('Push subscription failed: Service worker not active yet. Will retry later.');
+                // Optional: Implement retry logic here
+              } else {
+                console.error('Push subscription failed:', error);
+              }
             }
           }
         } catch (error) {

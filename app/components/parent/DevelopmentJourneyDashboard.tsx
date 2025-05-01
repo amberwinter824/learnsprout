@@ -10,7 +10,7 @@ import {
 import PediatricVisitPrep from './PediatricVisitPrep';
 import EnhancedActivityDetail from './EnhancedActivityDetail';
 import { DevelopmentalSkill } from '../../../lib/types/enhancedSchema';
-import { calculateAgeInMonths } from '../../../lib/ageUtils';
+import * as ageUtils from '../../../lib/ageUtils';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { getRecommendedActivities } from '../../../lib/planGenerator';
@@ -42,7 +42,12 @@ export default function DevelopmentJourneyDashboard({ child }: DevelopmentJourne
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const childAgeMonths = calculateAgeInMonths(child.birthDate);
+  // Make sure we're always working with a Date object
+  const birthDate = child.birthDate instanceof Date 
+    ? child.birthDate 
+    : new Date(child.birthDate);
+  
+  const childAgeMonths = ageUtils.calculateAgeInMonths(birthDate);
   
   // Fetch recommended activities for the child
   useEffect(() => {
