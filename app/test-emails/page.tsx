@@ -11,6 +11,7 @@ export default function TestEmailPage() {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +37,8 @@ export default function TestEmailPage() {
         url += `&childId=${encodeURIComponent(childId)}`;
       }
       
+      console.log('Sending request to:', url);
+      
       // Make the request
       const result = await fetch(url);
       
@@ -49,12 +52,22 @@ export default function TestEmailPage() {
         throw new Error(`Server returned non-JSON response (${result.status}): ${textContent.substring(0, 100)}...`);
       }
       
-      const data = await result.json();
+      let data;
+      try {
+        const responseText = await result.clone().text(); // Clone to not consume the body
+        console.log('Response text:', responseText);
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        const rawText = await result.text();
+        throw new Error(`Failed to parse JSON response: ${rawText.substring(0, 100)}...`);
+      }
       
       if (!result.ok) {
         throw new Error(data.error || `Server error (${result.status}): Failed to send test email`);
       }
       
+      console.log('Received response:', data);
       setResponse(data);
     } catch (err: any) {
       console.error('Email test error:', err);
@@ -99,17 +112,32 @@ export default function TestEmailPage() {
           </div>
         )}
         
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="safeMode"
-            checked={safeMode}
-            onChange={(e) => setSafeMode(e.target.checked)}
-            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-          />
-          <label htmlFor="safeMode" className="ml-2 block text-sm text-gray-700">
-            Use safe mode (no Firebase) - Use this if you&apos;re having Firebase configuration issues
-          </label>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="safeMode"
+              checked={safeMode}
+              onChange={(e) => setSafeMode(e.target.checked)}
+              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+            />
+            <label htmlFor="safeMode" className="ml-2 block text-sm text-gray-700">
+              Use safe mode (no Firebase)
+            </label>
+          </div>
+          
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="debugMode"
+              checked={showDebug}
+              onChange={(e) => setShowDebug(e.target.checked)}
+              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+            />
+            <label htmlFor="debugMode" className="ml-2 block text-sm text-gray-700">
+              Show debug info
+            </label>
+          </div>
         </div>
         
         <button
@@ -174,6 +202,15 @@ export default function TestEmailPage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+      )}
+      
+      {showDebug && response && (
+        <div className="mt-8">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Debug Information</h3>
+          <div className="bg-gray-800 text-white p-4 rounded-md overflow-auto max-h-96">
+            <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(response, null, 2)}</pre>
           </div>
         </div>
       )}
