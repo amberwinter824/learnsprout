@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
-export default function TestEmailPage() {
+export default function SimpleTestEmailPage() {
+  const [email, setEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -15,9 +16,19 @@ export default function TestEmailPage() {
       setMessage('');
       setError('');
       
-      const response = await fetch('/api/test-email', {
-        method: 'POST',
-      });
+      // Build the URL with email if provided
+      let url = '/api/simple-test-email';
+      if (email) {
+        url += `?email=${encodeURIComponent(email)}`;
+      }
+      
+      const response = await fetch(url);
+      
+      // Check if the response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response (${response.status}). Please check server logs.`);
+      }
       
       const data = await response.json();
       
@@ -26,8 +37,8 @@ export default function TestEmailPage() {
       } else {
         setError(data.error || 'Failed to send email. Please try again.');
       }
-    } catch (error) {
-      setError('Network error. Please check your connection and try again.');
+    } catch (error: any) {
+      setError(error.message || 'Network error. Please check your connection and try again.');
     } finally {
       setIsSending(false);
     }
@@ -37,7 +48,24 @@ export default function TestEmailPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="bg-white shadow rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Test Email Service</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Simple Test Email</h1>
+          <p className="mb-4 text-gray-600">
+            This page tests email sending without any Firebase dependencies. Use this if you're having issues with the regular test email page.
+          </p>
+          
+          <div className="mb-4">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email (optional - defaults to amberwinter824@gmail.com)
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter email address"
+              className="block w-full rounded-md border-gray-300 shadow-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
+            />
+          </div>
           
           <button
             onClick={sendTestEmail}
@@ -50,7 +78,7 @@ export default function TestEmailPage() {
                 Sending...
               </>
             ) : (
-              'Send Test Email'
+              'Send Simple Test Email'
             )}
           </button>
           
@@ -71,19 +99,19 @@ export default function TestEmailPage() {
           )}
 
           <div className="mt-6 pt-4 border-t border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900 mb-2">Other test options</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">Other email test options</h2>
             <div className="space-y-2">
               <Link 
-                href="/test-emails"
+                href="/test-email"
                 className="inline-flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full"
               >
-                Test Weekly Plan Emails
+                Standard Test Email
               </Link>
               <Link 
-                href="/simple-test-email"
-                className="inline-flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 w-full"
+                href="/test-emails"
+                className="inline-flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 w-full"
               >
-                Simple Email Test (No Firebase)
+                Test Weekly Plan Emails
               </Link>
             </div>
           </div>

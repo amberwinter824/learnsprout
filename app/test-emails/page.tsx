@@ -35,6 +35,13 @@ export default function TestEmailPage() {
       
       // Make the request
       const result = await fetch(url);
+      
+      // Check if the response is JSON
+      const contentType = result.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response (${result.status}). Please check server logs.`);
+      }
+      
       const data = await result.json();
       
       if (!result.ok) {

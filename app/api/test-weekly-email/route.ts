@@ -4,20 +4,49 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 
 // Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  const serviceAccount = JSON.parse(
-    Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '', 'base64').toString()
-  );
+let adminDb: any;
+let resend: any;
+
+try {
+  if (!getApps().length) {
+    // Check if Firebase service account key exists
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      console.error('Missing FIREBASE_SERVICE_ACCOUNT_KEY environment variable');
+    } else {
+      try {
+        const serviceAccount = JSON.parse(
+          Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '', 'base64').toString()
+        );
+        
+        initializeApp({
+          credential: cert(serviceAccount)
+        });
+      } catch (error) {
+        console.error('Error initializing Firebase:', error);
+      }
+    }
+  }
   
-  initializeApp({
-    credential: cert(serviceAccount)
-  });
+  adminDb = getFirestore();
+  
+  // Initialize Resend
+  if (!process.env.RESEND_API_KEY) {
+    console.error('Missing RESEND_API_KEY environment variable');
+  } else {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+} catch (error) {
+  console.error('Initialization error:', error);
 }
 
-const adminDb = getFirestore();
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function GET(request: NextRequest) {
+  // Verify services are initialized
+  if (!adminDb || !resend) {
+    return NextResponse.json({ 
+      error: 'Services not properly initialized. Check environment variables and server logs.' 
+    }, { status: 500 });
+  }
+  
   // Get query params
   const searchParams = request.nextUrl.searchParams;
   const userEmail = searchParams.get('email');

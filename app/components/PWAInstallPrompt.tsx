@@ -180,7 +180,8 @@ export default function InstallPWA() {
               // Get the VAPID key
               const vapidKey = getVapidKey();
               if (!vapidKey) {
-                throw new Error('VAPID key is not available');
+                console.log('Push notifications not available (VAPID key missing)');
+                return subscription; // Return existing subscription or null
               }
               
               // Create a new subscription
