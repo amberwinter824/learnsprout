@@ -5,21 +5,40 @@ import Link from 'next/link';
 
 export default function CheckEnvPage() {
   const [envStatus, setEnvStatus] = useState<any>(null);
+  const [rawResponse, setRawResponse] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   useEffect(() => {
     const checkEnv = async () => {
       try {
-        const response = await fetch('/api/check-env');
+        setLoading(true);
         
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
+        // Add timestamp to avoid caching
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/check-env?t=${timestamp}`);
+        
+        // Store raw text response for debugging
+        const rawText = await response.text();
+        setRawResponse(rawText);
+        
+        let jsonData;
+        
+        try {
+          // Try parsing the response as JSON
+          jsonData = JSON.parse(rawText);
+        } catch (jsonError) {
+          console.error('Failed to parse response as JSON:', jsonError);
+          throw new Error(`Server returned invalid JSON: ${rawText.substring(0, 100)}...`);
         }
         
-        const data = await response.json();
-        setEnvStatus(data);
+        if (!response.ok) {
+          throw new Error(jsonData.error || `Server error: ${response.status}`);
+        }
+        
+        setEnvStatus(jsonData);
       } catch (err: any) {
+        console.error('Error checking environment:', err);
         setError(err.message || 'Failed to check environment variables');
       } finally {
         setLoading(false);
@@ -84,6 +103,19 @@ export default function CheckEnvPage() {
                   )}
                 </div>
                 
+                <div className="text-sm font-medium text-gray-700">Decoded Content Length</div>
+                <div className="text-sm text-gray-900">
+                  {envStatus.firebase.decodedLength > 0 ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {envStatus.firebase.decodedLength} chars
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      Invalid or empty
+                    </span>
+                  )}
+                </div>
+                
                 <div className="text-sm font-medium text-gray-700">Valid JSON</div>
                 <div className="text-sm text-gray-900">
                   {envStatus.firebase.serviceAccountValid ? (
@@ -97,15 +129,15 @@ export default function CheckEnvPage() {
                   )}
                 </div>
                 
-                <div className="text-sm font-medium text-gray-700">Firebase Initialized</div>
+                <div className="text-sm font-medium text-gray-700">Traditional Credentials</div>
                 <div className="text-sm text-gray-900">
-                  {envStatus.firebase.alreadyInitialized ? (
+                  {envStatus.firebase.traditionalCredentialsPresent ? (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Yes
+                      Present
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      No
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Not found
                     </span>
                   )}
                 </div>
@@ -135,6 +167,21 @@ export default function CheckEnvPage() {
             </div>
           </div>
           
+          {envStatus.availableEnvKeys && (
+            <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">Available Environment Variables</h2>
+              </div>
+              <div className="px-4 py-5">
+                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
+                  {envStatus.availableEnvKeys.map((key: string) => (
+                    <li key={key}>{key}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-4">
             <h2 className="text-lg font-medium text-gray-900">What to do with this information</h2>
             
@@ -145,7 +192,7 @@ export default function CheckEnvPage() {
                 <li>Go to Firebase Console → Project Settings → Service Accounts</li>
                 <li>Click "Generate new private key" to download the JSON file</li>
                 <li>Encode the entire JSON file content as Base64</li>
-                <li>Add the Base64 string as FIREBASE_SERVICE_ACCOUNT_KEY in your .env file or environment variables</li>
+                <li>Add the Base64 string as FIREBASE_SERVICE_ACCOUNT_KEY in your .env.local file or environment variables</li>
               </ol>
             </div>
             
@@ -155,7 +202,7 @@ export default function CheckEnvPage() {
               <ol className="list-decimal ml-6 mt-2 space-y-1">
                 <li>Go to <a href="https://resend.com" className="text-emerald-600 hover:underline" target="_blank" rel="noopener noreferrer">Resend.com</a> and log in to your account</li>
                 <li>Navigate to API Keys and create a new API key</li>
-                <li>Add the API key as RESEND_API_KEY in your .env file or environment variables</li>
+                <li>Add the API key as RESEND_API_KEY in your .env.local file or environment variables</li>
               </ol>
             </div>
             
@@ -173,6 +220,15 @@ export default function CheckEnvPage() {
                 Test Weekly Emails with Safe Mode
               </Link>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {!envStatus && !loading && rawResponse && (
+        <div className="mt-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-2">Raw API Response</h2>
+          <div className="bg-gray-800 text-white p-4 rounded-md overflow-auto max-h-96">
+            <pre className="text-xs">{rawResponse}</pre>
           </div>
         </div>
       )}
