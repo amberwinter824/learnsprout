@@ -447,18 +447,18 @@ export default function Dashboard() {
                   Activities
                 </Link>
                 <Link
-                  href="/dashboard/progress"
+                  href="/dashboard/development"
                   className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <BarChart2 className="h-4 w-4 mr-2" />
-                  Progress
+                  Development
                 </Link>
                 <Link
                   href={`/dashboard/children/${selectedChildId}/development`}
                   className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <Award className="h-4 w-4 mr-2" />
-                  Development
+                  Child Journey
                 </Link>
                 <Link
                   href="/dashboard/settings"

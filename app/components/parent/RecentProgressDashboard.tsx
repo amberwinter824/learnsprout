@@ -281,7 +281,7 @@ export default function RecentProgressDashboard({
           <h2 className="text-lg font-medium">Recent Progress</h2>
         </div>
         <Link
-          href="/dashboard/progress"
+          href="/dashboard/development"
           className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center"
         >
           View All

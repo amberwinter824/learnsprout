@@ -89,7 +89,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error, resetError
   );
 }
 
-export default function ProgressDashboardPage() {
+export default function DevelopmentDashboardPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -548,7 +548,7 @@ export default function ProgressDashboardPage() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="mb-6 flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Progress Overview</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Development Overview</h1>
               <p className="mt-1 text-sm text-gray-500">Track your children's development and learning journey</p>
             </div>
             

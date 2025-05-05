@@ -135,10 +135,10 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
         <h3 className="text-sm font-medium text-gray-900">{childName}</h3>
         {!isOnProgressPage && (
           <Link
-            href={`/dashboard/children/${childId}/progress`}
+            href={`/dashboard/children/${childId}/development`}
             className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 hover:underline"
           >
-            View child's progress
+            View child's development
             <ArrowUpRight className="h-4 w-4 ml-1" />
           </Link>
         )}

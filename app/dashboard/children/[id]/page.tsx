@@ -855,11 +855,11 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
           Edit Profile
         </Link>
         <Link
-          href={`/dashboard/children/${childId}/progress`}
+          href={`/dashboard/children/${childId}/development`}
           className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
         >
           <BarChart2 className="h-4 w-4 mr-1" />
-          Track Progress
+          Development
         </Link>
         <Link
           href={`/dashboard/children/${childId}/weekly-plan`}
