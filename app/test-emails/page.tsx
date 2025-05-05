@@ -7,6 +7,7 @@ export default function TestEmailPage() {
   const { currentUser } = useAuth();
   const [email, setEmail] = useState('');
   const [childId, setChildId] = useState('');
+  const [safeMode, setSafeMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,10 +27,12 @@ export default function TestEmailPage() {
         throw new Error('Email is required');
       }
       
-      // Build the URL
-      let url = `/api/test-weekly-email?email=${encodeURIComponent(emailToUse)}`;
+      // Build the URL - use safe endpoint if safe mode is enabled
+      let url = safeMode 
+        ? `/api/test-weekly-email-safe?email=${encodeURIComponent(emailToUse)}`
+        : `/api/test-weekly-email?email=${encodeURIComponent(emailToUse)}`;
       
-      if (childId) {
+      if (childId && !safeMode) {
         url += `&childId=${encodeURIComponent(childId)}`;
       }
       
@@ -38,18 +41,23 @@ export default function TestEmailPage() {
       
       // Check if the response is JSON
       const contentType = result.headers.get('content-type');
+      
+      // For non-JSON responses, try to get the text content for better debugging
       if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Server returned non-JSON response (${result.status}). Please check server logs.`);
+        const textContent = await result.text();
+        console.error('Non-JSON response received:', textContent.substring(0, 500));
+        throw new Error(`Server returned non-JSON response (${result.status}): ${textContent.substring(0, 100)}...`);
       }
       
       const data = await result.json();
       
       if (!result.ok) {
-        throw new Error(data.error || 'Failed to send test email');
+        throw new Error(data.error || `Server error (${result.status}): Failed to send test email`);
       }
       
       setResponse(data);
     } catch (err: any) {
+      console.error('Email test error:', err);
       setError(err.message || 'An unknown error occurred');
     } finally {
       setLoading(false);
@@ -75,18 +83,33 @@ export default function TestEmailPage() {
           />
         </div>
         
-        <div>
-          <label htmlFor="childId" className="block text-sm font-medium text-gray-700 mb-1">
-            Child ID (optional - leave empty to send for all children)
-          </label>
+        {!safeMode && (
+          <div>
+            <label htmlFor="childId" className="block text-sm font-medium text-gray-700 mb-1">
+              Child ID (optional - leave empty to send for all children)
+            </label>
+            <input
+              type="text"
+              id="childId"
+              value={childId}
+              onChange={(e) => setChildId(e.target.value)}
+              placeholder="Optional: Specify a child ID"
+              className="block w-full rounded-md border-gray-300 shadow-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
+            />
+          </div>
+        )}
+        
+        <div className="flex items-center">
           <input
-            type="text"
-            id="childId"
-            value={childId}
-            onChange={(e) => setChildId(e.target.value)}
-            placeholder="Optional: Specify a child ID"
-            className="block w-full rounded-md border-gray-300 shadow-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
+            type="checkbox"
+            id="safeMode"
+            checked={safeMode}
+            onChange={(e) => setSafeMode(e.target.checked)}
+            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
           />
+          <label htmlFor="safeMode" className="ml-2 block text-sm text-gray-700">
+            Use safe mode (no Firebase) - Use this if you&apos;re having Firebase configuration issues
+          </label>
         </div>
         
         <button
@@ -131,7 +154,7 @@ export default function TestEmailPage() {
           <div className="mt-4">
             <h4 className="text-sm font-medium text-green-800 mb-2">Results:</h4>
             <ul className="bg-white rounded-md p-3 divide-y divide-gray-200">
-              {response.results.map((result: any, index: number) => (
+              {response.results && response.results.map((result: any, index: number) => (
                 <li key={index} className="py-2 first:pt-0 last:pb-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">{result.childName}</span>
@@ -165,9 +188,24 @@ export default function TestEmailPage() {
           If you specify a Child ID, only that child's weekly plan will be sent. Otherwise, weekly plans for all 
           active children associated with the user will be sent.
         </p>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 mb-2">
           If a weekly plan doesn't exist for the next week, a test plan will be generated with dummy activities.
         </p>
+        <p className="text-sm text-gray-600 font-medium mb-4">
+          If you&apos;re having issues with Firebase configuration, enable &quot;Safe Mode&quot; which skips all Firebase database interactions.
+        </p>
+        
+        <div className="mt-2">
+          <a 
+            href="/check-env"
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Check environment variables status
+          </a>
+        </div>
       </div>
     </div>
   );
