@@ -194,6 +194,8 @@ export default function AddChildPage() {
           status: result.status,
           lastAssessed: Timestamp.fromDate(new Date()),
           notes: result.notes || '',
+          observations: result.notes ? [result.notes] : [],
+          observationDates: [new Date()],
           createdAt: Timestamp.fromDate(new Date()),
           updatedAt: Timestamp.fromDate(new Date())
         });
@@ -278,12 +280,15 @@ export default function AddChildPage() {
             status: result.status,
             lastAssessed: new Date(),
             notes: result.notes || '',
+            observations: result.notes ? [result.notes] : [],
+            observationDates: [new Date()],
             createdAt: new Date(),
             updatedAt: new Date()
           });
         });
         
         await batch.commit();
+        console.log('Saved assessment results as child skills with observations');
       }
       
       // Redirect to the child's profile page
