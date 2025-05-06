@@ -240,19 +240,18 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
             const batchSize = 10;
             for (let i = 0; i < skillIds.length; i += batchSize) {
               const batch = skillIds.slice(i, i + batchSize);
+              
+              // Adjust query to fetch all developmental skills instead of filtering by ID
+              // This ensures we get skills even if they have different ID formats
               const skillsQuery = query(
-                collection(db, 'developmentalSkills'),
-                where('id', 'in', batch)
+                collection(db, 'developmentalSkills')
               );
               
               const skillsSnapshot = await getDocs(skillsQuery);
-              skillsData = [
-                ...skillsData,
-                ...skillsSnapshot.docs.map(doc => ({ 
-                  id: doc.id, 
-                  ...doc.data() 
-                })) as DevelopmentalSkill[]
-              ];
+              skillsData = skillsSnapshot.docs.map(doc => ({ 
+                id: doc.id, 
+                ...doc.data() 
+              })) as DevelopmentalSkill[];
             }
           }
         } catch (err) {
@@ -270,13 +269,34 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
         // 4. Calculate domain progress
         const domains: ASQDomain[] = ['communication', 'gross_motor', 'fine_motor', 'problem_solving', 'personal_social'];
         const progress = domains.map(domain => {
-          // Count skills by domain
-          const domainSkills = skillsData.filter(skill => skill.asqDomain === domain);
+          // Find skills with appropriate area that maps to this ASQ domain
+          const domainSkills = skillsData.filter(skill => {
+            // First check if skill has asqDomain property
+            if (skill.asqDomain === domain) {
+              return true;
+            }
+            
+            // If not, try to map the skill area to domain
+            const mappedDomain = mapAreaToDomain(skill.area);
+            return mappedDomain === domain;
+          });
+          
           const skillIds = domainSkills.map(skill => skill.id);
           
+          // Find child skills that match these skill IDs
+          const matchingChildSkills = childSkillsData.filter(cs => {
+            // Try to find a match by skillId in our domain skills
+            return skillIds.some(id => cs.skillId === id);
+          });
+          
+          // Count skills with status (emerging, developing, mastered)
+          const skillsWithStatus = matchingChildSkills.filter(cs => 
+            cs.status === 'emerging' || cs.status === 'developing' || cs.status === 'mastered'
+          ).length;
+          
           // Count observations for this domain
-          const domainObservations = childSkillsData
-            .filter(cs => skillIds.includes(cs.skillId) && cs.observations && cs.observations.length > 0)
+          const domainObservations = matchingChildSkills
+            .filter(cs => cs.observations && cs.observations.length > 0)
             .reduce((total, cs) => total + (cs.observations?.length || 0), 0);
           
           // Calculate progress percentage - this is just an example logic
@@ -284,9 +304,14 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           const activitiesNeeded = 2; // Example: need 2 activities per domain
           
           const domainActivities = visitData.asqPreparation?.[domain as keyof typeof visitData.asqPreparation]?.activities.length || 0;
-          const progressPercentage = Math.min(100, Math.round(
-            ((domainObservations / observationsNeeded) * 0.7 + (domainActivities / activitiesNeeded) * 0.3) * 100
-          ));
+          
+          // Set a minimum progress of 0% if we have matching skills, even if no observations
+          let progressPercentage = 0;
+          if (skillsWithStatus > 0) {
+            progressPercentage = Math.min(100, Math.round(
+              ((domainObservations / observationsNeeded) * 0.7 + (domainActivities / activitiesNeeded) * 0.3) * 100
+            ));
+          }
           
           // Determine status
           let status: 'not_started' | 'in_progress' | 'ready' = 'not_started';
@@ -441,11 +466,12 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'ready':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500 mr-1" />;
       case 'in_progress':
-        return <Activity className="h-5 w-5 text-blue-500" />;
+        return <Activity className="h-5 w-5 text-blue-500 mr-1" />;
+      case 'not_started':
       default:
-        return <AlertCircle className="h-5 w-5 text-amber-500" />;
+        return <AlertCircle className="h-5 w-5 text-amber-500 mr-1" />;
     }
   };
   
@@ -557,34 +583,61 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   
   // Map skill areas to their corresponding domains
   const mapAreaToDomain = (area: string): ASQDomain | null => {
+    if (!area) return null;
+    
+    // Convert to lowercase and remove any spaces/special chars for consistent matching
+    const normalizedArea = area.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
     const domainMap: Record<string, ASQDomain> = {
+      // Communication related areas
       'language': 'communication',
       'communication': 'communication',
       'speaking': 'communication',
       'listening': 'communication',
       'vocabulary': 'communication',
+      'linguisticintelligence': 'communication',
+      'speech': 'communication',
       
-      'gross_motor': 'gross_motor',
+      // Gross motor related areas
+      'grossmotor': 'gross_motor',
       'physical': 'gross_motor',
       'movement': 'gross_motor',
+      'bodyawareness': 'gross_motor',
+      'largemuscle': 'gross_motor',
+      'coordination': 'gross_motor',
+      'balance': 'gross_motor',
       
-      'fine_motor': 'fine_motor',
-      'hand_eye_coordination': 'fine_motor',
+      // Fine motor related areas
+      'finemotor': 'fine_motor',
+      'handeyecoordination': 'fine_motor',
       'writing': 'fine_motor',
       'drawing': 'fine_motor',
+      'grasping': 'fine_motor',
+      'manipulation': 'fine_motor',
+      'sensorial': 'fine_motor',
       
-      'problem_solving': 'problem_solving',
+      // Problem solving related areas
+      'problemsolving': 'problem_solving',
       'cognitive': 'problem_solving',
       'thinking': 'problem_solving',
       'reasoning': 'problem_solving',
+      'logic': 'problem_solving',
+      'mathematics': 'problem_solving',
+      'sorting': 'problem_solving',
+      'matching': 'problem_solving',
       
-      'personal_social': 'personal_social',
+      // Personal social related areas
+      'personalsocial': 'personal_social',
       'social': 'personal_social',
       'emotional': 'personal_social',
-      'self_care': 'personal_social'
+      'selfcare': 'personal_social',
+      'independence': 'personal_social',
+      'selfhelp': 'personal_social',
+      'dailyliving': 'personal_social',
+      'interpersonal': 'personal_social'
     };
     
-    return domainMap[area.toLowerCase()] || null;
+    return domainMap[normalizedArea] || null;
   };
   
   return (
@@ -673,7 +726,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                         <div className="flex items-center">
                           {getStatusIcon(domain.status)}
                           <span className="text-xs text-gray-500 ml-1 capitalize">
-                            {domain.status.replace('_', ' ')}
+                            {domain.status === 'not_started' ? 'Not Started' : domain.status.replace('_', ' ')}
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">

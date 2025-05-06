@@ -170,7 +170,17 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
           return a.name.localeCompare(b.name);
         });
         
-        setSkills(sortedSkills);
+        // Deduplicate skills based on skillId
+        const uniqueSkillIds = new Set();
+        const uniqueSkills = sortedSkills.filter(skill => {
+          if (uniqueSkillIds.has(skill.skillId)) {
+            return false;
+          }
+          uniqueSkillIds.add(skill.skillId);
+          return true;
+        });
+        
+        setSkills(uniqueSkills);
         
         // Fetch progress records
         const progressQuery = query(
@@ -843,7 +853,7 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
                         </td>
                         <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <span className="text-sm text-gray-900 capitalize flex items-center">
+                            <span className={`text-sm capitalize flex items-center px-2 py-1 rounded-full ${getStatusColor(skill.status)}`}>
                               {getStatusIcon(skill.status)}
                               {skill.status.replace('_', ' ')}
                             </span>

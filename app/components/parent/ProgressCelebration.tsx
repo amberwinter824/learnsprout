@@ -30,7 +30,7 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const pathname = usePathname();
-  const isOnProgressPage = pathname === `/dashboard/children/${childId}/progress`;
+  const isOnProgressPage = pathname === `/dashboard/children/${childId}/development`;
 
   const sortedMilestones = [...recentMilestones].sort((a, b) => {
     const statusOrder: Record<SkillStatus, number> = {
