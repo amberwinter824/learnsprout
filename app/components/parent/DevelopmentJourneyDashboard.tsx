@@ -382,11 +382,11 @@ export default function DevelopmentJourneyDashboard({ child }: DevelopmentJourne
                       onClick={() => handleDomainClick(domain.domain)}
                       className="p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors text-center"
                     >
-                      <div className={`inline-flex p-2 rounded-full mb-1 ${domainColors[domain.domain]}`}>
-                        <span>{domainIcons[domain.domain]}</span>
+                      <div className={`inline-flex p-2 rounded-full mb-1 ${domainColors[domain.domain as ASQDomain]}`}>
+                        <span>{domainIcons[domain.domain as ASQDomain]}</span>
                       </div>
                       <div className="text-xs">
-                        {formatASQDomain(domain.domain)}
+                        {formatASQDomain(domain.domain as ASQDomain)}
                       </div>
                       <div 
                         className={`text-xs font-medium mt-1 ${
@@ -417,8 +417,8 @@ export default function DevelopmentJourneyDashboard({ child }: DevelopmentJourne
                           <h5 className="text-sm font-medium">{obs.skillName}</h5>
                           <p className="text-xs text-gray-600 mt-1">{obs.text}</p>
                         </div>
-                        <span className={`px-2 h-fit py-0.5 text-xs rounded-full ${domainColors[obs.domain]}`}>
-                          {formatASQDomain(obs.domain)}
+                        <span className={`px-2 h-fit py-0.5 text-xs rounded-full ${domainColors[obs.domain as ASQDomain]}`}>
+                          {formatASQDomain(obs.domain as ASQDomain)}
                         </span>
                       </div>
                       <div className="text-xs text-gray-500 mt-1">

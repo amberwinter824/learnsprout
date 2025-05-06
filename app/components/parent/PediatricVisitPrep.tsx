@@ -650,11 +650,11 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div className={`${getDomainColor(domain.domain)} w-8 h-8 rounded-full flex items-center justify-center mr-3`}>
-                          <span className="text-lg">{domainIcons[domain.domain]}</span>
+                          <span className="text-lg">{domainIcons[domain.domain as ASQDomain]}</span>
                         </div>
                         <div>
                           <h4 className="text-sm font-medium text-gray-900">
-                            {formatASQDomain(domain.domain)}
+                            {formatASQDomain(domain.domain as ASQDomain)}
                           </h4>
                           <div className="flex items-center mt-1">
                             <div className="w-24 bg-gray-200 rounded-full h-1.5 mr-2">
@@ -691,7 +691,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           {selectedDomain && (
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h2 className="text-lg font-medium text-gray-900 mb-3">
-                Recommended Activities for {formatASQDomain(selectedDomain)}
+                Recommended Activities for {formatASQDomain(selectedDomain as ASQDomain)}
               </h2>
               
               {recommendedActivities.filter(activity => {
@@ -783,8 +783,8 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-sm font-medium text-gray-900">{observation.skillName}</h3>
-                          <span className={`mt-1 inline-block ${domainColors[observation.domain]} text-xs px-2 py-0.5 rounded-full`}>
-                            {formatASQDomain(observation.domain)}
+                          <span className={`mt-1 inline-block ${domainColors[observation.domain as ASQDomain]} text-xs px-2 py-0.5 rounded-full`}>
+                            {formatASQDomain(observation.domain as ASQDomain)}
                           </span>
                         </div>
                         <span className="text-xs text-gray-500">
