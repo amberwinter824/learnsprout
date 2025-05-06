@@ -95,168 +95,167 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentAssessmentResults, setCurrentAssessmentResults] = useState<AssessmentResult[]>([]);
   
-  // Fetch child and progress data
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        
-        // Fetch child data
-        const childDoc = await getDoc(doc(db, 'children', childId));
-        if (!childDoc.exists()) {
-          setError('Child not found');
-          setLoading(false);
-          return;
-        }
-        
-        setChild({ id: childDoc.id, ...childDoc.data() } as ChildData);
-        
-        // Fetch developmental skills data
-        const devSkillsQuery = query(collection(db, 'developmentalSkills'));
-        const devSkillsSnapshot = await getDocs(devSkillsQuery);
-        const devSkillsMap = new Map();
-        
-        devSkillsSnapshot.forEach(doc => {
-          devSkillsMap.set(doc.id, { id: doc.id, ...doc.data() });
-        });
-        
-        // Fetch child's skills progress
-        const childSkillsQuery = query(
-          collection(db, 'childSkills'),
-          where('childId', '==', childId)
-        );
-        
-        const childSkillsSnapshot = await getDocs(childSkillsQuery);
-        const childSkillsData: Skill[] = [];
-        
-        childSkillsSnapshot.forEach(doc => {
-          const data = doc.data();
-          const devSkill = devSkillsMap.get(data.skillId);
-          
-          if (devSkill) {
-            childSkillsData.push({
-              id: doc.id,
-              skillId: data.skillId,
-              name: devSkill.name || 'Unnamed Skill',
-              description: devSkill.description,
-              area: devSkill.area || 'unknown',
-              status: data.status || 'not_started',
-              lastAssessed: data.lastAssessed,
-              notes: data.notes
-            });
-          }
-        });
-        
-        // For skills not yet tracked, add them with not_started status
-        devSkillsMap.forEach((devSkill, skillId) => {
-          const exists = childSkillsData.some(s => s.skillId === skillId);
-          if (!exists) {
-            childSkillsData.push({
-              id: `new-${skillId}`,
-              skillId,
-              name: devSkill.name || 'Unnamed Skill',
-              description: devSkill.description,
-              area: devSkill.area || 'unknown',
-              status: 'not_started'
-            });
-          }
-        });
-        
-        // Sort skills by area and then by name
-        const sortedSkills = childSkillsData.sort((a, b) => {
-          if (a.area !== b.area) {
-            return a.area.localeCompare(b.area);
-          }
-          return a.name.localeCompare(b.name);
-        });
-        
-        // Deduplicate skills based on skillId
-        const uniqueSkillIds = new Set();
-        const uniqueSkills = sortedSkills.filter(skill => {
-          if (uniqueSkillIds.has(skill.skillId)) {
-            return false;
-          }
-          uniqueSkillIds.add(skill.skillId);
-          return true;
-        });
-        
-        setSkills(uniqueSkills);
-        
-        // Fetch progress records
-        const progressQuery = query(
-          collection(db, 'progressRecords'),
-          where('childId', '==', childId),
-          orderBy('date', 'desc')
-        );
-        
-        console.log('Fetching progress records for childId:', childId);
-        const progressSnapshot = await getDocs(progressQuery);
-        console.log('Progress records found:', progressSnapshot.size);
-        
-        const progressData: ProgressRecord[] = [];
-        
-        progressSnapshot.forEach(doc => {
-          const data = doc.data();
-          console.log('Progress record data:', data);
-          progressData.push({ 
-            id: doc.id, 
-            childId: data.childId,
-            activityId: data.activityId,
-            activityTitle: data.activityTitle || 'Untitled Activity',
-            date: data.date,
-            notes: data.notes || '',
-            completionStatus: data.completionStatus || 'started',
-            engagementLevel: data.engagementLevel,
-            skillsDemonstrated: data.skillsDemonstrated || [],
-            photoUrls: data.photoUrls || []
-          });
-        });
-        
-        console.log('Processed progress data:', progressData);
-        
-        // Fetch activity titles
-        const activityIds = progressData
-          .map(record => record.activityId)
-          .filter((id, index, self) => id && self.indexOf(id) === index);
-        
-        console.log('Activity IDs to fetch:', activityIds);
-        
-        const activityTitles: Record<string, string> = {};
-        
-        for (const activityId of activityIds) {
-          if (!activityId) continue;
-          try {
-            console.log('Fetching activity:', activityId);
-            const activityDoc = await getDoc(doc(db, 'activities', activityId));
-            if (activityDoc.exists()) {
-              activityTitles[activityId] = activityDoc.data().title || 'Unknown Activity';
-              console.log('Activity title found:', activityTitles[activityId]);
-            }
-          } catch (err) {
-            console.error(`Error fetching activity ${activityId}:`, err);
-          }
-        }
-        
-        // Add activity titles to progress records
-        progressData.forEach(record => {
-          if (record.activityId && activityTitles[record.activityId]) {
-            record.activityTitle = activityTitles[record.activityId];
-          }
-        });
-        
-        console.log('Final progress records:', progressData);
-        setProgressRecords(progressData);
+  // Define fetchData function outside of useEffect
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch child data
+      const childDoc = await getDoc(doc(db, 'children', childId));
+      if (!childDoc.exists()) {
+        setError('Child not found');
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to load data');
-        setLoading(false);
+        return;
       }
+      
+      setChild({ id: childDoc.id, ...childDoc.data() } as ChildData);
+      
+      // Fetch developmental skills data
+      const devSkillsQuery = query(collection(db, 'developmentalSkills'));
+      const devSkillsSnapshot = await getDocs(devSkillsQuery);
+      const devSkillsMap = new Map();
+      
+      devSkillsSnapshot.forEach(doc => {
+        devSkillsMap.set(doc.id, { id: doc.id, ...doc.data() });
+      });
+      
+      // Fetch child's skills progress
+      const childSkillsQuery = query(
+        collection(db, 'childSkills'),
+        where('childId', '==', childId)
+      );
+      
+      const childSkillsSnapshot = await getDocs(childSkillsQuery);
+      const childSkillsData: Skill[] = [];
+      
+      childSkillsSnapshot.forEach(doc => {
+        const data = doc.data();
+        const devSkill = devSkillsMap.get(data.skillId);
+        
+        if (devSkill) {
+          childSkillsData.push({
+            id: doc.id,
+            skillId: data.skillId,
+            name: devSkill.name || 'Unnamed Skill',
+            description: devSkill.description,
+            area: devSkill.area || 'unknown',
+            status: data.status || 'not_started',
+            lastAssessed: data.lastAssessed,
+            notes: data.notes
+          });
+        }
+      });
+      
+      // For skills not yet tracked, add them with not_started status
+      devSkillsMap.forEach((devSkill, skillId) => {
+        const exists = childSkillsData.some(s => s.skillId === skillId);
+        if (!exists) {
+          childSkillsData.push({
+            id: `new-${skillId}`,
+            skillId,
+            name: devSkill.name || 'Unnamed Skill',
+            description: devSkill.description,
+            area: devSkill.area || 'unknown',
+            status: 'not_started'
+          });
+        }
+      });
+      
+      // Sort skills by area and then by name
+      const sortedSkills = childSkillsData.sort((a, b) => {
+        if (a.area !== b.area) {
+          return a.area.localeCompare(b.area);
+        }
+        return a.name.localeCompare(b.name);
+      });
+      
+      // Deduplicate skills based on skillId
+      const uniqueSkillIds = new Set();
+      const uniqueSkills = sortedSkills.filter(skill => {
+        if (uniqueSkillIds.has(skill.skillId)) {
+          return false;
+        }
+        uniqueSkillIds.add(skill.skillId);
+        return true;
+      });
+      
+      setSkills(uniqueSkills);
+      
+      // Fetch progress records
+      const progressQuery = query(
+        collection(db, 'progressRecords'),
+        where('childId', '==', childId),
+        orderBy('date', 'desc')
+      );
+      
+      console.log('Fetching progress records for childId:', childId);
+      const progressSnapshot = await getDocs(progressQuery);
+      console.log('Progress records found:', progressSnapshot.size);
+      
+      const progressData: ProgressRecord[] = [];
+      
+      progressSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('Progress record data:', data);
+        progressData.push({ 
+          id: doc.id, 
+          childId: data.childId,
+          activityId: data.activityId,
+          activityTitle: data.activityTitle || 'Untitled Activity',
+          date: data.date,
+          notes: data.notes || '',
+          completionStatus: data.completionStatus || 'started',
+          engagementLevel: data.engagementLevel,
+          skillsDemonstrated: data.skillsDemonstrated || [],
+          photoUrls: data.photoUrls || []
+        });
+      });
+      
+      console.log('Processed progress data:', progressData);
+      
+      // Fetch activity titles
+      const activityIds = progressData
+        .map(record => record.activityId)
+        .filter((id, index, self) => id && self.indexOf(id) === index);
+      
+      console.log('Activity IDs to fetch:', activityIds);
+      
+      const activityTitles: Record<string, string> = {};
+      
+      for (const activityId of activityIds) {
+        if (!activityId) continue;
+        try {
+          console.log('Fetching activity:', activityId);
+          const activityDoc = await getDoc(doc(db, 'activities', activityId));
+          if (activityDoc.exists()) {
+            activityTitles[activityId] = activityDoc.data().title || 'Unknown Activity';
+            console.log('Activity title found:', activityTitles[activityId]);
+          }
+        } catch (err) {
+          console.error(`Error fetching activity ${activityId}:`, err);
+        }
+      }
+      
+      // Add activity titles to progress records
+      progressData.forEach(record => {
+        if (record.activityId && activityTitles[record.activityId]) {
+          record.activityTitle = activityTitles[record.activityId];
+        }
+      });
+      
+      console.log('Final progress records:', progressData);
+      setProgressRecords(progressData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Failed to load data');
+      setLoading(false);
     }
-    
-    if (childId) {
-      fetchData();
-    }
+  };
+  
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchData();
   }, [childId]);
 
   useEffect(() => {
@@ -470,18 +469,22 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
                 id: skillRef.id,
                 status: updateStatus,
                 notes: updateNotes,
-                lastAssessed: Timestamp.now(),
-                updatedAt: Timestamp.now()
+                lastAssessed: Timestamp.now()
               }
             : skill
         )
       );
 
+      // Add a console log to debug
+      console.log('Updated skill status in local state:', updateStatus);
+      
       // Close modal and reset state
       setIsUpdateModalOpen(false);
       setSelectedSkill(null);
-      setUpdateStatus('emerging');
-      setUpdateNotes('');
+      
+      // Fetch the latest data from Firestore to ensure UI is in sync
+      fetchData();
+      
     } catch (error) {
       console.error('Error updating skill status:', error);
       // You might want to show an error message to the user here

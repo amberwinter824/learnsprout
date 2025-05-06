@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, AlertCircle, ArrowRight, Activity, MessageSquare, Info, X } from 'lucide-react';
 import { DevelopmentalSkill, PediatricVisit, EnhancedChildSkill } from '../../../lib/types/enhancedSchema';
-import { ASQDomain, formatASQDomain, PediatricVisitMonth, PEDIATRIC_VISIT_MONTHS } from '../../../lib/types/asqTypes';
+import { ASQDomain, formatASQDomain, mapSkillAreaToASQDomain, getSkillASQDomain, PediatricVisitMonth, PEDIATRIC_VISIT_MONTHS } from '../../../lib/types/asqTypes';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, limit } from 'firebase/firestore';
 import { differenceInMonths } from 'date-fns';
@@ -271,14 +271,8 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
         const progress = domains.map(domain => {
           // Find skills with appropriate area that maps to this ASQ domain
           const domainSkills = skillsData.filter(skill => {
-            // First check if skill has asqDomain property
-            if (skill.asqDomain === domain) {
-              return true;
-            }
-            
-            // If not, try to map the skill area to domain
-            const mappedDomain = mapAreaToDomain(skill.area);
-            return mappedDomain === domain;
+            // Use the utility function to get the domain
+            return getSkillASQDomain(skill) === domain;
           });
           
           const skillIds = domainSkills.map(skill => skill.id);
@@ -581,65 +575,6 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
     return 'bg-gray-100 text-gray-800 border-gray-300';
   };
   
-  // Map skill areas to their corresponding domains
-  const mapAreaToDomain = (area: string): ASQDomain | null => {
-    if (!area) return null;
-    
-    // Convert to lowercase and remove any spaces/special chars for consistent matching
-    const normalizedArea = area.toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    const domainMap: Record<string, ASQDomain> = {
-      // Communication related areas
-      'language': 'communication',
-      'communication': 'communication',
-      'speaking': 'communication',
-      'listening': 'communication',
-      'vocabulary': 'communication',
-      'linguisticintelligence': 'communication',
-      'speech': 'communication',
-      
-      // Gross motor related areas
-      'grossmotor': 'gross_motor',
-      'physical': 'gross_motor',
-      'movement': 'gross_motor',
-      'bodyawareness': 'gross_motor',
-      'largemuscle': 'gross_motor',
-      'coordination': 'gross_motor',
-      'balance': 'gross_motor',
-      
-      // Fine motor related areas
-      'finemotor': 'fine_motor',
-      'handeyecoordination': 'fine_motor',
-      'writing': 'fine_motor',
-      'drawing': 'fine_motor',
-      'grasping': 'fine_motor',
-      'manipulation': 'fine_motor',
-      'sensorial': 'fine_motor',
-      
-      // Problem solving related areas
-      'problemsolving': 'problem_solving',
-      'cognitive': 'problem_solving',
-      'thinking': 'problem_solving',
-      'reasoning': 'problem_solving',
-      'logic': 'problem_solving',
-      'mathematics': 'problem_solving',
-      'sorting': 'problem_solving',
-      'matching': 'problem_solving',
-      
-      // Personal social related areas
-      'personalsocial': 'personal_social',
-      'social': 'personal_social',
-      'emotional': 'personal_social',
-      'selfcare': 'personal_social',
-      'independence': 'personal_social',
-      'selfhelp': 'personal_social',
-      'dailyliving': 'personal_social',
-      'interpersonal': 'personal_social'
-    };
-    
-    return domainMap[normalizedArea] || null;
-  };
-  
   return (
     <div className="space-y-6">
       {errorMessage && (
@@ -751,7 +686,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                 const matchesDomain = activity.skillsAddressed?.some(
                   (skillId: string) => {
                     const skill = skills.find(s => s.id === skillId);
-                    return skill && mapAreaToDomain(skill.area) === selectedDomain;
+                    return skill && getSkillASQDomain(skill) === selectedDomain;
                   }
                 );
                 return matchesDomain;
@@ -762,7 +697,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                       const matchesDomain = activity.skillsAddressed?.some(
                         (skillId: string) => {
                           const skill = skills.find(s => s.id === skillId);
-                          return skill && mapAreaToDomain(skill.area) === selectedDomain;
+                          return skill && getSkillASQDomain(skill) === selectedDomain;
                         }
                       );
                       return matchesDomain;
@@ -782,7 +717,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                             const skill = skills.find(s => s.id === skillId);
                             if (!skill) return null;
                             
-                            const domain = mapAreaToDomain(skill.area);
+                            const domain = getSkillASQDomain(skill);
                             if (!domain || domain !== selectedDomain) return null;
                             
                             // Since we've checked that domain is not null and matches selectedDomain,
