@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
-import DevelopmentGuide from '@/components/DevelopmentGuide';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PediatricVisitPrep from '@/components/parent/PediatricVisitPrep';
 
@@ -94,7 +93,6 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
   const [updateStatus, setUpdateStatus] = useState<'emerging' | 'developing' | 'mastered'>('emerging');
   const [updateNotes, setUpdateNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [showDevelopmentGuide, setShowDevelopmentGuide] = useState(false);
   const [currentAssessmentResults, setCurrentAssessmentResults] = useState<AssessmentResult[]>([]);
   
   // Fetch child and progress data
@@ -565,17 +563,6 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
     );
   }
   
-  if (showDevelopmentGuide) {
-    return (
-      <DevelopmentGuide
-        childName={child?.name || ''}
-        childId={params.id}
-        assessmentResults={currentAssessmentResults}
-        onBack={() => setShowDevelopmentGuide(false)}
-      />
-    );
-  }
-  
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -587,24 +574,6 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
               Back to {child?.name}'s Profile
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Development Tracking</h1>
-          </div>
-
-          {/* Add Development Guide section */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900">Development Guide</h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  View and update your child's development activities and progress
-                </p>
-              </div>
-              <button
-                onClick={() => setShowDevelopmentGuide(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-              >
-                View Development Guide
-              </button>
-            </div>
           </div>
         </div>
 

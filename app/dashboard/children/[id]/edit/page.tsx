@@ -10,7 +10,6 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, writeBatch, doc, query, where, Timestamp } from 'firebase/firestore';
 import DevelopmentAssessment from '@/components/DevelopmentAssessment';
 import DevelopmentPlan from '@/components/DevelopmentPlan';
-import DevelopmentGuide from '@/components/DevelopmentGuide';
 import { 
   calculateAgeGroup, 
   getAgeGroupDescription, 
@@ -59,7 +58,6 @@ export default function EditChildPage({ params }: { params: { id: string } }) {
   const [birthdateError, setBirthdateError] = useState('');
   const [showAssessment, setShowAssessment] = useState(false);
   const [showDevelopmentPlan, setShowDevelopmentPlan] = useState(false);
-  const [showDevelopmentGuide, setShowDevelopmentGuide] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<AssessmentResult[]>([]);
 
   useEffect(() => {
@@ -227,7 +225,6 @@ export default function EditChildPage({ params }: { params: { id: string } }) {
       await batch.commit();
       
       setAssessmentResults(results);
-      setShowDevelopmentGuide(true);
     } catch (err) {
       console.error('Error saving assessment results:', err);
       setError('Failed to save assessment results');
@@ -241,20 +238,6 @@ export default function EditChildPage({ params }: { params: { id: string } }) {
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
       </div>
-    );
-  }
-
-  if (showDevelopmentGuide && assessmentResults.length > 0) {
-    return (
-      <DevelopmentGuide
-        childName={name}
-        childId={params.id}
-        assessmentResults={assessmentResults}
-        onBack={() => {
-          setShowDevelopmentGuide(false);
-          setShowAssessment(false);
-        }}
-      />
     );
   }
 

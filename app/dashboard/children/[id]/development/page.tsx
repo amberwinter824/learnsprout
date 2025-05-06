@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
-import DevelopmentGuide from '@/components/DevelopmentGuide';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PediatricVisitPrep from '@/components/parent/PediatricVisitPrep';
 
@@ -94,7 +93,6 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
   const [updateStatus, setUpdateStatus] = useState<'emerging' | 'developing' | 'mastered'>('emerging');
   const [updateNotes, setUpdateNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [showDevelopmentGuide, setShowDevelopmentGuide] = useState(false);
   const [currentAssessmentResults, setCurrentAssessmentResults] = useState<AssessmentResult[]>([]);
   
   // Fetch child and progress data
@@ -565,17 +563,6 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
     );
   }
   
-  if (showDevelopmentGuide) {
-    return (
-      <DevelopmentGuide
-        childName={child?.name || ''}
-        childId={params.id}
-        assessmentResults={currentAssessmentResults}
-        onBack={() => setShowDevelopmentGuide(false)}
-      />
-    );
-  }
-  
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -587,24 +574,6 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
               Back to {child?.name}'s Profile
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Development Tracking</h1>
-          </div>
-
-          {/* Add Development Guide section */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900">Development Guide</h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  View and update your child's development activities and progress
-                </p>
-              </div>
-              <button
-                onClick={() => setShowDevelopmentGuide(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-              >
-                View Development Guide
-              </button>
-            </div>
           </div>
         </div>
 
@@ -620,7 +589,7 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
           </TabsList>
 
           <TabsContent value="overview" className="bg-white rounded-lg shadow-sm p-6">
-            {/* Overview content (existing) */}
+            {/* Overview content */}
             <div className="mb-4">
               <h2 className="text-lg font-medium text-gray-900 mb-2">Development Progress</h2>
               <p className="text-sm text-gray-600 mb-4">
@@ -628,21 +597,188 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
               </p>
             </div>
 
-            {/* Area Selection */}
-            <div className="mb-6">
-              {/* Existing area selection code */}
-              {/* ... */}
+            {/* Progress Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-4 py-5 sm:p-6">
+                  <h2 className="text-lg font-medium text-gray-900 flex items-center mb-4">
+                    <Award className="h-5 w-5 mr-2 text-emerald-500" />
+                    Skills Progress
+                  </h2>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-gray-900">{skillStats.total}</div>
+                      <div className="text-sm text-gray-500">Total Skills</div>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-green-600">{skillStats.mastered}</div>
+                      <div className="text-sm text-gray-500">Mastered</div>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-blue-600">{skillStats.developing}</div>
+                      <div className="text-sm text-gray-500">Developing</div>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-amber-600">{skillStats.emerging}</div>
+                      <div className="text-sm text-gray-500">Emerging</div>
+                    </div>
+                  </div>
+                  
+                  {/* Simple progress bar */}
+                  <div className="mt-6">
+                    <div className="flex justify-between text-sm text-gray-500 mb-1">
+                      <span>Progress</span>
+                      <span>
+                        {skillStats.total > 0 
+                          ? Math.round(((skillStats.mastered + skillStats.developing + skillStats.emerging) / skillStats.total) * 100) 
+                          : 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="bg-emerald-500 h-2.5 rounded-full" style={{ 
+                        width: `${skillStats.total > 0 
+                          ? ((skillStats.mastered + skillStats.developing + skillStats.emerging) / skillStats.total) * 100 
+                          : 0}%` 
+                      }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-4 py-5 sm:p-6">
+                  <h2 className="text-lg font-medium text-gray-900 flex items-center mb-4">
+                    <Activity className="h-5 w-5 mr-2 text-emerald-500" />
+                    Activity Completion
+                  </h2>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-gray-900">{activityStats.total}</div>
+                      <div className="text-sm text-gray-500">Total Records</div>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-green-600">{activityStats.completed}</div>
+                      <div className="text-sm text-gray-500">Completed</div>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-blue-600">{activityStats.recent}</div>
+                      <div className="text-sm text-gray-500">Last 30 Days</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Skill Progress Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Existing skill progress cards */}
-              {/* ... */}
+            {/* Recent Skills and Activities */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Recently Updated Skills */}
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-4 py-5 border-b border-gray-200">
+                  <h2 className="text-lg font-medium text-gray-900">Recently Updated Skills</h2>
+                </div>
+                
+                <div className="px-4 py-5 sm:p-6">
+                  {skills.filter(s => s.lastAssessed).length > 0 ? (
+                    <div className="space-y-4">
+                      {skills
+                        .filter(s => s.lastAssessed)
+                        .sort((a, b) => {
+                          if (!a.lastAssessed) return 1;
+                          if (!b.lastAssessed) return -1;
+                          return b.lastAssessed.seconds - a.lastAssessed.seconds;
+                        })
+                        .slice(0, 5)
+                        .map(skill => (
+                          <div key={skill.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-medium text-gray-900">{skill.name}</h3>
+                                <div className="mt-1">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${getAreaColor(skill.area)}`}>
+                                    {getAreaLabel(skill.area)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(skill.status)}`}>
+                                  {skill.status.charAt(0).toUpperCase() + skill.status.slice(1)}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-2 flex items-center text-xs text-gray-500">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Last assessed: {formatDate(skill.lastAssessed)}
+                            </div>
+                            
+                            {skill.notes && (
+                              <p className="mt-2 text-sm text-gray-600 line-clamp-2">{skill.notes}</p>
+                            )}
+                          </div>
+                        ))
+                      }
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500">No skills have been assessed yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Recent Activities */}
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-4 py-5 border-b border-gray-200">
+                  <h2 className="text-lg font-medium text-gray-900">Recent Activities</h2>
+                </div>
+                
+                <div className="px-4 py-5 sm:p-6">
+                  {progressRecords.length > 0 ? (
+                    <div className="space-y-4">
+                      {progressRecords.slice(0, 5).map(record => (
+                        <div key={record.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                          <div className="flex justify-between">
+                            <h3 className="font-medium text-gray-900">{record.activityTitle || 'Activity'}</h3>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              record.completionStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                              record.completionStatus === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {record.completionStatus.replace('_', ' ').charAt(0).toUpperCase() + record.completionStatus.replace('_', ' ').slice(1)}
+                            </span>
+                          </div>
+                          
+                          <div className="mt-2 flex items-center text-xs text-gray-500">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {formatDate(record.date)}
+                            
+                            {record.engagementLevel && (
+                              <span className="ml-3 capitalize">
+                                Engagement: {record.engagementLevel}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {record.notes && (
+                            <p className="mt-2 text-sm text-gray-600 line-clamp-2">{record.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500">No activity records yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="details" className="bg-white rounded-lg shadow-sm p-6">
-            {/* Details content (existing) */}
+            {/* Details content */}
             <div className="mb-4">
               <h2 className="text-lg font-medium text-gray-900 mb-2">Skill Details</h2>
               <p className="text-sm text-gray-600 mb-4">
@@ -650,8 +786,86 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
               </p>
             </div>
 
-            {/* Existing skill details UI */}
-            {/* ... */}
+            {/* Skills Search and Filter */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search skills..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={selectedArea || ''}
+                  onChange={(e) => setSelectedArea(e.target.value || null)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Areas</option>
+                  {uniqueAreas.map((area) => (
+                    <option key={area} value={area}>
+                      {getAreaLabel(area)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Skills List */}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skill</th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area</th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Assessed</th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredSkills.map((skill) => (
+                      <tr key={skill.id || `skill-${skill.skillId}`} className="hover:bg-gray-50">
+                        <td className="px-4 sm:px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900">{skill.name}</div>
+                          {skill.description && (
+                            <div className="text-sm text-gray-500 mt-1">{skill.description}</div>
+                          )}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getAreaColor(skill.area)}`}>
+                            {getAreaLabel(skill.area)}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-900 capitalize flex items-center">
+                              {getStatusIcon(skill.status)}
+                              {skill.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(skill.lastAssessed)}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => handleUpdateSkillStatus(skill.id || `skill-${skill.skillId}`)}
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600"
+                          >
+                            Update Status
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="checkup" className="bg-white rounded-lg shadow-sm p-6">
@@ -681,7 +895,62 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
           </TabsContent>
         </Tabs>
 
-        {/* Rest of existing content... */}
+        {/* Status Update Modal */}
+        {isUpdateModalOpen && selectedSkill && (
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Update Skill Status: {selectedSkill.name}
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={updateStatus}
+                    onChange={(e) => setUpdateStatus(e.target.value as 'emerging' | 'developing' | 'mastered')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="emerging">Emerging</option>
+                    <option value="developing">Developing</option>
+                    <option value="mastered">Mastered</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    value={updateNotes}
+                    onChange={(e) => setUpdateNotes(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="Add any observations or notes about this skill..."
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => setIsUpdateModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitStatusUpdate}
+                  disabled={isUpdating}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-700 rounded-md shadow-sm hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUpdating ? 'Updating...' : 'Update Status'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

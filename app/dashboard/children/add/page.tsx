@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { createChild } from '@/lib/dataService';
-import { ArrowLeft, AlertCircle, Calendar } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Calendar, CheckCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import { 
   calculateAgeGroup, 
   getAgeGroupDescription, 
@@ -16,9 +16,12 @@ import {
 import DevelopmentAssessment from '@/components/DevelopmentAssessment';
 import DevelopmentPlan from '@/components/DevelopmentPlan';
 import { query, collection, getDocs, writeBatch, doc, Timestamp, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import InitialAssessment from '@/components/InitialAssessment';
-import DevelopmentGuide from '@/components/DevelopmentGuide';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { RiCheckboxCircleFill } from 'react-icons/ri';
+import Image from 'next/image';
+import { toast } from 'react-hot-toast';
 import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
 interface Interest {
@@ -94,7 +97,6 @@ export default function AddChildPage() {
   });
   const [newConcern, setNewConcern] = useState('');
   const [newGoal, setNewGoal] = useState('');
-  const [showDevelopmentGuide, setShowDevelopmentGuide] = useState(false);
   const [childId, setChildId] = useState<string>('');
 
   // Add an effect to wait for the auth state to be properly loaded
@@ -205,7 +207,6 @@ export default function AddChildPage() {
       await batch.commit();
       
       setAssessmentResults(results);
-      setShowDevelopmentGuide(true);
     } catch (err) {
       console.error('Error saving assessment results:', err);
       setError(err instanceof Error ? err.message : 'Failed to save assessment results');
@@ -349,20 +350,6 @@ export default function AddChildPage() {
           setShowAssessment(true);
         }}
         onGenerateWeeklyPlan={handleGenerateWeeklyPlan}
-      />
-    );
-  }
-
-  if (showDevelopmentGuide && assessmentResults.length > 0) {
-    return (
-      <DevelopmentGuide
-        childName={name}
-        childId={childId}
-        assessmentResults={assessmentResults}
-        onBack={() => {
-          setShowDevelopmentGuide(false);
-          setShowAssessment(true);
-        }}
       />
     );
   }

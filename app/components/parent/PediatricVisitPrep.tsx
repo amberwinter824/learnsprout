@@ -129,6 +129,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<ASQDomain | null>(null);
   const [showAsqPopup, setShowAsqPopup] = useState(false);
+  const [skills, setSkills] = useState<DevelopmentalSkill[]>([]);
   
   // Ensure childAge is a valid number
   const safeChildAge = typeof childAge === 'number' && !isNaN(childAge) ? childAge : 0;
@@ -407,6 +408,8 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           
         setRecommendedActivities(prioritizedActivities);
         
+        setSkills(skillsData);
+        
         setLoading(false);
       } catch (err) {
         console.error("Error fetching preparation data:", err);
@@ -552,258 +555,317 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
     return 'bg-gray-100 text-gray-800 border-gray-300';
   };
   
+  // Map skill areas to their corresponding domains
+  const mapAreaToDomain = (area: string): ASQDomain | null => {
+    const domainMap: Record<string, ASQDomain> = {
+      'language': 'communication',
+      'communication': 'communication',
+      'speaking': 'communication',
+      'listening': 'communication',
+      'vocabulary': 'communication',
+      
+      'gross_motor': 'gross_motor',
+      'physical': 'gross_motor',
+      'movement': 'gross_motor',
+      
+      'fine_motor': 'fine_motor',
+      'hand_eye_coordination': 'fine_motor',
+      'writing': 'fine_motor',
+      'drawing': 'fine_motor',
+      
+      'problem_solving': 'problem_solving',
+      'cognitive': 'problem_solving',
+      'thinking': 'problem_solving',
+      'reasoning': 'problem_solving',
+      
+      'personal_social': 'personal_social',
+      'social': 'personal_social',
+      'emotional': 'personal_social',
+      'self_care': 'personal_social'
+    };
+    
+    return domainMap[area.toLowerCase()] || null;
+  };
+  
   return (
-    <div className="p-4">
+    <div className="space-y-6">
+      {errorMessage && (
+        <div className="p-4 bg-red-50 rounded-md flex items-start">
+          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-2" />
+          <div>
+            <h3 className="text-sm font-medium text-red-800">Error</h3>
+            <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
+          </div>
+        </div>
+      )}
+      
       {loading ? (
-        <div className="flex justify-center items-center h-24">
-          <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+        <div className="py-8 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
         </div>
       ) : (
         <>
-          {/* Next checkup section */}
-          <div className="mb-6">
-            <div className="flex justify-between items-start">
+          {/* Next Checkup */}
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+              <Calendar className="h-5 w-5 text-emerald-500 mr-2" />
+              Preparing for {nextVisit?.visitType} Checkup
+            </h2>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">
-                  Preparing for {nextVisit?.visitType || "Upcoming"} Checkup
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Child's age: {safeChildAge} months • 
-                  {nextVisit?.scheduledDate ? (
-                    <span> Scheduled for {safeTimestampToDate(nextVisit.scheduledDate)}</span>
-                  ) : (
-                    <span> Not yet scheduled</span>
-                  )}
+                <p className="text-sm text-gray-600">
+                  Child's age: <span className="font-medium">{safeChildAge} months</span>
                 </p>
+                {nextVisit?.scheduledDate && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Scheduled for: <span className="font-medium">{safeTimestampToDate(nextVisit.scheduledDate)}</span>
+                  </p>
+                )}
               </div>
               
-              <button 
+              <button
                 onClick={() => setShowAsqPopup(true)}
-                className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                <Info className="w-4 h-4 mr-1" />
-                <span>Preview ASQ</span>
+                <Info className="h-4 w-4 mr-1.5" />
+                Preview ASQ
               </button>
             </div>
-          </div>
-          
-          {errorMessage && (
-            <div className="p-3 mb-4 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
-              {errorMessage}
-            </div>
-          )}
-          
-          {/* Domain progress */}
-          <div className="mb-6">
-            <h4 className="text-md font-medium mb-3">Progress by ASQ Domain</h4>
-            <div className="grid gap-3">
-              {domainProgress.map(domain => (
-                <div 
-                  key={domain.domain} 
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedDomain === domain.domain ? 
-                    'border-blue-400 bg-blue-50' : 
-                    'border-gray-200 hover:border-blue-300'
-                  }`}
-                  onClick={() => handleDomainClick(domain.domain)}
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-block p-1 rounded ${domainColors[domain.domain]}`}>
-                        {domainIcons[domain.domain]}
-                      </span>
-                      <div>
-                        <h5 className="font-medium">{formatASQDomain(domain.domain)}</h5>
-                        <div className="text-xs text-gray-500">
-                          {domain.observations} observations • {domain.activities} activities
+            
+            <div className="mt-4">
+              <h3 className="text-sm font-medium text-gray-900 mb-2">Progress by ASQ Domain</h3>
+              
+              <div className="space-y-3">
+                {domainProgress.map((domain) => (
+                  <div
+                    key={domain.domain}
+                    onClick={() => handleDomainClick(domain.domain)}
+                    className={`p-3 border rounded-md ${
+                      selectedDomain === domain.domain
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+                    } cursor-pointer transition-colors`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`${getDomainColor(domain.domain)} w-8 h-8 rounded-full flex items-center justify-center mr-3`}>
+                          <span className="text-lg">{domainIcons[domain.domain]}</span>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">
+                            {formatASQDomain(domain.domain)}
+                          </h4>
+                          <div className="flex items-center mt-1">
+                            <div className="w-24 bg-gray-200 rounded-full h-1.5 mr-2">
+                              <div
+                                className="bg-emerald-500 h-1.5 rounded-full"
+                                style={{ width: `${domain.progress}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {domain.progress}%
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <div className="w-32 bg-gray-200 rounded-full h-2.5 mr-2">
-                        <div 
-                          className={`h-2.5 rounded-full ${
-                            domain.status === 'ready' ? 'bg-green-500' : 
-                            domain.status === 'in_progress' ? 'bg-blue-500' : 
-                            'bg-amber-500'
-                          }`} 
-                          style={{ width: `${domain.progress}%` }}
-                        ></div>
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center">
+                          {getStatusIcon(domain.status)}
+                          <span className="text-xs text-gray-500 ml-1 capitalize">
+                            {domain.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {domain.observations} observation{domain.observations !== 1 ? 's' : ''}
+                        </div>
                       </div>
-                      {getStatusIcon(domain.status)}
-                    </div>
-                  </div>
-                  
-                  {/* Expanded view when domain is selected */}
-                  {selectedDomain === domain.domain && (
-                    <div className="mt-3 pt-3 border-t">
-                      <h6 className="font-medium mb-2">Domain-specific observations:</h6>
-                      {observations.filter(obs => obs.domain === domain.domain).length > 0 ? (
-                        <ul className="text-sm space-y-2">
-                          {observations
-                            .filter(obs => obs.domain === domain.domain)
-                            .map(obs => (
-                              <li key={obs.id} className="border-l-2 border-blue-300 pl-3 py-1">
-                                <div className="font-medium">{obs.skillName}</div>
-                                <div className="text-gray-600">{obs.text}</div>
-                                <div className="text-xs text-gray-500">
-                                  {obs.date.toLocaleDateString()}
-                                </div>
-                              </li>
-                            ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-500">No observations recorded for this domain yet.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Recommended activities */}
-          <div className="mb-6">
-            <h4 className="text-md font-medium mb-3">Recommended Activities</h4>
-            {recommendedActivities.length > 0 ? (
-              <div className="space-y-3">
-                {recommendedActivities.map(activity => (
-                  <div 
-                    key={activity.id}
-                    onClick={() => handleActivitySelect(activity.id)}
-                    className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  >
-                    <h5 className="font-medium">{activity.title}</h5>
-                    {activity.description && (
-                      <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                    )}
-                    <div className="flex items-center mt-2">
-                      {activity.area && (
-                        <span className="text-xs px-2 py-1 bg-gray-100 rounded mr-2">
-                          {activity.area}
-                        </span>
-                      )}
-                      <span className="text-xs text-blue-600 ml-auto flex items-center">
-                        View details <ArrowRight className="h-3 w-3 ml-1" />
-                      </span>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500 p-3 border rounded-lg">
-                No activities recommended yet.
-              </p>
-            )}
+            </div>
           </div>
-          
-          {/* Recent observations */}
-          <div>
+
+          {/* Recommended Activities */}
+          {selectedDomain && (
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900 mb-3">
+                Recommended Activities for {formatASQDomain(selectedDomain)}
+              </h2>
+              
+              {recommendedActivities.filter(activity => {
+                const matchesDomain = activity.skillsAddressed?.some(
+                  (skillId: string) => {
+                    const skill = skills.find(s => s.id === skillId);
+                    return skill && mapAreaToDomain(skill.area) === selectedDomain;
+                  }
+                );
+                return matchesDomain;
+              }).length > 0 ? (
+                <div className="space-y-3">
+                  {recommendedActivities
+                    .filter(activity => {
+                      const matchesDomain = activity.skillsAddressed?.some(
+                        (skillId: string) => {
+                          const skill = skills.find(s => s.id === skillId);
+                          return skill && mapAreaToDomain(skill.area) === selectedDomain;
+                        }
+                      );
+                      return matchesDomain;
+                    })
+                    .map((activity) => (
+                      <div
+                        key={activity.id}
+                        className="p-4 border border-gray-200 rounded-md hover:border-emerald-300 cursor-pointer"
+                        onClick={() => handleActivitySelect(activity.id)}
+                      >
+                        <h3 className="text-sm font-medium text-gray-900">{activity.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                          {activity.description}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {activity.skillsAddressed?.map((skillId: string) => {
+                            const skill = skills.find(s => s.id === skillId);
+                            if (!skill) return null;
+                            
+                            const domain = mapAreaToDomain(skill.area);
+                            if (!domain || domain !== selectedDomain) return null;
+                            
+                            // Since we've checked that domain is not null and matches selectedDomain,
+                            // which is of type ASQDomain, we can safely assert the type
+                            const safeColorClass = domainColors[domain as ASQDomain];
+                            
+                            return (
+                              <span
+                                key={skillId}
+                                className={`${safeColorClass} text-xs px-2 py-0.5 rounded-full`}
+                              >
+                                {skill.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="py-4 text-center">
+                  <p className="text-gray-500">No specific activities for this domain yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Recent Observations */}
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex justify-between items-center mb-3">
-              <h4 className="text-md font-medium">Recent Observations</h4>
-              <button 
-                onClick={() => setShowAllObservations(!showAllObservations)}
-                className="text-sm text-blue-600"
-              >
-                {showAllObservations ? "Show less" : "Show all"}
-              </button>
+              <h2 className="text-lg font-medium text-gray-900">
+                Recent Observations
+              </h2>
+              
+              {observations.length > 3 && (
+                <button 
+                  onClick={() => setShowAllObservations(!showAllObservations)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700"
+                >
+                  {showAllObservations ? 'Show Less' : 'View All'}
+                </button>
+              )}
             </div>
             
             {observations.length > 0 ? (
               <div className="space-y-3">
-                {observations
-                  .slice(0, showAllObservations ? undefined : 3)
-                  .map(obs => (
-                    <div key={obs.id} className="p-3 border rounded-lg">
+                {(showAllObservations ? observations : observations.slice(0, 3))
+                  .filter(obs => !selectedDomain || obs.domain === selectedDomain)
+                  .map((observation) => (
+                    <div key={observation.id} className="p-4 border border-gray-200 rounded-md">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h5 className="font-medium">{obs.skillName}</h5>
-                          <p className="text-sm text-gray-600 mt-1">{obs.text}</p>
+                          <h3 className="text-sm font-medium text-gray-900">{observation.skillName}</h3>
+                          <span className={`mt-1 inline-block ${domainColors[observation.domain]} text-xs px-2 py-0.5 rounded-full`}>
+                            {formatASQDomain(observation.domain)}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded ${getDomainColor(obs.domain)}`}>
-                          {formatASQDomain(obs.domain)}
+                        <span className="text-xs text-gray-500">
+                          {observation.date instanceof Date 
+                            ? observation.date.toLocaleDateString() 
+                            : new Date(observation.date).toLocaleDateString()}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-2">
-                        {obs.date.toLocaleDateString()}
-                      </div>
+                      <p className="mt-2 text-sm text-gray-600">{observation.text}</p>
                     </div>
                   ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 p-3 border rounded-lg">
-                No observations recorded yet.
-              </p>
+              <div className="py-4 text-center">
+                <p className="text-gray-500">No observations recorded yet.</p>
+              </div>
             )}
           </div>
           
-          {/* ASQ Questionnaire Preview Popup */}
-          {showAsqPopup && nextVisit?.visitType && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between border-b p-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    ASQ Preview for {nextVisit.visitType} Visit
-                  </h2>
-                  <button 
-                    onClick={() => setShowAsqPopup(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                
-                <div className="p-4">
-                  {(() => {
-                    const asqData = getAsqQuestionnaire(nextVisit.visitType);
-                    return (
-                      <>
-                        <div className="mb-4">
-                          <h3 className="font-medium text-gray-900">{asqData.title}</h3>
-                          <p className="text-sm text-gray-600">{asqData.description}</p>
-                        </div>
+          {/* ASQ Preview Popup */}
+          {showAsqPopup && nextVisit && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {getAsqQuestionnaire(nextVisit.visitType?.toString() || '24m').title}
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {getAsqQuestionnaire(nextVisit.visitType?.toString() || '24m').description}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setShowAsqPopup(false)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    {Object.entries(getAsqQuestionnaire(nextVisit.visitType?.toString() || '24m').questions).map(([domain, questions]) => (
+                      <div key={domain} className="border border-gray-200 rounded-lg p-4">
+                        <h3 className={`text-lg font-medium mb-3 flex items-center ${getDomainColor(domain as ASQDomain).replace('bg-', 'text-').replace('-100', '-700')}`}>
+                          <span className="mr-2">{domainIcons[domain as ASQDomain]}</span>
+                          {formatASQDomain(domain as ASQDomain)}
+                        </h3>
                         
-                        <div className="space-y-4">
-                          {Object.entries(asqData.questions).map(([domain, questions]) => (
-                            <div key={domain} className="p-3 border rounded-lg">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <span className={`inline-block p-1 rounded ${domainColors[domain as ASQDomain]}`}>
-                                  {domainIcons[domain as ASQDomain]}
-                                </span>
-                                <h4 className="font-medium">{formatASQDomain(domain as ASQDomain)}</h4>
-                              </div>
-                              
-                              <ul className="space-y-2 text-sm">
-                                {questions.map((question, idx) => (
-                                  <li key={idx} className="flex items-start">
-                                    <span className="text-gray-500 mr-2">•</span>
-                                    <span>{question}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                        <ul className="space-y-3">
+                          {questions.map((question, index) => (
+                            <li key={index} className="flex items-start">
+                              <span className="font-medium text-gray-600 mr-2">{index + 1}.</span>
+                              <span className="text-gray-700">{question}</span>
+                            </li>
                           ))}
-                        </div>
-                        
-                        <div className="mt-6 text-sm text-gray-600">
-                          <p>
-                            This is a preview of some sample questions from the ASQ-3 questionnaire.
-                            Your pediatrician may use a similar but different questionnaire during the actual visit.
-                          </p>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-                
-                <div className="border-t p-4 flex justify-end">
-                  <button
-                    onClick={() => setShowAsqPopup(false)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Close
-                  </button>
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start">
+                      <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-3" />
+                      <div>
+                        <h3 className="text-sm font-medium text-blue-800">About ASQ Questionnaires</h3>
+                        <p className="text-sm text-blue-700 mt-1">
+                          The Ages and Stages Questionnaire (ASQ) is a developmental screening tool used during pediatric checkups to assess your child's progress in key developmental domains. Your doctor will cover these questions at your child's next checkup.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={() => setShowAsqPopup(false)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
+                    >
+                      Close Preview
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
