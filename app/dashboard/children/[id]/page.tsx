@@ -753,17 +753,17 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
           </div>
         </Link>
 
-        {/* Progress Tracking Card */}
-        <Link href={`/dashboard/children/${childId}/progress`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+        {/* Development Tracking Card */}
+        <Link href={`/dashboard/children/${childId}/development`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center mb-4">
             <div className="p-2 bg-purple-100 rounded-lg">
               <BarChart2 className="h-6 w-6 text-purple-600" />
             </div>
-            <h3 className="ml-3 text-lg font-medium text-gray-900">Progress Tracking</h3>
+            <h3 className="ml-3 text-lg font-medium text-gray-900">Development Tracking</h3>
           </div>
-          <p className="text-sm text-gray-500 mb-4">Monitor your child's developmental progress and milestones</p>
+          <p className="text-sm text-gray-500 mb-4">Monitor your child's developmental progress, skills, and checkup prep</p>
           <div className="flex items-center text-sm text-purple-600">
-            View Progress
+            View Development
             <ArrowUpRight className="h-4 w-4 ml-1" />
           </div>
         </Link>

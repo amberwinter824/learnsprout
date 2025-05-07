@@ -1022,6 +1022,7 @@ export default function WeeklyPlanWithDayFocus({
             <ActivityDetailsPopup 
               activityId={detailsActivityId} 
               onClose={() => setShowDetailsPopup(false)}
+              childId={selectedChildId || ''}
             />
           </div>
         </div>

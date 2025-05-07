@@ -811,6 +811,7 @@ export default function WeekAtAGlanceView({
             <ActivityDetailsPopup 
               activityId={detailsActivityId} 
               onClose={() => setShowDetailsPopup(false)}
+              childId={childId}
             />
           </div>
         </div>

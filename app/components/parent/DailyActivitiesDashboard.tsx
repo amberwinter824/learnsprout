@@ -790,6 +790,7 @@ export default function DailyActivitiesDashboard({
           <ActivityDetailsPopup 
             activityId={detailsActivityId || ''} 
             onClose={() => setShowDetailsPopup(false)}
+            childId={childId}
           />
         )}
         
