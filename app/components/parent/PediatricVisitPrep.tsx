@@ -120,48 +120,29 @@ const asqQuestionnaires: Record<string, {title: string, description: string, que
   }
 };
 
+// Helper to get ASQ questionnaire for a visit type
+const getAsqQuestionnaire = (visitType: string) => {
+  const exactMatch = asqQuestionnaires[visitType];
+  if (exactMatch) return exactMatch;
+  const visitMonth = parseInt(visitType.replace('m', ''));
+  const availableMonths = Object.keys(asqQuestionnaires).map(m => parseInt(m.replace('m', '')));
+  const closestMonth = availableMonths.reduce((prev, curr) =>
+    Math.abs(curr - visitMonth) < Math.abs(prev - visitMonth) ? curr : prev
+  );
+  return asqQuestionnaires[`${closestMonth}m`] || asqQuestionnaires['24m'];
+};
+
 export default function PediatricVisitPrep({ childId, childAge, onActivitySelect }: PediatricVisitPrepProps) {
   const [loading, setLoading] = useState(true);
   const [nextVisit, setNextVisit] = useState<{ childId: string; visitType: string; scheduledDate: Timestamp } | null>(null);
-  const [domainProgress, setDomainProgress] = useState<DomainProgress[]>([]);
   const [recommendedActivities, setRecommendedActivities] = useState<any[]>([]);
-  const [observations, setObservations] = useState<any[]>([]);
-  const [showAllObservations, setShowAllObservations] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [selectedDomain, setSelectedDomain] = useState<ASQDomain | null>(null);
-  const [showAsqPopup, setShowAsqPopup] = useState(false);
-  const [skills, setSkills] = useState<DevelopmentalSkill[]>([]);
-  const [childSkills, setChildSkills] = useState<EnhancedChildSkill[]>([]);
-  const [childName, setChildName] = useState<string>('your child');
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+  const [childName, setChildName] = useState<string>('your child');
+  const [showAsqPopup, setShowAsqPopup] = useState(false);
   
   // Ensure childAge is a valid number
   const safeChildAge = typeof childAge === 'number' && !isNaN(childAge) ? childAge : 0;
-  
-  // Get the visit type based on age
-  const getVisitTypeForAge = (ageMonths: number): `${PediatricVisitMonth}m` => {
-    // Find next upcoming visit
-    const nextVisitMonth = PEDIATRIC_VISIT_MONTHS.find(month => month > ageMonths) || 60;
-    return `${nextVisitMonth}m`;
-  };
-
-  // Get ASQ questionnaire based on visit type
-  const getAsqQuestionnaire = (visitType: string) => {
-    // Try to get exact match first
-    const exactMatch = asqQuestionnaires[visitType];
-    if (exactMatch) return exactMatch;
-    
-    // If not found, get the closest match
-    const visitMonth = parseInt(visitType.replace('m', ''));
-    const availableMonths = Object.keys(asqQuestionnaires).map(m => parseInt(m.replace('m', '')));
-    
-    // Get closest month
-    const closestMonth = availableMonths.reduce((prev, curr) => 
-      Math.abs(curr - visitMonth) < Math.abs(prev - visitMonth) ? curr : prev
-    );
-    
-    return asqQuestionnaires[`${closestMonth}m`] || asqQuestionnaires['24m']; // Default to 24m if nothing found
-  };
   
   useEffect(() => {
     async function fetchVisitPreparation() {
@@ -171,20 +152,13 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
 
         // 1. Get child information from Firestore to double-check age
         const childDoc = await getDoc(doc(db, 'children', childId));
-        let verifiedChildAge = safeChildAge;
         if (childDoc.exists()) {
           const childData = childDoc.data();
           if (childData.name) setChildName(childData.name);
-          if (childData.birthDate) {
-            const birthDate = childData.birthDate.toDate ? 
-              childData.birthDate.toDate() : 
-              new Date(childData.birthDate);
-            verifiedChildAge = differenceInMonths(new Date(), birthDate);
-          }
         }
 
-        // 2. Calculate next visit type based on age (no Firestore pediatricVisits)
-        const nextVisitMonth = PEDIATRIC_VISIT_MONTHS.find(month => month > verifiedChildAge) || 60;
+        // 2. Calculate next visit type based on age
+        const nextVisitMonth = PEDIATRIC_VISIT_MONTHS.find(month => month > safeChildAge) || 60;
         const visitType = `${nextVisitMonth}m`;
         setNextVisit({
           childId: childId,
@@ -192,165 +166,19 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           scheduledDate: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // Dummy date 30 days in future
         });
 
-        // 3. Fetch child's skill observations
-        let childSkillsData: EnhancedChildSkill[] = [];
-        let skillsData: DevelopmentalSkill[] = [];
-        try {
-          const childSkillsQuery = query(
-            collection(db, 'childSkills'),
-            where('childId', '==', childId)
-          );
-          const childSkillsSnapshot = await getDocs(childSkillsQuery);
-          childSkillsData = childSkillsSnapshot.docs.map(doc => ({ 
-            id: doc.id, 
-            ...doc.data() 
-          })) as EnhancedChildSkill[];
-
-          // Fetch all developmental skills
-          const skillsQuery = query(collection(db, 'developmentalSkills'));
-          const skillsSnapshot = await getDocs(skillsQuery);
-          skillsData = skillsSnapshot.docs.map(doc => ({ 
-            id: doc.id, 
-            ...doc.data() 
-          })) as DevelopmentalSkill[];
-
-          // Debug logging
-          console.log('Loaded childSkillsData:', childSkillsData);
-          console.log('Loaded skillsData:', skillsData);
-        } catch (err) {
-          console.error("Error fetching skills data:", err);
-          setErrorMessage("Limited data access: Using preview mode");
-          childSkillsData = generateMockChildSkills(childId);
-          skillsData = generateMockSkills();
-        }
-
-        // 4. Calculate domain progress (same as before)
-        const domains: ASQDomain[] = ['communication', 'gross_motor', 'fine_motor', 'problem_solving', 'personal_social'];
-        const progress = domains.map(domain => {
-          const domainSkills = skillsData.filter(skill => getSkillASQDomain(skill) === domain);
-          const skillIds = domainSkills.map(skill => skill.id);
-          const matchingChildSkills = childSkillsData.filter(cs => skillIds.some(id => cs.skillId === id));
-          // Debug logging for each domain
-          console.log(`Domain: ${domain}`);
-          console.log('  domainSkills:', domainSkills);
-          console.log('  matchingChildSkills:', matchingChildSkills);
-          const skillsWithStatus = matchingChildSkills.filter(cs => cs.status === 'emerging' || cs.status === 'developing' || cs.status === 'mastered').length;
-          const domainObservations = matchingChildSkills
-            .filter(cs => cs.observations && cs.observations.length > 0)
-            .reduce((total, cs) => total + (cs.observations?.length || 0), 0);
-          const observationsNeeded = 3;
-          const activitiesNeeded = 2;
-          // No activities from pediatricVisits, so just use 0 for now
-          const domainActivities = 0;
-          let progressPercentage = 0;
-          if (skillsWithStatus > 0) {
-            progressPercentage = Math.min(100, Math.round(
-              ((domainObservations / observationsNeeded) * 0.7 + (domainActivities / activitiesNeeded) * 0.3) * 100
-            ));
-          }
-          let status: 'not_started' | 'in_progress' | 'ready' = 'not_started';
-          if (progressPercentage >= 100) status = 'ready';
-          else if (progressPercentage > 0) status = 'in_progress';
-          console.log('Progress for domain', domain, {
-            skillsWithStatus,
-            domainObservations,
-            progressPercentage,
-            status
-          });
-          return {
-            domain,
-            status,
-            progress: progressPercentage,
-            observations: domainObservations,
-            activities: domainActivities
-          };
-        });
-        setDomainProgress(progress);
-
-        // 5. Get recent observations (same as before)
-        interface ObservationDisplay {
-          id: string;
-          text: string;
-          date: Date;
-          skillId: string;
-          skillName: string;
-          domain: ASQDomain;
-        }
-        const recentObservations = childSkillsData
-          .filter(cs => cs.observations && cs.observations.length > 0)
-          .flatMap(cs => (cs.observations || []).map((obs: any, idx: number) => {
-            const observationText = typeof obs === 'string' ? obs : obs.text;
-            let observationDate: Date;
-            if (typeof obs === 'object' && obs !== null && obs.date) {
-              const dateObj = obs.date;
-              if (typeof dateObj === 'object' && dateObj !== null && 'toDate' in dateObj) {
-                observationDate = dateObj.toDate();
-              } else if (dateObj instanceof Date) {
-                observationDate = dateObj;
-              } else {
-                observationDate = new Date();
-              }
-            } else if (cs.observationDates && cs.observationDates[idx]) {
-              const dateObj = cs.observationDates[idx];
-              if (typeof dateObj === 'object' && dateObj !== null && 'toDate' in dateObj) {
-                observationDate = dateObj.toDate();
-              } else {
-                const castDateObj = dateObj as any;
-                if (castDateObj instanceof Date) {
-                  observationDate = castDateObj;
-                } else {
-                  observationDate = new Date();
-                }
-              }
-            } else {
-              observationDate = new Date();
-            }
-            return {
-              id: `${cs.id}_${idx}`,
-              text: observationText,
-              date: observationDate,
-              skillId: cs.skillId,
-              skillName: skillsData.find(s => s.id === cs.skillId)?.name || 'Unknown Skill',
-              domain: skillsData.find(s => s.id === cs.skillId)?.asqDomain || 'problem_solving'
-            } as ObservationDisplay;
-          }))
-          .sort((a, b) => b.date.getTime() - a.date.getTime())
-          .slice(0, 10);
-        setObservations(recentObservations);
-
-        // 6. Get recommended activities (same as before)
+        // 3. Fetch all activities for the child's age group
         const activitiesQuery = query(
           collection(db, 'activities'),
           where('ageRanges', 'array-contains', childDoc.exists() ? childDoc.data().ageGroup : '2-3'),
           where('status', '==', 'active'),
-          limit(10)
+          limit(50)
         );
         const activitiesSnapshot = await getDocs(activitiesQuery);
         const activityData = activitiesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        type ActivityWithSkills = {
-          id: string;
-          skillsAddressed?: string[];
-          [key: string]: any;
-        };
-        const sortedDomains = [...progress].sort((a, b) => a.progress - b.progress);
-        const lowProgressDomains = sortedDomains.slice(0, 3).map(d => d.domain);
-        const prioritizedActivities = (activityData as ActivityWithSkills[])
-          .filter(activity => {
-            if (!activity.skillsAddressed || activity.skillsAddressed.length === 0) {
-              return true;
-            }
-            const activityDomains = activity.skillsAddressed
-              .map((skillId: string) => skillsData.find(s => s.id === skillId)?.asqDomain || null)
-              .filter(Boolean) as ASQDomain[];
-            return activityDomains.some(domain => lowProgressDomains.includes(domain));
-          })
-          .slice(0, 5);
-        setRecommendedActivities(prioritizedActivities);
-        setSkills(skillsData);
-        setChildSkills(childSkillsData);
+        setRecommendedActivities(activityData);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching preparation data:", err);
@@ -361,13 +189,24 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
     fetchVisitPreparation();
   }, [childId, safeChildAge]);
   
-  // Handle domain selection/toggle
-  const handleDomainClick = (domain: ASQDomain) => {
-    if (selectedDomain === domain) {
-      setSelectedDomain(null); // Toggle off if already selected
-    } else {
-      setSelectedDomain(domain); // Select new domain
+  // Helper to safely access domain colors
+  const getDomainColor = (domain: any): string => {
+    if (domain && typeof domain === 'string' && Object.keys(domainColors).includes(domain)) {
+      return domainColors[domain as ASQDomain];
     }
+    return 'bg-gray-100 text-gray-800 border-gray-300';
+  };
+
+  // Get activities for a domain (up to 2)
+  const getActivitiesForDomain = (domain: ASQDomain) => {
+    return recommendedActivities.filter((activity: any) =>
+      activity.skillsAddressed && activity.skillsAddressed.some((skillId: string) => {
+        // Try to infer the domain from the skillId format or from activity.asqDomain if present
+        // If you have a more direct mapping, update this logic
+        if (activity.asqDomain) return activity.asqDomain === domain;
+        return skillId.toLowerCase().includes(domain.replace('_', ''));
+      })
+    ).slice(0, 2);
   };
   
   // Handle activity selection
@@ -407,93 +246,6 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
     }
     
     return 'Soon';
-  };
-  
-  // Function to generate mock child skills for preview mode
-  function generateMockChildSkills(childId: string): EnhancedChildSkill[] {
-    const mockSkills = [
-      {
-        id: 'mock-cs-1',
-        childId,
-        skillId: 'skill-1',
-        status: 'emerging' as const,
-        observations: ['Can stack 3 blocks without help', 'Uses pincer grasp to pick up small objects'],
-        observationDates: [new Date(), new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)]
-      },
-      {
-        id: 'mock-cs-2',
-        childId,
-        skillId: 'skill-2',
-        status: 'developing' as const,
-        observations: ['Follows two-step instructions', 'Responds to simple questions appropriately'],
-        observationDates: [new Date(), new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)]
-      },
-      {
-        id: 'mock-cs-3',
-        childId,
-        skillId: 'skill-3',
-        status: 'emerging' as const,
-        observations: ['Sorts by color'],
-        observationDates: [new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)]
-      }
-    ];
-    
-    // Convert to EnhancedChildSkill by casting through unknown
-    return mockSkills as unknown as EnhancedChildSkill[];
-  }
-  
-  // Function to generate mock skills
-  function generateMockSkills(): DevelopmentalSkill[] {
-    return [
-      {
-        id: 'skill-1',
-        name: 'Fine Motor Control',
-        description: 'Uses small muscles in hands and fingers with increasing control',
-        area: 'sensorial',
-        ageRanges: ['2-3', '3-4'],
-        asqDomain: 'fine_motor'
-      },
-      {
-        id: 'skill-2',
-        name: 'Following Directions',
-        description: 'Understands and follows simple verbal instructions',
-        area: 'language',
-        ageRanges: ['2-3', '3-4'],
-        asqDomain: 'communication'
-      },
-      {
-        id: 'skill-3',
-        name: 'Visual Discrimination',
-        description: 'Distinguishes between similar objects based on visual properties',
-        area: 'cognitive',
-        ageRanges: ['2-3', '3-4'],
-        asqDomain: 'problem_solving'
-      },
-      {
-        id: 'skill-4',
-        name: 'Gross Motor Skills',
-        description: 'Uses large muscles for coordinated movements',
-        area: 'movement',
-        ageRanges: ['2-3', '3-4'],
-        asqDomain: 'gross_motor'
-      },
-      {
-        id: 'skill-5',
-        name: 'Social Interaction',
-        description: 'Engages with others in play and activities',
-        area: 'social',
-        ageRanges: ['2-3', '3-4'],
-        asqDomain: 'personal_social'
-      }
-    ] as DevelopmentalSkill[];
-  }
-  
-  // Helper to safely access domain colors
-  const getDomainColor = (domain: any): string => {
-    if (domain && typeof domain === 'string' && Object.keys(domainColors).includes(domain)) {
-      return domainColors[domain as ASQDomain];
-    }
-    return 'bg-gray-100 text-gray-800 border-gray-300';
   };
   
   return (
@@ -540,39 +292,20 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
               </button>
             </div>
             <div className="mt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Progress by ASQ Domain</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Checkup Domains & Activities</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {domainProgress.map((domain) => {
-                  const domainSkills = skills.filter(skill => getSkillASQDomain(skill) === domain.domain);
-                  const skillIds = domainSkills.map(skill => skill.id);
-                  const matchingChildSkills = (childSkills as EnhancedChildSkill[]).filter((cs: EnhancedChildSkill) => skillIds.includes(cs.skillId));
-                  // Gather recent observations/updates
-                  const recentUpdates = matchingChildSkills
-                    .flatMap((cs: EnhancedChildSkill) => (cs.observations || []).map((obs: any, idx: number) => ({
-                      skillName: skills.find(s => s.id === cs.skillId)?.name || 'Unknown Skill',
-                      note: typeof obs === 'string' ? obs : obs.text,
-                      date: cs.observationDates?.[idx] || null,
-                    })))
-                    .sort((a: any, b: any) => (b.date?.getTime?.() || 0) - (a.date?.getTime?.() || 0))
-                    .slice(0, 3);
-                  // Get recommended activities for this domain
-                  const domainRecommendedActivities = (recommendedActivities as any[])
-                    .filter((activity: any) => activity.skillsAddressed?.some((id: string) => skillIds.includes(id)))
-                    .slice(0, recentUpdates.length > 0 ? 2 : 5);
-                  // Get ASQ questions for this domain
-                  const asqQuestions = getAsqQuestionnaire(nextVisit?.visitType || '24m').questions[domain.domain as ASQDomain] || [];
+                {(['communication', 'gross_motor', 'fine_motor', 'problem_solving', 'personal_social'] as ASQDomain[]).map(domain => {
+                  const asqQuestions = getAsqQuestionnaire(nextVisit?.visitType || '24m').questions[domain] || [];
+                  const domainActivities = getActivitiesForDomain(domain);
                   return (
                     <div
-                      key={domain.domain}
-                      className={`rounded-xl border-2 p-6 shadow-sm bg-white flex flex-col h-full ${getDomainColor(domain.domain)}`}
+                      key={domain}
+                      className={`rounded-xl border-2 p-6 shadow-sm bg-white flex flex-col h-full ${getDomainColor(domain)}`}
                       style={{ borderLeftWidth: '8px' }}
                     >
                       <div className="flex items-center mb-2">
-                        <span className="text-2xl mr-2">{domainIcons[domain.domain]}</span>
-                        <h3 className="text-xl font-bold">{formatASQDomain(domain.domain as ASQDomain)}</h3>
-                        <span className="ml-auto px-3 py-1 rounded-full text-xs font-semibold bg-white border border-gray-300 shadow-sm">
-                          {domain.status === 'ready' ? 'Ready!' : domain.status === 'in_progress' ? 'In Progress' : 'Not Started'}
-                        </span>
+                        <span className="text-2xl mr-2">{domainIcons[domain]}</span>
+                        <h3 className="text-xl font-bold">{formatASQDomain(domain)}</h3>
                       </div>
                       {/* ASQ Questions Callout */}
                       <div className="bg-blue-50 border-l-4 border-blue-400 rounded-md p-4 mb-4 flex items-start">
@@ -586,30 +319,10 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                           </ul>
                         </div>
                       </div>
-                      {/* Observations or Encouragement */}
-                      {recentUpdates.length > 0 ? (
-                        <div className="bg-green-50 border-l-4 border-green-400 rounded-md p-4 mb-4">
-                          <h4 className="font-semibold text-green-800 mb-2 flex items-center">
-                            <CheckCircle className="h-4 w-4 mr-1 text-green-500" /> Recent Observations
-                          </h4>
-                          <ul className="space-y-1">
-                            {recentUpdates.map((update: any, idx: number) => (
-                              <li key={idx} className="text-sm text-green-900">
-                                <span className="font-medium">{update.skillName}</span>: {update.note} {update.date ? <span className="text-xs text-gray-500">({new Date(update.date).toLocaleDateString()})</span> : ''}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : (
-                        <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-md p-4 mb-4 flex items-center">
-                          <AlertCircle className="h-4 w-4 mr-2 text-yellow-500" />
-                          <span className="text-yellow-900 text-sm">It looks like this is an area we can focus on this week—here are some activities to try with {childName}!</span>
-                        </div>
-                      )}
                       {/* Activities as clickable cards */}
                       <div className="grid grid-cols-1 gap-3">
-                        {domainRecommendedActivities.length > 0 ? (
-                          domainRecommendedActivities.map((activity: any) => (
+                        {domainActivities.length > 0 ? (
+                          domainActivities.map((activity: any) => (
                             <button
                               key={activity.id}
                               type="button"
@@ -635,13 +348,13 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
               </div>
             </div>
           </div>
+          {selectedActivityId && (
+            <ActivityDetailsPopup
+              activityId={selectedActivityId}
+              onClose={() => setSelectedActivityId(null)}
+            />
+          )}
         </>
-      )}
-      {selectedActivityId && (
-        <ActivityDetailsPopup
-          activityId={selectedActivityId}
-          onClose={() => setSelectedActivityId(null)}
-        />
       )}
     </div>
   );
