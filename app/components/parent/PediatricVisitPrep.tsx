@@ -352,6 +352,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
             <ActivityDetailsPopup
               activityId={selectedActivityId}
               onClose={() => setSelectedActivityId(null)}
+              childId={childId}
             />
           )}
         </>

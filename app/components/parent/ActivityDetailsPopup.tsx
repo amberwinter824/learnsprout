@@ -15,10 +15,12 @@ import {
 } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import QuickObservationForm from './QuickObservationForm';
 
 interface ActivityDetailsPopupProps {
   activityId: string;
   onClose: () => void;
+  childId: string;
 }
 
 interface Skill {
@@ -50,13 +52,15 @@ interface ActivityData {
 
 export default function ActivityDetailsPopup({ 
   activityId, 
-  onClose 
+  onClose,
+  childId
 }: ActivityDetailsPopupProps) {
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'setup' | 'instructions' | 'observation' | 'extensions'>('setup');
   const [activitySkills, setActivitySkills] = useState<Skill[]>([]);
+  const [showObservationForm, setShowObservationForm] = useState(false);
 
   useEffect(() => {
     const fetchActivityDetails = async () => {
@@ -362,6 +366,32 @@ export default function ActivityDetailsPopup({
                   </li>
                 ))}
               </ul>
+              <div className="mt-6 flex justify-end">
+                <button
+                  className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-md shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  onClick={() => setShowObservationForm(true)}
+                >
+                  Add Observation
+                </button>
+              </div>
+              {showObservationForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg shadow-xl p-4 max-w-lg w-full relative">
+                    <QuickObservationForm
+                      activityId={activityId}
+                      childId={childId}
+                      onClose={() => setShowObservationForm(false)}
+                      onSuccess={() => setShowObservationForm(false)}
+                    />
+                    <button
+                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                      onClick={() => setShowObservationForm(false)}
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
