@@ -130,6 +130,8 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   const [selectedDomain, setSelectedDomain] = useState<ASQDomain | null>(null);
   const [showAsqPopup, setShowAsqPopup] = useState(false);
   const [skills, setSkills] = useState<DevelopmentalSkill[]>([]);
+  const [childSkills, setChildSkills] = useState<EnhancedChildSkill[]>([]);
+  const [childName, setChildName] = useState<string>('your child');
   
   // Ensure childAge is a valid number
   const safeChildAge = typeof childAge === 'number' && !isNaN(childAge) ? childAge : 0;
@@ -170,6 +172,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
         let verifiedChildAge = safeChildAge;
         if (childDoc.exists()) {
           const childData = childDoc.data();
+          if (childData.name) setChildName(childData.name);
           if (childData.birthDate) {
             const birthDate = childData.birthDate.toDate ? 
               childData.birthDate.toDate() : 
@@ -345,6 +348,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           .slice(0, 5);
         setRecommendedActivities(prioritizedActivities);
         setSkills(skillsData);
+        setChildSkills(childSkillsData);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching preparation data:", err);
@@ -540,52 +544,67 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
               <h3 className="text-sm font-medium text-gray-900 mb-2">Progress by ASQ Domain</h3>
               
               <div className="space-y-3">
-                {domainProgress.map((domain) => (
-                  <div
-                    key={domain.domain}
-                    onClick={() => handleDomainClick(domain.domain)}
-                    className={`p-3 border rounded-md ${
-                      selectedDomain === domain.domain
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
-                    } cursor-pointer transition-colors`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className={`${getDomainColor(domain.domain)} w-8 h-8 rounded-full flex items-center justify-center mr-3`}>
-                          <span className="text-lg">{domainIcons[domain.domain as ASQDomain]}</span>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900">
-                            {formatASQDomain(domain.domain as ASQDomain)}
-                          </h4>
-                          <div className="flex items-center mt-1">
-                            <div className="w-24 bg-gray-200 rounded-full h-1.5 mr-2">
-                              <div
-                                className="bg-emerald-500 h-1.5 rounded-full"
-                                style={{ width: `${domain.progress}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {domain.progress}%
-                            </span>
-                          </div>
-                        </div>
+                {domainProgress.map((domain) => {
+                  const domainSkills = skills.filter(skill => getSkillASQDomain(skill) === domain.domain);
+                  const skillIds = domainSkills.map(skill => skill.id);
+                  const matchingChildSkills = (childSkills as EnhancedChildSkill[]).filter((cs: EnhancedChildSkill) => skillIds.includes(cs.skillId));
+                  // Gather recent observations/updates
+                  const recentUpdates = matchingChildSkills
+                    .flatMap((cs: EnhancedChildSkill) => (cs.observations || []).map((obs: any, idx: number) => ({
+                      skillName: skills.find(s => s.id === cs.skillId)?.name || 'Unknown Skill',
+                      note: typeof obs === 'string' ? obs : obs.text,
+                      date: cs.observationDates?.[idx] || null,
+                    })))
+                    .sort((a: any, b: any) => (b.date?.getTime?.() || 0) - (a.date?.getTime?.() || 0))
+                    .slice(0, 3);
+                  // Get recommended activities for this domain
+                  const domainRecommendedActivities = (recommendedActivities as any[])
+                    .filter((activity: any) => activity.skillsAddressed?.some((id: string) => skillIds.includes(id)))
+                    .slice(0, recentUpdates.length > 0 ? 2 : 5);
+                  // Get ASQ questions for this domain
+                  const asqQuestions = getAsqQuestionnaire(nextVisit?.visitType || '24m').questions[domain.domain as ASQDomain] || [];
+                  return (
+                    <div key={domain.domain} className="mb-8">
+                      <h3 className="text-lg font-semibold mb-2">{formatASQDomain(domain.domain as ASQDomain)}</h3>
+                      {/* ASQ Questions */}
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">Sample ASQ Questions</h4>
+                        <ul className="mb-2 list-disc list-inside">
+                          {asqQuestions.map((q: string, idx: number) => (
+                            <li key={idx} className="text-sm text-gray-700">Q{idx + 1}: {q}</li>
+                          ))}
+                        </ul>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <div className="flex items-center">
-                          {getStatusIcon(domain.status)}
-                          <span className="text-xs text-gray-500 ml-1 capitalize">
-                            {domain.status === 'not_started' ? 'Not Started' : domain.status.replace('_', ' ')}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {domain.observations} observation{domain.observations !== 1 ? 's' : ''}
-                        </div>
-                      </div>
+                      {recentUpdates.length > 0 ? (
+                        <>
+                          <h4 className="font-medium mb-1">Recent Observations</h4>
+                          <ul className="mb-2">
+                            {recentUpdates.map((update: any, idx: number) => (
+                              <li key={idx} className="mb-1">
+                                <strong>{update.skillName}</strong>: {update.note} {update.date ? `(${new Date(update.date).toLocaleDateString()})` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                          <h4 className="font-medium mb-1">Try These Activities</h4>
+                          <ul>
+                            {domainRecommendedActivities.map((activity: any) => (
+                              <li key={activity.id}>{activity.title}</li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mb-2">It looks like this is an area we can focus on this week—here are 5 activities to try with {childName}:</p>
+                          <ul>
+                            {domainRecommendedActivities.map((activity: any) => (
+                              <li key={activity.id}>{activity.title}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
