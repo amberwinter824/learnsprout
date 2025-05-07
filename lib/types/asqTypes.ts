@@ -129,78 +129,8 @@ export function formatASQDomain(domain: ASQDomain): string {
 }
 
 /**
- * Maps a skill area to its corresponding ASQ domain
- * Use this function across components for consistent domain mapping
- */
-export function mapSkillAreaToASQDomain(area: string | undefined): ASQDomain | null {
-  if (!area) return null;
-  
-  // Convert to lowercase and remove any spaces/special chars for consistent matching
-  const normalizedArea = area.toLowerCase().replace(/[^a-z0-9]/g, '');
-  
-  const domainMap: Record<string, ASQDomain> = {
-    // Communication related areas
-    'language': 'communication',
-    'communication': 'communication',
-    'speaking': 'communication',
-    'listening': 'communication',
-    'vocabulary': 'communication',
-    'linguisticintelligence': 'communication',
-    'speech': 'communication',
-    
-    // Gross motor related areas
-    'grossmotor': 'gross_motor',
-    'physical': 'gross_motor',
-    'movement': 'gross_motor',
-    'bodyawareness': 'gross_motor',
-    'largemuscle': 'gross_motor',
-    'coordination': 'gross_motor',
-    'balance': 'gross_motor',
-    
-    // Fine motor related areas
-    'finemotor': 'fine_motor',
-    'handeyecoordination': 'fine_motor',
-    'writing': 'fine_motor',
-    'drawing': 'fine_motor',
-    'grasping': 'fine_motor',
-    'manipulation': 'fine_motor',
-    'sensorial': 'fine_motor',
-    
-    // Problem solving related areas
-    'problemsolving': 'problem_solving',
-    'cognitive': 'problem_solving',
-    'thinking': 'problem_solving',
-    'reasoning': 'problem_solving',
-    'logic': 'problem_solving',
-    'mathematics': 'problem_solving',
-    'sorting': 'problem_solving',
-    'matching': 'problem_solving',
-    
-    // Personal social related areas
-    'personalsocial': 'personal_social',
-    'social': 'personal_social',
-    'emotional': 'personal_social',
-    'selfcare': 'personal_social',
-    'independence': 'personal_social',
-    'selfhelp': 'personal_social',
-    'dailyliving': 'personal_social',
-    'interpersonal': 'personal_social'
-  };
-  
-  return domainMap[normalizedArea] || null;
-}
-
-/**
- * Gets the ASQ domain for a developmental skill, accounting for both direct domain assignment and area mapping
+ * Gets the ASQ domain for a developmental skill. Now only uses the asqDomain property.
  */
 export function getSkillASQDomain(skill: DevelopmentalSkill | undefined): ASQDomain | null {
-  if (!skill) return null;
-  
-  // First check if skill has asqDomain property
-  if (skill.asqDomain) {
-    return skill.asqDomain;
-  }
-  
-  // If not, try to map the skill area to domain
-  return mapSkillAreaToASQDomain(skill.area);
+  return skill?.asqDomain || null;
 } 
