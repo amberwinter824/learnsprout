@@ -246,6 +246,12 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           let status: 'not_started' | 'in_progress' | 'ready' = 'not_started';
           if (progressPercentage >= 100) status = 'ready';
           else if (progressPercentage > 0) status = 'in_progress';
+          console.log('Progress for domain', domain, {
+            skillsWithStatus,
+            domainObservations,
+            progressPercentage,
+            status
+          });
           return {
             domain,
             status,
