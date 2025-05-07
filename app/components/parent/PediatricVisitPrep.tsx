@@ -5,6 +5,7 @@ import { ASQDomain, formatASQDomain, getSkillASQDomain, PediatricVisitMonth, PED
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, limit } from 'firebase/firestore';
 import { differenceInMonths } from 'date-fns';
+import ActivityDetailsPopup from './ActivityDetailsPopup';
 
 interface PediatricVisitPrepProps {
   childId: string;
@@ -132,6 +133,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   const [skills, setSkills] = useState<DevelopmentalSkill[]>([]);
   const [childSkills, setChildSkills] = useState<EnhancedChildSkill[]>([]);
   const [childName, setChildName] = useState<string>('your child');
+  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   
   // Ensure childAge is a valid number
   const safeChildAge = typeof childAge === 'number' && !isNaN(childAge) ? childAge : 0;
@@ -513,37 +515,33 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
       ) : (
         <>
           {/* Next Checkup */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
-              <Calendar className="h-5 w-5 text-emerald-500 mr-2" />
+          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-3 flex items-center">
+              <Calendar className="h-6 w-6 text-emerald-500 mr-2" />
               Preparing for {nextVisit?.visitType} Checkup
             </h2>
-            
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between mb-4">
               <div>
-                <p className="text-sm text-gray-600">
-                  Child's age: <span className="font-medium">{safeChildAge} months</span>
+                <p className="text-base text-gray-700">
+                  Child's age: <span className="font-semibold">{safeChildAge} months</span>
                 </p>
                 {nextVisit?.scheduledDate && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Scheduled for: <span className="font-medium">{safeTimestampToDate(nextVisit.scheduledDate)}</span>
+                  <p className="text-base text-gray-700 mt-1">
+                    Scheduled for: <span className="font-semibold">{safeTimestampToDate(nextVisit.scheduledDate)}</span>
                   </p>
                 )}
               </div>
-              
               <button
                 onClick={() => setShowAsqPopup(true)}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow"
               >
-                <Info className="h-4 w-4 mr-1.5" />
+                <Info className="h-5 w-5 mr-2" />
                 Preview ASQ
               </button>
             </div>
-            
             <div className="mt-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-2">Progress by ASQ Domain</h3>
-              
-              <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Progress by ASQ Domain</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {domainProgress.map((domain) => {
                   const domainSkills = skills.filter(skill => getSkillASQDomain(skill) === domain.domain);
                   const skillIds = domainSkills.map(skill => skill.id);
@@ -564,53 +562,86 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                   // Get ASQ questions for this domain
                   const asqQuestions = getAsqQuestionnaire(nextVisit?.visitType || '24m').questions[domain.domain as ASQDomain] || [];
                   return (
-                    <div key={domain.domain} className="mb-8">
-                      <h3 className="text-lg font-semibold mb-2">{formatASQDomain(domain.domain as ASQDomain)}</h3>
-                      {/* ASQ Questions */}
-                      <div className="mb-2">
-                        <h4 className="font-medium mb-1">Sample ASQ Questions</h4>
-                        <ul className="mb-2 list-disc list-inside">
-                          {asqQuestions.map((q: string, idx: number) => (
-                            <li key={idx} className="text-sm text-gray-700">Q{idx + 1}: {q}</li>
-                          ))}
-                        </ul>
+                    <div
+                      key={domain.domain}
+                      className={`rounded-xl border-2 p-6 shadow-sm bg-white flex flex-col h-full ${getDomainColor(domain.domain)}`}
+                      style={{ borderLeftWidth: '8px' }}
+                    >
+                      <div className="flex items-center mb-2">
+                        <span className="text-2xl mr-2">{domainIcons[domain.domain]}</span>
+                        <h3 className="text-xl font-bold">{formatASQDomain(domain.domain as ASQDomain)}</h3>
+                        <span className="ml-auto px-3 py-1 rounded-full text-xs font-semibold bg-white border border-gray-300 shadow-sm">
+                          {domain.status === 'ready' ? 'Ready!' : domain.status === 'in_progress' ? 'In Progress' : 'Not Started'}
+                        </span>
                       </div>
+                      {/* ASQ Questions Callout */}
+                      <div className="bg-blue-50 border-l-4 border-blue-400 rounded-md p-4 mb-4 flex items-start">
+                        <MessageSquare className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
+                        <div>
+                          <h4 className="font-semibold text-blue-800 mb-1">Sample ASQ Questions</h4>
+                          <ul className="list-disc list-inside text-blue-900">
+                            {asqQuestions.map((q: string, idx: number) => (
+                              <li key={idx} className="text-sm">Q{idx + 1}: {q}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      {/* Observations or Encouragement */}
                       {recentUpdates.length > 0 ? (
-                        <>
-                          <h4 className="font-medium mb-1">Recent Observations</h4>
-                          <ul className="mb-2">
+                        <div className="bg-green-50 border-l-4 border-green-400 rounded-md p-4 mb-4">
+                          <h4 className="font-semibold text-green-800 mb-2 flex items-center">
+                            <CheckCircle className="h-4 w-4 mr-1 text-green-500" /> Recent Observations
+                          </h4>
+                          <ul className="space-y-1">
                             {recentUpdates.map((update: any, idx: number) => (
-                              <li key={idx} className="mb-1">
-                                <strong>{update.skillName}</strong>: {update.note} {update.date ? `(${new Date(update.date).toLocaleDateString()})` : ''}
+                              <li key={idx} className="text-sm text-green-900">
+                                <span className="font-medium">{update.skillName}</span>: {update.note} {update.date ? <span className="text-xs text-gray-500">({new Date(update.date).toLocaleDateString()})</span> : ''}
                               </li>
                             ))}
                           </ul>
-                          <h4 className="font-medium mb-1">Try These Activities</h4>
-                          <ul>
-                            {domainRecommendedActivities.map((activity: any) => (
-                              <li key={activity.id}>{activity.title}</li>
-                            ))}
-                          </ul>
-                        </>
+                        </div>
                       ) : (
-                        <>
-                          <p className="mb-2">It looks like this is an area we can focus on this week—here are 5 activities to try with {childName}:</p>
-                          <ul>
-                            {domainRecommendedActivities.map((activity: any) => (
-                              <li key={activity.id}>{activity.title}</li>
-                            ))}
-                          </ul>
-                        </>
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-md p-4 mb-4 flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-2 text-yellow-500" />
+                          <span className="text-yellow-900 text-sm">It looks like this is an area we can focus on this week—here are some activities to try with {childName}!</span>
+                        </div>
                       )}
+                      {/* Activities as clickable cards */}
+                      <div className="grid grid-cols-1 gap-3">
+                        {domainRecommendedActivities.length > 0 ? (
+                          domainRecommendedActivities.map((activity: any) => (
+                            <button
+                              key={activity.id}
+                              type="button"
+                              onClick={() => setSelectedActivityId(activity.id)}
+                              className="block w-full text-left bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition p-4 group cursor-pointer hover:bg-emerald-50"
+                            >
+                              <div className="flex items-center">
+                                <Activity className="h-5 w-5 text-emerald-500 mr-2" />
+                                <span className="font-semibold text-emerald-900 group-hover:underline">{activity.title}</span>
+                              </div>
+                              {activity.description && (
+                                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{activity.description}</p>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-sm">No activities found for this domain.</span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
           </div>
-          
-          {/* Recommended Activities, Recent Observations, ASQ Preview Popup, etc. would follow here, ensure all are properly closed */}
         </>
+      )}
+      {selectedActivityId && (
+        <ActivityDetailsPopup
+          activityId={selectedActivityId}
+          onClose={() => setSelectedActivityId(null)}
+        />
       )}
     </div>
   );
