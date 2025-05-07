@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, AlertCircle, ArrowRight, Activity, MessageSquare, Info, X } from 'lucide-react';
-import { DevelopmentalSkill, PediatricVisit, EnhancedChildSkill } from '../../../lib/types/enhancedSchema';
+import { DevelopmentalSkill, EnhancedChildSkill } from '../../../lib/types/enhancedSchema';
 import { ASQDomain, formatASQDomain, getSkillASQDomain, PediatricVisitMonth, PEDIATRIC_VISIT_MONTHS } from '../../../lib/types/asqTypes';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, limit } from 'firebase/firestore';
@@ -121,7 +121,7 @@ const asqQuestionnaires: Record<string, {title: string, description: string, que
 
 export default function PediatricVisitPrep({ childId, childAge, onActivitySelect }: PediatricVisitPrepProps) {
   const [loading, setLoading] = useState(true);
-  const [nextVisit, setNextVisit] = useState<Partial<PediatricVisit> | null>(null);
+  const [nextVisit, setNextVisit] = useState<{ childId: string; visitType: string; scheduledDate: Timestamp } | null>(null);
   const [domainProgress, setDomainProgress] = useState<DomainProgress[]>([]);
   const [recommendedActivities, setRecommendedActivities] = useState<any[]>([]);
   const [observations, setObservations] = useState<any[]>([]);
@@ -208,6 +208,10 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
             id: doc.id, 
             ...doc.data() 
           })) as DevelopmentalSkill[];
+
+          // Debug logging
+          console.log('Loaded childSkillsData:', childSkillsData);
+          console.log('Loaded skillsData:', skillsData);
         } catch (err) {
           console.error("Error fetching skills data:", err);
           setErrorMessage("Limited data access: Using preview mode");
@@ -221,6 +225,10 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           const domainSkills = skillsData.filter(skill => getSkillASQDomain(skill) === domain);
           const skillIds = domainSkills.map(skill => skill.id);
           const matchingChildSkills = childSkillsData.filter(cs => skillIds.some(id => cs.skillId === id));
+          // Debug logging for each domain
+          console.log(`Domain: ${domain}`);
+          console.log('  domainSkills:', domainSkills);
+          console.log('  matchingChildSkills:', matchingChildSkills);
           const skillsWithStatus = matchingChildSkills.filter(cs => cs.status === 'emerging' || cs.status === 'developing' || cs.status === 'mastered').length;
           const domainObservations = matchingChildSkills
             .filter(cs => cs.observations && cs.observations.length > 0)
