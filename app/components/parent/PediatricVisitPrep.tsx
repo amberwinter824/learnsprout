@@ -136,6 +136,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   const [loading, setLoading] = useState(true);
   const [nextVisit, setNextVisit] = useState<{ childId: string; visitType: string; scheduledDate: Timestamp } | null>(null);
   const [recommendedActivities, setRecommendedActivities] = useState<any[]>([]);
+  const [developmentalSkillsMap, setDevelopmentalSkillsMap] = useState<Record<string, DevelopmentalSkill>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [childName, setChildName] = useState<string>('your child');
@@ -179,6 +180,21 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
           ...doc.data()
         }));
         setRecommendedActivities(activityData);
+
+        // 4. Collect all unique skill IDs from activities
+        const allSkillIds = Array.from(new Set(activityData.flatMap((a: any) => a.skillsAddressed || [])));
+        // 5. Fetch all referenced skills
+        const skillDocs = await Promise.all(
+          allSkillIds.map(skillId => getDoc(doc(db, 'developmentalSkills', skillId)))
+        );
+        const skillsMap: Record<string, DevelopmentalSkill> = {};
+        skillDocs.forEach(docSnap => {
+          if (docSnap.exists()) {
+            const skill = { id: docSnap.id, ...docSnap.data() } as DevelopmentalSkill;
+            skillsMap[skill.id] = skill;
+          }
+        });
+        setDevelopmentalSkillsMap(skillsMap);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching preparation data:", err);
@@ -201,10 +217,10 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
   const getActivitiesForDomain = (domain: ASQDomain) => {
     return recommendedActivities.filter((activity: any) =>
       activity.skillsAddressed && activity.skillsAddressed.some((skillId: string) => {
-        // Try to infer the domain from the skillId format or from activity.asqDomain if present
-        // If you have a more direct mapping, update this logic
-        if (activity.asqDomain) return activity.asqDomain === domain;
-        return skillId.toLowerCase().includes(domain.replace('_', ''));
+        const skill = developmentalSkillsMap[skillId];
+        if (!skill) return false;
+        const skillDomain = getSkillASQDomain(skill);
+        return skillDomain === domain;
       })
     ).slice(0, 2);
   };
