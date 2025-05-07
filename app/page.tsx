@@ -108,7 +108,7 @@ export default function Home() {
         <main className="mt-12 md:mt-16">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 md:mb-6">
-              Personalized Montessori Learning at Home
+              Personalized Play-Based Learning at Home
             </h2>
             <p className="text-lg md:text-xl text-gray-600 mb-6 md:mb-8">
               Create custom activity plans, track your child's progress, and get personalized recommendations based on their interests and development.
@@ -129,7 +129,7 @@ export default function Home() {
             
             <div className="bg-white rounded-lg shadow-sm p-5 md:p-6">
               <h3 className="text-xl font-semibold mb-3">Weekly Activities</h3>
-              <p className="text-gray-600">Get age-appropriate Montessori activities tailored to your child's developmental needs.</p>
+              <p className="text-gray-600">Get age-appropriate activities tailored to your child's developmental needs.</p>
             </div>
             
             <div className="bg-white rounded-lg shadow-sm p-5 md:p-6">

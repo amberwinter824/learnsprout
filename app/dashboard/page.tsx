@@ -317,7 +317,7 @@ export default function Dashboard() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Your Dashboard</h1>
               <p className="text-gray-600">
-                Welcome to Learn Sprout, your personalized Montessori learning companion
+                Welcome to Learn Sprout, your personalized play-based development learning companion
               </p>
             </div>
             

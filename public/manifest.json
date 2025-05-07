@@ -1,7 +1,7 @@
 {
   "name": "Learn Sprout",
   "short_name": "LearnSprout",
-  "description": "Personalized Montessori Learning at Home",
+  "description": "Personalized play-based development activities for your child",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f0fff4",

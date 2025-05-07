@@ -178,9 +178,9 @@ export default function ActivitiesPage() {
     <div>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Montessori Activities</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Activities</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Browse and explore age-appropriate Montessori activities
+            Browse and explore age-appropriate activities
           </p>
         </div>
       </div>

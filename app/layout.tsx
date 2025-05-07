@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Learn Sprout",
-  description: "Personalized Montessori activities for your child",
+  description: "Personalized play-based development activities for your child",
   manifest: "/manifest.json",
   themeColor: "#10b981",
   appleWebApp: {
