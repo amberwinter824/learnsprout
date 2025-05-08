@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import DevelopmentAssessment from '@/app/components/DevelopmentAssessment';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, writeBatch, collection, getDocs, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, writeBatch, collection, getDocs, serverTimestamp, query, where } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
+
+interface AssessmentResult {
+  skillId: string;
+  status: 'emerging' | 'developing' | 'mastered';
+  notes?: string;
+}
 
 export default function ChildAssessmentPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -15,6 +21,7 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [childData, setChildData] = useState<any>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     if (!currentUser) {
@@ -46,35 +53,79 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
     fetchChildData();
   }, [currentUser, params.id, router]);
 
-  const handleAssessmentComplete = async (assessmentResults: any[]) => {
+  const handleAssessmentComplete = async (results: AssessmentResult[]) => {
     try {
       setLoading(true);
       const batch = writeBatch(db);
-
-      // Delete existing skills if any
-      const existingSkillsSnapshot = await getDocs(collection(db, 'children', params.id, 'skills'));
-      existingSkillsSnapshot.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      // Add new skills
-      assessmentResults.forEach((result) => {
-        const skillRef = doc(collection(db, 'children', params.id, 'skills'));
-        batch.set(skillRef, {
-          ...result,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      });
-
+      
+      // Save each skill assessment
+      for (const result of results) {
+        const skillQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', '==', params.id),
+          where('skillId', '==', result.skillId)
+        );
+        
+        const skillSnapshot = await getDocs(skillQuery);
+        
+        if (skillSnapshot.empty) {
+          const newSkillRef = doc(collection(db, 'childSkills'));
+          batch.set(newSkillRef, {
+            ...result,
+            childId: params.id,
+            lastAssessed: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+        } else {
+          const skillDoc = skillSnapshot.docs[0];
+          batch.update(skillDoc.ref, {
+            status: result.status,
+            lastAssessed: serverTimestamp(),
+            notes: result.notes,
+            updatedAt: serverTimestamp()
+          });
+        }
+      }
+      
       await batch.commit();
-      router.push(`/dashboard/children/${params.id}/progress`);
+      setIsCompleted(true);
+      
+      // Redirect to dashboard after 3 seconds
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 3000);
     } catch (err) {
-      console.error('Error saving assessment results:', err);
+      console.error('Error saving assessment:', err);
       setError('Failed to save assessment results');
+    } finally {
       setLoading(false);
     }
   };
+
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <div className="mb-6">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100">
+                <CheckCircle className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Awesome work!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {childData?.name} is off to a great start! Let's head to the dashboard and see what activities will have the biggest impact on {childData?.name}'s development in the coming month.
+            </p>
+            <p className="text-sm text-gray-500">
+              Redirecting you to the dashboard...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -150,6 +201,7 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
           birthDate={childData.birthDate.toDate()}
           parentInput={childData.parentInput || { concerns: [], goals: [], notes: '' }}
           onComplete={handleAssessmentComplete}
+          childId={params.id}
         />
       </div>
     </div>
