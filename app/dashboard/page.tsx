@@ -409,33 +409,19 @@ export default function Dashboard() {
                   const childSkills = recentSkills
                     .filter(skill => skill.childId === child.id)
                     .map(skill => ({
-                      id: skill.id,
-                      skillId: skill.skillId,
-                      skillName: skillNameMap[skill.skillId] || 'Skill',
-                      status: skill.status as 'mastered' | 'developing' | 'emerging',
-                      lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
+                      ...skill,
+                      skillName: skill.skillName || 'Unknown Skill',
+                      lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function' ? skill.lastAssessed.toDate().toISOString() : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : '')
                     }))
-                    // Sort by: 1. Developing skills first (most relevant), 2. Recently assessed, 3. Mastered skills
-                    .sort((a, b) => {
-                      if (a.status === 'developing' && b.status !== 'developing') return -1;
-                      if (b.status === 'developing' && a.status !== 'developing') return 1;
-                      return new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime();
-                    })
-                    // Take top 3 developing skills and 2 most recent mastered skills
-                    .reduce<Array<{
-                      id: string;
-                      skillId: string;
-                      skillName: string;
-                      status: 'mastered' | 'developing' | 'emerging';
-                      lastAssessed: string;
-                    }>>((acc, skill) => {
+                    .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
+                    .reduce((acc: any[], skill) => {
                       if (skill.status === 'developing' && acc.filter(s => s.status === 'developing').length < 3) {
                         acc.push(skill);
                       } else if (skill.status === 'mastered' && acc.filter(s => s.status === 'mastered').length < 2) {
                         acc.push(skill);
                       }
                       return acc;
-                    }, []);
+                    }, [] as any[]);
 
                   return (
                     <ProgressCelebration

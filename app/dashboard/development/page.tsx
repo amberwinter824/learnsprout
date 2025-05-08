@@ -274,13 +274,14 @@ export default function DevelopmentDashboardPage() {
           }
         }
 
-        // Enrich skills data with names
+        // Enrich skills data with names and defensive date handling
         const skillsWithNames = skillsData.map(skill => ({
           ...skill,
-          skillName: skill.skillId && skillNames[skill.skillId] ? skillNames[skill.skillId] : 'Unknown Skill'
+          skillName: skill.skillId && skillNames[skill.skillId] ? skillNames[skill.skillId] : 'Unknown Skill',
+          lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function' ? skill.lastAssessed.toDate().toISOString() : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : '')
         }));
 
-        setRecentSkills(skillsWithNames);
+        setRecentSkills(skillsWithNames as any);
         
         // Calculate progress summaries for each child
         const summaries: ProgressSummary[] = [];
