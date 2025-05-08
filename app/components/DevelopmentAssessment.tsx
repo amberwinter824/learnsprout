@@ -22,12 +22,14 @@ export default function DevelopmentAssessment({
   childName, 
   birthDate,
   parentInput,
-  onComplete 
+  onComplete,
+  childId
 }: { 
   childName: string;
   birthDate: Date;
   parentInput: ParentInput;
   onComplete: (results: AssessmentResult[]) => void;
+  childId?: string;
 }) {
   const [assessmentData, setAssessmentData] = useState<AssessmentResult[]>([]);
   const [skills, setSkills] = useState<DevelopmentalSkill[]>([]);
@@ -81,52 +83,59 @@ export default function DevelopmentAssessment({
     ).length;
   };
 
-  // Fetch skills
   useEffect(() => {
-    const fetchDevelopmentalSkills = async () => {
+    const fetchSkills = async () => {
       try {
-        setLoading(true);
+        // Fetch age-appropriate skills
         const ageGroup = calculateAgeGroup(birthDate);
-        console.log('Calculated age group:', ageGroup);
-        
         const skillsQuery = query(
           collection(db, 'developmentalSkills'),
-          where('ageRanges', 'array-contains', ageGroup)
+          where('ageGroup', '==', ageGroup)
         );
-        
-        console.log('Fetching skills for age group:', ageGroup);
         const skillsSnapshot = await getDocs(skillsQuery);
-        console.log('Query results:', {
-          empty: skillsSnapshot.empty,
-          size: skillsSnapshot.size,
-          docs: skillsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ageRanges: doc.data().ageRanges,
-            name: doc.data().name
-          }))
-        });
-
-        if (skillsSnapshot.empty) {
-          throw new Error(`No developmental skills found for age group: ${ageGroup}`);
-        }
-
-        const fetchedSkills = skillsSnapshot.docs.map(doc => ({
+        const skillsData = skillsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as DevelopmentalSkill[];
 
-        const sortedSkills = sortSkillsByPriority(fetchedSkills, parentInput);
-        setSkills(sortedSkills);
-        setLoading(false);
+        setSkills(skillsData);
+
+        // Group skills by area
+        const areaMap: Record<string, DevelopmentalSkill[]> = {};
+        skillsData.forEach(skill => {
+          if (!areaMap[skill.area]) {
+            areaMap[skill.area] = [];
+          }
+          areaMap[skill.area].push(skill);
+        });
+        setSkillsByArea(areaMap);
+        setAreas(Object.keys(areaMap));
+
+        // If childId is provided, fetch previous assessment results
+        if (childId) {
+          const skillsQuery = query(
+            collection(db, 'childSkills'),
+            where('childId', '==', childId)
+          );
+          const skillsSnapshot = await getDocs(skillsQuery);
+          const previousResults = skillsSnapshot.docs.map(doc => ({
+            skillId: doc.data().skillId,
+            status: doc.data().status,
+            notes: doc.data().notes
+          })) as AssessmentResult[];
+          
+          setAssessmentData(previousResults);
+        }
       } catch (err) {
-        console.error('Error details:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load assessment questions');
+        console.error('Error fetching skills:', err);
+        setError('Failed to load assessment data');
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchDevelopmentalSkills();
-  }, [birthDate, parentInput]);
+    fetchSkills();
+  }, [birthDate, childId]);
 
   // Update skillsByArea and areas when skills change
   useEffect(() => {
@@ -168,8 +177,12 @@ export default function DevelopmentAssessment({
       return [...prev, { skillId, status }];
     });
 
+    // Auto-advance to next section if not on the last skill
     if (currentSkillIndex < filteredSkills.length - 1) {
       setCurrentSkillIndex(prev => prev + 1);
+    } else {
+      // If on the last skill, automatically submit the assessment
+      handleSubmit();
     }
   };
 

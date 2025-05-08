@@ -15,7 +15,7 @@ import {
 } from '@/lib/ageUtils';
 import DevelopmentAssessment from '@/components/DevelopmentAssessment';
 import DevelopmentPlan from '@/components/DevelopmentPlan';
-import { query, collection, getDocs, writeBatch, doc, Timestamp, setDoc } from 'firebase/firestore';
+import { query, collection, getDocs, writeBatch, doc, Timestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import InitialAssessment from '@/components/InitialAssessment';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -157,41 +157,16 @@ export default function AddChildPage() {
         throw new Error('You must be logged in to add a child');
       }
 
-      if (!name.trim()) {
-        throw new Error('Please enter a name');
+      if (!childId) {
+        throw new Error('Child ID not found');
       }
 
-      if (!birthDate) {
-        throw new Error('Please enter a birth date');
-      }
-
-      // Create child document first
-      const childRef = doc(collection(db, 'children'));
-      const childData = {
-        name: name.trim(),
-        birthDateString: birthDate.toISOString().split('T')[0],
-        birthDate: Timestamp.fromDate(birthDate),
-        ageGroup: calculateAgeGroup(birthDate),
-        interests: selectedInterests,
-        parentInput,
-        createdAt: Timestamp.fromDate(new Date()),
-        updatedAt: Timestamp.fromDate(new Date()),
-        userId: currentUser.uid
-      };
-      
-      // Set the child document first
-      await setDoc(childRef, childData);
-      
-      // Store the childId
-      const newChildId = childRef.id;
-      setChildId(newChildId);
-      
-      // Now create child skills records in a separate batch
+      // Create child skills records in a batch
       const batch = writeBatch(db);
       results.forEach(result => {
         const skillRef = doc(collection(db, 'childSkills'));
         batch.set(skillRef, {
-          childId: newChildId,
+          childId,
           skillId: result.skillId,
           status: result.status,
           lastAssessed: Timestamp.fromDate(new Date()),
@@ -223,7 +198,7 @@ export default function AddChildPage() {
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
-  const handleStartAssessment = () => {
+  const handleStartAssessment = async () => {
     if (!birthDate) {
       setBirthdateError('Please enter a birth date before starting the assessment');
       return;
@@ -232,7 +207,43 @@ export default function AddChildPage() {
       setError('Please enter a name before starting the assessment');
       return;
     }
-    setShowAssessment(true);
+
+    try {
+      setLoading(true);
+      
+      if (!currentUser) {
+        throw new Error('You must be logged in to add a child');
+      }
+
+      // Create child document first
+      const childRef = doc(collection(db, 'children'));
+      const childData = {
+        name: name.trim(),
+        birthDateString: birthDate.toISOString().split('T')[0],
+        birthDate: Timestamp.fromDate(birthDate),
+        ageGroup: calculateAgeGroup(birthDate),
+        interests: selectedInterests,
+        parentInput,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
+        userId: currentUser.uid
+      };
+      
+      // Set the child document first
+      await setDoc(childRef, childData);
+      
+      // Store the childId
+      const newChildId = childRef.id;
+      setChildId(newChildId);
+      
+      // Show the assessment
+      setShowAssessment(true);
+    } catch (err) {
+      console.error('Error creating child:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create child');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -245,29 +256,20 @@ export default function AddChildPage() {
         throw new Error('You must be logged in to add a child');
       }
 
-      if (!name.trim()) {
-        throw new Error('Please enter a name');
+      if (!childId) {
+        throw new Error('Child ID not found');
       }
 
-      if (!birthDate) {
-        throw new Error('Please enter a birth date');
-      }
-
-      if (!isValidBirthdate(birthDate)) {
-        throw new Error('Please enter a valid birth date');
-      }
-
-      const childData = {
+      // Update the child document with any changes
+      const childRef = doc(db, 'children', childId);
+      await updateDoc(childRef, {
         name: name.trim(),
-        birthDate,
+        birthDate: Timestamp.fromDate(birthDate!),
         ageGroup,
         interests: selectedInterests,
         parentInput,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      const childId = await createChild(currentUser.uid, childData);
+        updatedAt: Timestamp.fromDate(new Date())
+      });
       
       // Create child skills records from assessment results if they exist
       if (assessmentResults.length > 0) {
@@ -295,8 +297,8 @@ export default function AddChildPage() {
       // Redirect to the child's profile page
       router.push(`/dashboard/children/${childId}`);
     } catch (err: any) {
-      console.error('Error adding child:', err);
-      setError(err.message || 'Failed to add child');
+      console.error('Error updating child:', err);
+      setError(err.message || 'Failed to update child');
     } finally {
       setLoading(false);
     }
