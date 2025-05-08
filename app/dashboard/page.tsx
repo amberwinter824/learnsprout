@@ -271,6 +271,9 @@ export default function Dashboard() {
     }
   };
   
+  // After fetching allSkills and recentSkills
+  const skillNameMap = Object.fromEntries(allSkills.map(s => [s.id, s.name]));
+  
   // Loading state
   if (loading) {
     return (
@@ -405,12 +408,11 @@ export default function Dashboard() {
               <div className="space-y-6">
                 {children.map((child) => {
                   // Get meaningful skills for this child, joined with skill names
-                  const skillNameMap = Object.fromEntries(allSkills.map(s => [s.id, s.name]));
                   const childSkills = recentSkills
                     .filter(skill => skill.childId === child.id)
                     .map(skill => ({
                       ...skill,
-                      skillName: skill.skillName || 'Unknown Skill',
+                      skillName: skillNameMap[skill.skillId] || 'Unknown Skill',
                       lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function' ? skill.lastAssessed.toDate().toISOString() : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : '')
                     }))
                     .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
