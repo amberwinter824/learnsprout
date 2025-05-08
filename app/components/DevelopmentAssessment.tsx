@@ -4,6 +4,7 @@ import { calculateAgeGroup } from '@/lib/ageUtils';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
+import { useRouter } from 'next/navigation';
 
 // Keep the local AssessmentResult interface
 interface AssessmentResult {
@@ -34,6 +35,7 @@ export default function DevelopmentAssessment({
   onComplete: (results: AssessmentResult[]) => void;
   childId?: string;
 }) {
+  const router = useRouter();
   const [assessmentData, setAssessmentData] = useState<AssessmentResult[]>([]);
   const [skills, setSkills] = useState<DevelopmentalSkill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,8 +177,9 @@ export default function DevelopmentAssessment({
   }, [selectedArea, skills]);
 
   const currentSkill = filteredSkills[currentSkillIndex] || null;
+  const assessedSkillIds = new Set(assessmentData.map(r => r.skillId));
+  const completedSkills = Array.from(assessedSkillIds).filter(skillId => filteredSkills.some(s => s.id === skillId)).length;
   const totalSkills = filteredSkills.length;
-  const completedSkills = assessmentData.length;
 
   const handleAnswer = async (skillId: string, status: 'emerging' | 'developing' | 'mastered') => {
     try {
@@ -380,6 +383,7 @@ export default function DevelopmentAssessment({
           <p className="text-sm text-gray-600 mt-2">
             Progress: {completedSkills} of {totalSkills} skills assessed
           </p>
+          <p className="text-xs text-gray-500 mt-1">Select an option to proceed.</p>
         </div>
       )}
 
@@ -462,10 +466,10 @@ export default function DevelopmentAssessment({
           <div className="flex gap-2">
             {currentSkillIndex === filteredSkills.length - 1 ? (
               <button
-                onClick={handleSubmit}
+                onClick={async () => { await handleSubmit(); router.push('/dashboard'); }}
                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
               >
-                Complete Assessment
+                Save & Exit
               </button>
             ) : (
               <>
@@ -476,7 +480,7 @@ export default function DevelopmentAssessment({
                   Skip This Skill
                 </button>
                 <button
-                  onClick={() => setCurrentSkillIndex(prev => Math.min(filteredSkills.length - 1, prev + 1))}
+                  onClick={async () => { await handleSubmit(); router.push('/dashboard'); }}
                   className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
                 >
                   Save & Exit

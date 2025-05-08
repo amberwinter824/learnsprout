@@ -410,11 +410,17 @@ export default function Dashboard() {
                   // Get meaningful skills for this child, joined with skill names
                   const childSkills = recentSkills
                     .filter(skill => skill.childId === child.id)
-                    .map(skill => ({
-                      ...skill,
-                      skillName: skillNameMap[skill.skillId] || 'Unknown Skill',
-                      lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function' ? skill.lastAssessed.toDate().toISOString() : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : '')
-                    }))
+                    .map(skill => {
+                      const skillName = skillNameMap[skill.skillId];
+                      if (!skillName) {
+                        console.warn('[Dashboard Debug] Unknown skillId:', skill.skillId, 'for child:', child.id);
+                      }
+                      return {
+                        ...skill,
+                        skillName: skillName || 'Unknown Skill',
+                        lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function' ? skill.lastAssessed.toDate().toISOString() : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : '')
+                      };
+                    })
                     .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
                     .reduce((acc: any[], skill) => {
                       if (skill.status === 'developing' && acc.filter(s => s.status === 'developing').length < 3) {
