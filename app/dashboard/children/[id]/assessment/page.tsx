@@ -87,6 +87,13 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
         }
       }
       
+      // Update the child's last assessment date
+      const childRef = doc(db, 'children', params.id);
+      batch.update(childRef, {
+        lastAssessmentDate: serverTimestamp(),
+        assessmentStatus: 'completed'
+      });
+      
       await batch.commit();
       setIsCompleted(true);
       

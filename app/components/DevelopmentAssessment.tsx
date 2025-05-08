@@ -125,6 +125,14 @@ export default function DevelopmentAssessment({
           })) as AssessmentResult[];
           
           setAssessmentData(previousResults);
+
+          // Find the first unassessed skill
+          const firstUnassessedIndex = skillsData.findIndex(skill => 
+            !previousResults.some(result => result.skillId === skill.id)
+          );
+          
+          // If all skills are assessed, start from the beginning
+          setCurrentSkillIndex(firstUnassessedIndex >= 0 ? firstUnassessedIndex : 0);
         }
       } catch (err) {
         console.error('Error fetching skills:', err);
@@ -167,6 +175,7 @@ export default function DevelopmentAssessment({
   const completedSkills = assessmentData.length;
 
   const handleAnswer = (skillId: string, status: 'emerging' | 'developing' | 'mastered') => {
+    // Update the assessment data
     setAssessmentData(prev => {
       const existingIndex = prev.findIndex(r => r.skillId === skillId);
       if (existingIndex >= 0) {
