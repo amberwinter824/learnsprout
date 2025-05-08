@@ -89,6 +89,9 @@ export default function DevelopmentAssessment({
         // Fetch age-appropriate skills
         const ageInMonths = Math.floor((new Date().getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
         console.log('[Assessment Debug] Child age in months:', ageInMonths);
+        const ageInYears = ageInMonths / 12;
+        console.log('[Assessment Debug] Child age in years:', ageInYears);
+        
         // Query for skills where any ageRange includes the child's age in months
         const allSkillsSnapshot = await getDocs(collection(db, 'developmentalSkills'));
         const allSkillsData = allSkillsSnapshot.docs.map(doc => ({
@@ -99,22 +102,44 @@ export default function DevelopmentAssessment({
 
         // Filter skills by age
         const skillsData = allSkillsData.filter(skill => {
-          if (!skill.ageRanges) return false;
+          if (!skill.ageRanges) {
+            console.log('[Assessment Debug] Skill has no age ranges:', skill.id);
+            return false;
+          }
           
-          // Convert age ranges string to array of ranges
-          const ageRangeStrings = skill.ageRanges.split(';');
-          return ageRangeStrings.some((rangeStr: string) => {
-            const [minStr, maxStr] = rangeStr.split('-');
-            const min = parseInt(minStr);
-            const max = parseInt(maxStr);
+          // Handle both string array and object array formats
+          const ageRanges = Array.isArray(skill.ageRanges) ? skill.ageRanges : [];
+          console.log('[Assessment Debug] Processing skill:', skill.id, 'Age ranges:', ageRanges);
+          
+          const isInRange = ageRanges.some((range: any) => {
+            let min: number, max: number;
             
-            // Convert age in months to years (approximate)
-            const ageInYears = ageInMonths / 12;
+            if (typeof range === 'string') {
+              // Handle string format (e.g. "3-4")
+              const [minStr, maxStr] = range.split('-');
+              min = parseInt(minStr) * 12; // Convert years to months
+              max = parseInt(maxStr) * 12;
+            } else if (range.min !== undefined && range.max !== undefined) {
+              // Handle object format (e.g. {min: 36, max: 48})
+              min = range.min;
+              max = range.max;
+            } else {
+              console.log('[Assessment Debug] Invalid age range format:', range);
+              return false;
+            }
+            
+            console.log('[Assessment Debug] Checking range:', range, 'min:', min, 'max:', max, 'child age:', ageInMonths);
             
             // Check if child's age falls within this range
-            return ageInYears >= min && ageInYears < max;
+            const isInThisRange = ageInMonths >= min && ageInMonths < max;
+            console.log('[Assessment Debug] Is in range?', isInThisRange);
+            return isInThisRange;
           });
+          
+          console.log('[Assessment Debug] Skill', skill.id, 'is in any range?', isInRange);
+          return isInRange;
         });
+        
         console.log('[Assessment Debug] Filtered skills for age:', skillsData.length, skillsData.map(s => ({id: s.id, name: s.name, ageRanges: s.ageRanges})));
 
         setSkills(skillsData);

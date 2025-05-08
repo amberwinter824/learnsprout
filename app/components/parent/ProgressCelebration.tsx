@@ -1,9 +1,11 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FaStar, FaArrowUp, FaSeedling, FaChevronRight } from 'react-icons/fa';
 import { Flower2, Sprout, Leaf, CircleDot, ArrowUpRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface Milestone {
   id: string;
@@ -29,10 +31,50 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
   showProgressLinks = true
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [enrichedMilestones, setEnrichedMilestones] = useState<Milestone[]>(recentMilestones);
   const pathname = usePathname();
   const isOnProgressPage = pathname === `/dashboard/children/${childId}/development`;
 
-  const sortedMilestones = [...recentMilestones].sort((a, b) => {
+  useEffect(() => {
+    async function enrichSkillNames() {
+      // Find milestones missing skillName
+      const missing = recentMilestones.filter(m => !m.skillName || m.skillName === 'unnamed skill' || m.skillName === 'Skill');
+      if (missing.length === 0) {
+        setEnrichedMilestones(recentMilestones);
+        return;
+      }
+      const skillIds = Array.from(new Set(missing.map(m => m.skillId)));
+      if (skillIds.length === 0) {
+        setEnrichedMilestones(recentMilestones);
+        return;
+      }
+      try {
+        // Firestore only allows up to 10 in 'in' queries
+        const batches = [];
+        for (let i = 0; i < skillIds.length; i += 10) {
+          batches.push(skillIds.slice(i, i + 10));
+        }
+        let skillNames: Record<string, string> = {};
+        for (const batch of batches) {
+          const q = query(collection(db, 'developmentalSkills'), where('__name__', 'in', batch));
+          const snap = await getDocs(q);
+          snap.forEach(doc => {
+            skillNames[doc.id] = doc.data().name || 'Skill';
+          });
+        }
+        // Enrich milestones
+        setEnrichedMilestones(recentMilestones.map(m => ({
+          ...m,
+          skillName: m.skillName && m.skillName !== 'unnamed skill' && m.skillName !== 'Skill' ? m.skillName : (skillNames[m.skillId] || 'Skill')
+        })));
+      } catch (err) {
+        setEnrichedMilestones(recentMilestones);
+      }
+    }
+    enrichSkillNames();
+  }, [recentMilestones]);
+
+  const sortedMilestones = [...enrichedMilestones].sort((a, b) => {
     const statusOrder: Record<SkillStatus, number> = {
       mastered: 3,
       developing: 2,
@@ -100,14 +142,14 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
     }
   };
 
-  const statusCounts = recentMilestones.reduce((acc, milestone) => {
+  const statusCounts = enrichedMilestones.reduce((acc, milestone) => {
     acc[milestone.status] = (acc[milestone.status] || 0) + 1;
     return acc;
   }, { mastered: 0, developing: 0, emerging: 0, not_started: 0 } as Record<SkillStatus, number>);
 
   const totalMilestones = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
 
-  if (!recentMilestones.length) {
+  if (!enrichedMilestones.length) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex items-center mb-3">
