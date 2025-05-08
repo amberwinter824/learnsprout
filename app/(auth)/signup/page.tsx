@@ -27,6 +27,13 @@ export default function Signup() {
   const inviteCode = searchParams.get('invite');
   const inviteEmail = searchParams.get('email');
 
+  // Get token from URL
+  const token = searchParams.get('token');
+  const [tokenValid, setTokenValid] = useState(false);
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [tokenError, setTokenError] = useState('');
+  const [tokenEmail, setTokenEmail] = useState('');
+
   // Check invitation when component loads
   useEffect(() => {
     async function checkInvitation() {
@@ -64,6 +71,26 @@ export default function Signup() {
     checkInvitation();
   }, [inviteCode, inviteEmail]);
 
+  // Token-based registration logic
+  useEffect(() => {
+    if (token) {
+      setTokenLoading(true);
+      fetch(`/api/validate-token?token=${token}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.email) {
+            setTokenEmail(data.email);
+            setEmail(data.email);
+            setTokenValid(true);
+          } else {
+            setTokenError(data.error || 'Invalid or expired registration link.');
+          }
+        })
+        .catch(() => setTokenError('Failed to validate registration link.'))
+        .finally(() => setTokenLoading(false));
+    }
+  }, [token]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -76,6 +103,22 @@ export default function Signup() {
     }
 
     try {
+      // Token-based registration
+      if (token && tokenValid) {
+        const userCredential = await createUserWithEmailAndPassword(auth, tokenEmail, password);
+        await updateProfile(userCredential.user, { displayName: name });
+        // Call complete-registration API
+        const res = await fetch('/api/complete-registration', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, uid: userCredential.user.uid, email: tokenEmail }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Registration failed');
+        router.push('/dashboard');
+        return;
+      }
+
       // Create the user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -119,7 +162,7 @@ export default function Signup() {
             <Sprout className="w-10 h-10 text-emerald-500" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            {isInviteMode ? 'Join the Family' : 'Create your account'}
+            {isInviteMode ? 'Join the Family' : token ? 'Complete your registration' : 'Create your account'}
           </h2>
           {isInviteMode && familyName && (
             <p className="mt-2 text-sm text-emerald-600">
@@ -137,89 +180,93 @@ export default function Signup() {
           </p>
         </div>
         
-        {error && (
+        {(error || tokenError) && (
           <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
-            {error}
+            {error || tokenError}
           </div>
         )}
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-              />
+        {token && tokenLoading ? (
+          <div className="text-center text-gray-500">Validating registration link...</div>
+        ) : (!token || tokenValid) && (
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  Full Name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={token ? tokenEmail : email}
+                  onChange={e => token ? undefined : setEmail(e.target.value)}
+                  disabled={!!token}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-50"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="confirm-password" className="text-sm font-medium text-gray-700">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirm-password"
+                  name="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
             </div>
-            
-            <div>
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isInviteMode}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-50"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="confirm-password" className="text-sm font-medium text-gray-700">
-                Confirm Password
-              </label>
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-              />
-            </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
-            >
-              {loading ? 'Creating Account...' : isInviteMode ? 'Join Family' : 'Sign Up'}
-            </button>
-          </div>
-        </form>
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
+              >
+                {loading ? 'Creating Account...' : isInviteMode ? 'Join Family' : token ? 'Sign Up' : 'Sign Up'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

@@ -34,5 +34,11 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "cron": [
+    {
+      "path": "/api/sync-orders",
+      "schedule": "*/10 * * * *"
+    }
+  ]
 } 
