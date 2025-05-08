@@ -96,14 +96,23 @@ export default function DevelopmentAssessment({
           ...doc.data()
         })) as DevelopmentalSkill[];
         console.log('[Assessment Debug] All skills loaded:', allSkillsData.length, allSkillsData.map(s => ({id: s.id, name: s.name, ageRanges: s.ageRanges})));
+
         // Filter skills by age
         const skillsData = allSkillsData.filter(skill => {
-          if (!Array.isArray(skill.ageRanges)) return false;
-          // Only include if ageRanges is an array of objects with min and max
-          return skill.ageRanges.some((range: any) => {
-            return typeof range === 'object' && range !== null &&
-              typeof range.min === 'number' && typeof range.max === 'number' &&
-              ageInMonths >= range.min && ageInMonths < range.max;
+          if (!skill.ageRanges) return false;
+          
+          // Convert age ranges string to array of ranges
+          const ageRangeStrings = skill.ageRanges.split(';');
+          return ageRangeStrings.some((rangeStr: string) => {
+            const [minStr, maxStr] = rangeStr.split('-');
+            const min = parseInt(minStr);
+            const max = parseInt(maxStr);
+            
+            // Convert age in months to years (approximate)
+            const ageInYears = ageInMonths / 12;
+            
+            // Check if child's age falls within this range
+            return ageInYears >= min && ageInYears < max;
           });
         });
         console.log('[Assessment Debug] Filtered skills for age:', skillsData.length, skillsData.map(s => ({id: s.id, name: s.name, ageRanges: s.ageRanges})));

@@ -44,6 +44,7 @@ interface Child {
   notes?: string;
   active?: boolean;
   familyId: string;
+  lastAssessmentDate?: Timestamp;
 }
 
 interface ActivityRecord {
@@ -762,9 +763,17 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
             <h3 className="ml-3 text-lg font-medium text-gray-900">Development Tracking</h3>
           </div>
           <p className="text-sm text-gray-500 mb-4">Monitor your child's developmental progress, skills, and checkup prep</p>
-          <div className="flex items-center text-sm text-purple-600">
-            View Development
-            <ArrowUpRight className="h-4 w-4 ml-1" />
+          <div className="flex flex-col space-y-2">
+            <Link
+              href={`/dashboard/children/${childId}/assessment`}
+              className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
+            >
+              {child.lastAssessmentDate ? 'Update Assessment' : 'Start Assessment'}
+            </Link>
+            <div className="flex items-center text-sm text-purple-600">
+              View Development
+              <ArrowUpRight className="h-4 w-4 ml-1" />
+            </div>
           </div>
         </Link>
 
@@ -783,21 +792,6 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
             onMarkMaterialOwned={handleMarkMaterialOwned}
           />
         </div>
-
-        {/* Edit Profile Card */}
-        <Link href={`/dashboard/children/${childId}/edit`} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center mb-4">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <Edit className="h-6 w-6 text-gray-600" />
-            </div>
-            <h3 className="ml-3 text-lg font-medium text-gray-900">Edit Profile</h3>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">Update your child's information and preferences</p>
-          <div className="flex items-center text-sm text-gray-600">
-            Edit Profile
-            <ArrowUpRight className="h-4 w-4 ml-1" />
-          </div>
-        </Link>
       </div>
 
       {/* Recent Activity Section */}
@@ -843,38 +837,6 @@ export default function ChildProfilePage({ params }: { params: { id: string } })
             </div>
           )}
         </div>
-      </div>
-
-      {/* Child Actions */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <Link
-          href={`/dashboard/children/${childId}/edit`}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        >
-          <Edit className="h-4 w-4 mr-1" />
-          Edit Profile
-        </Link>
-        <Link
-          href={`/dashboard/children/${childId}/development`}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        >
-          <BarChart2 className="h-4 w-4 mr-1" />
-          Development
-        </Link>
-        <Link
-          href={`/dashboard/children/${childId}/weekly-plan`}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        >
-          <Calendar className="h-4 w-4 mr-1" />
-          Weekly Plan
-        </Link>
-        <Link
-          href={`/dashboard/children/${childId}/development`}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        >
-          <Award className="h-4 w-4 mr-1" />
-          Development Journey
-        </Link>
       </div>
     </div>
   );

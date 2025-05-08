@@ -216,7 +216,7 @@ export interface DevelopmentalSkill {
   name: string;
   description: string;
   area: string;      // "practical_life", "sensorial", "language", etc.
-  ageRanges: string[]; // Original string format for backward compatibility
+  ageRanges: string; // Semicolon-separated age ranges (e.g. "3-4;4-5;5-6")
   prerequisites?: string[];
   category?: string;
   
