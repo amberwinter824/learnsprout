@@ -18,6 +18,9 @@ interface ParentInput {
   notes: string;
 }
 
+// Add a helper to format area names
+const formatAreaName = (area: string) => area.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
 export default function DevelopmentAssessment({ 
   childName, 
   birthDate,
@@ -37,51 +40,9 @@ export default function DevelopmentAssessment({
   const [error, setError] = useState('');
   const [currentSkillIndex, setCurrentSkillIndex] = useState(0);
   const [selectedArea, setSelectedArea] = useState<string>('all');
-  const [showPrioritized, setShowPrioritized] = useState(true);
   const [filteredSkills, setFilteredSkills] = useState<DevelopmentalSkill[]>([]);
   const [skillsByArea, setSkillsByArea] = useState<Record<string, DevelopmentalSkill[]>>({});
   const [areas, setAreas] = useState<string[]>([]);
-
-  // Define helper functions first
-  const isSkillPrioritized = (skill: DevelopmentalSkill, parentInput: ParentInput) => {
-    if (!skill || !parentInput) return false;
-    const text = `${skill.name} ${skill.description} ${skill.area}`.toLowerCase();
-    const concernKeywords = parentInput.concerns?.flatMap(concern => concern.toLowerCase().split(' ')) || [];
-    const goalKeywords = parentInput.goals?.flatMap(goal => goal.toLowerCase().split(' ')) || [];
-    
-    return concernKeywords.some(keyword => text.includes(keyword)) ||
-           goalKeywords.some(keyword => text.includes(keyword));
-  };
-
-  const sortSkillsByPriority = (skillsToSort: DevelopmentalSkill[], input: ParentInput) => {
-    const concernKeywords = input.concerns?.flatMap(concern => concern.toLowerCase().split(' ')) || [];
-    const goalKeywords = input.goals?.flatMap(goal => goal.toLowerCase().split(' ')) || [];
-
-    return [...skillsToSort].sort((a, b) => {
-      const aText = `${a.name} ${a.description} ${a.area}`.toLowerCase();
-      const bText = `${b.name} ${b.description} ${b.area}`.toLowerCase();
-      
-      const aMatchesConcerns = concernKeywords.some(keyword => aText.includes(keyword));
-      const bMatchesConcerns = concernKeywords.some(keyword => bText.includes(keyword));
-      const aMatchesGoals = goalKeywords.some(keyword => aText.includes(keyword));
-      const bMatchesGoals = goalKeywords.some(keyword => bText.includes(keyword));
-      
-      if (aMatchesConcerns && !bMatchesConcerns) return -1;
-      if (!aMatchesConcerns && bMatchesConcerns) return 1;
-      if (aMatchesGoals && !bMatchesGoals) return -1;
-      if (!aMatchesGoals && bMatchesGoals) return 1;
-      
-      return a.area.localeCompare(b.area);
-    });
-  };
-
-  const getAreaProgress = (area: string) => {
-    if (!skills.length) return 0;
-    const areaSkills = area === 'all' ? skills : skills.filter(s => s.area === area);
-    return areaSkills.filter(skill => 
-      assessmentData.some(result => result.skillId === skill.id)
-    ).length;
-  };
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -203,16 +164,15 @@ export default function DevelopmentAssessment({
     setAreas(Object.keys(newSkillsByArea));
   }, [skills]);
 
-  // Update filtered skills when area or prioritization changes
+  // Update filtered skills when area changes
   useEffect(() => {
     const newFilteredSkills = skills.filter(skill => {
       if (!skill || !skill.area) return false;
-      return (selectedArea === 'all' || skill.area === selectedArea) &&
-             (!showPrioritized || isSkillPrioritized(skill, parentInput));
+      return (selectedArea === 'all' || skill.area === selectedArea);
     });
     setFilteredSkills(newFilteredSkills);
     setCurrentSkillIndex(0);
-  }, [selectedArea, showPrioritized, skills, parentInput]);
+  }, [selectedArea, skills]);
 
   const currentSkill = filteredSkills[currentSkillIndex] || null;
   const totalSkills = filteredSkills.length;
@@ -375,12 +335,6 @@ export default function DevelopmentAssessment({
             Assess your child's developmental progress in different areas
           </p>
         </div>
-        <button
-          onClick={handleBack}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
       </div>
 
       {/* Area selection and filters */}
@@ -395,7 +349,7 @@ export default function DevelopmentAssessment({
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              All Areas ({getAreaProgress('all')}/{skills.length})
+              All Areas ({completedSkills}/{totalSkills})
             </button>
             {areas.map(area => (
               <button
@@ -407,20 +361,10 @@ export default function DevelopmentAssessment({
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {area} ({getAreaProgress(area)}/{skillsByArea[area].length})
+                {formatAreaName(area)} ({skillsByArea[area].length})
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setShowPrioritized(!showPrioritized)}
-            className={`px-3 py-1 rounded-full text-sm ${
-              showPrioritized
-                ? 'bg-amber-100 text-amber-800'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-          >
-            {showPrioritized ? '✓ Showing Priority Skills' : 'Show All Skills'}
-          </button>
         </div>
       )}
 
@@ -535,7 +479,7 @@ export default function DevelopmentAssessment({
                   onClick={() => setCurrentSkillIndex(prev => Math.min(filteredSkills.length - 1, prev + 1))}
                   className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700"
                 >
-                  Save & Continue
+                  Save & Exit
                 </button>
               </>
             )}
