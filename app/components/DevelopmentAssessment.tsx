@@ -87,16 +87,23 @@ export default function DevelopmentAssessment({
     const fetchSkills = async () => {
       try {
         // Fetch age-appropriate skills
-        const ageGroup = calculateAgeGroup(birthDate);
-        const skillsQuery = query(
-          collection(db, 'developmentalSkills'),
-          where('ageGroup', '==', ageGroup)
-        );
-        const skillsSnapshot = await getDocs(skillsQuery);
-        const skillsData = skillsSnapshot.docs.map(doc => ({
+        const ageInMonths = Math.floor((new Date().getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+        // Query for skills where any ageRange includes the child's age in months
+        const allSkillsSnapshot = await getDocs(collection(db, 'developmentalSkills'));
+        const allSkillsData = allSkillsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as DevelopmentalSkill[];
+        // Filter skills by age
+        const skillsData = allSkillsData.filter(skill => {
+          if (!Array.isArray(skill.ageRanges)) return false;
+          // Only include if ageRanges is an array of objects with min and max
+          return skill.ageRanges.some((range: any) => {
+            return typeof range === 'object' && range !== null &&
+              typeof range.min === 'number' && typeof range.max === 'number' &&
+              ageInMonths >= range.min && ageInMonths < range.max;
+          });
+        });
 
         setSkills(skillsData);
 

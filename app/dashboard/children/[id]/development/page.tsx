@@ -581,12 +581,20 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Child Info */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="mb-6">
-            <Link href={`/dashboard/children/${childId}`} className="inline-flex items-center text-emerald-600 hover:text-emerald-700">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to {child?.name}'s Profile
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <Link href={`/dashboard/children/${childId}`} className="inline-flex items-center text-emerald-600 hover:text-emerald-700">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to {child?.name}'s Profile
+              </Link>
+              <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Development Tracking</h1>
+            </div>
+            <Link
+              href={`/dashboard/children/${childId}/assessment`}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
+            >
+              {currentAssessmentResults && currentAssessmentResults.length > 0 ? 'Update Assessment' : 'Start Assessment'}
             </Link>
-            <h1 className="mt-2 text-2xl font-bold text-gray-900">{child?.name}'s Development Tracking</h1>
           </div>
         </div>
 

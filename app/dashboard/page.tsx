@@ -35,6 +35,7 @@ import { getDocs, query, where, collection, doc, updateDoc, arrayUnion, getDoc, 
 import { db } from '@/lib/firebase';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
 import { Timestamp } from 'firebase/firestore';
+import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
 interface ChildSkill {
   id: string;
@@ -81,6 +82,7 @@ export default function Dashboard() {
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
   const [recentSkills, setRecentSkills] = useState<ChildSkill[]>([]);
+  const [allSkills, setAllSkills] = useState<DevelopmentalSkill[]>([]);
   const materialsForecastRef = useRef<{ fetchMaterialsNeeded: () => void }>(null);
   
   // Update URL when parameters change
@@ -118,6 +120,14 @@ export default function Dashboard() {
           ...doc.data()
         })) as Child[];
         setChildren(childrenData);
+
+        // Fetch all developmental skills
+        const devSkillsSnapshot = await getDocs(collection(db, 'developmentalSkills'));
+        const devSkillsData = devSkillsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as DevelopmentalSkill[];
+        setAllSkills(devSkillsData);
 
         // Fetch all skills for all children
         const skillsQuery = query(
@@ -387,13 +397,14 @@ export default function Dashboard() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Children's Progress</h2>
               <div className="space-y-6">
                 {children.map((child) => {
-                  // Get meaningful skills for this child
+                  // Get meaningful skills for this child, joined with skill names
+                  const skillNameMap = Object.fromEntries(allSkills.map(s => [s.id, s.name]));
                   const childSkills = recentSkills
                     .filter(skill => skill.childId === child.id)
                     .map(skill => ({
                       id: skill.id,
                       skillId: skill.skillId,
-                      skillName: skill.skillName || 'Skill',
+                      skillName: skillNameMap[skill.skillId] || 'Skill',
                       status: skill.status as 'mastered' | 'developing' | 'emerging',
                       lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
                     }))

@@ -236,8 +236,8 @@ export default function AddChildPage() {
       const newChildId = childRef.id;
       setChildId(newChildId);
       
-      // Show the assessment
-      setShowAssessment(true);
+      // Redirect to the new assessment page
+      router.push(`/dashboard/children/${newChildId}/assessment`);
     } catch (err) {
       console.error('Error creating child:', err);
       setError(err instanceof Error ? err.message : 'Failed to create child');

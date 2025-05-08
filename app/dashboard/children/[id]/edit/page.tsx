@@ -147,7 +147,7 @@ export default function EditChildPage({ params }: { params: { id: string } }) {
       setError(birthdateError);
       return;
     }
-    setShowAssessment(true);
+    router.push(`/dashboard/children/${params.id}/assessment`);
   };
 
   const handleSave = async (e: React.FormEvent) => {
