@@ -121,6 +121,12 @@ export default function Dashboard() {
         })) as Child[];
         setChildren(childrenData);
 
+        // Set default selected child if not set
+        if (!selectedChildId && childrenData.length > 0) {
+          setSelectedChildId(childrenData[0].id);
+          updateUrlParams(selectedDate, childrenData[0].id);
+        }
+
         // Fetch all developmental skills
         const devSkillsSnapshot = await getDocs(collection(db, 'developmentalSkills'));
         const devSkillsData = devSkillsSnapshot.docs.map(doc => ({
@@ -150,6 +156,7 @@ export default function Dashboard() {
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
   
   // Handle date selection

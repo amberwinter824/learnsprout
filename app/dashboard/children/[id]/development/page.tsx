@@ -34,6 +34,7 @@ import SkillsJourneyMap from '@/app/components/parent/SkillsJourneyMap';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PediatricVisitPrep from '@/components/parent/PediatricVisitPrep';
+import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
 // Define interfaces
 interface ChildData {
@@ -94,6 +95,16 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
   const [updateNotes, setUpdateNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentAssessmentResults, setCurrentAssessmentResults] = useState<AssessmentResult[]>([]);
+  const [allDevSkills, setAllDevSkills] = useState<DevelopmentalSkill[]>([]);
+  
+  // SkillId -> skillName map
+  const skillNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    allDevSkills.forEach(skill => {
+      map[skill.id] = skill.name;
+    });
+    return map;
+  }, [allDevSkills]);
   
   // Define fetchData function outside of useEffect
   const fetchData = async () => {
@@ -113,11 +124,8 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
       // Fetch developmental skills data
       const devSkillsQuery = query(collection(db, 'developmentalSkills'));
       const devSkillsSnapshot = await getDocs(devSkillsQuery);
-      const devSkillsMap = new Map();
-      
-      devSkillsSnapshot.forEach(doc => {
-        devSkillsMap.set(doc.id, { id: doc.id, ...doc.data() });
-      });
+      const devSkillsData = devSkillsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DevelopmentalSkill[];
+      setAllDevSkills(devSkillsData);
       
       // Fetch child's skills progress
       const childSkillsQuery = query(
@@ -130,7 +138,7 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
       
       childSkillsSnapshot.forEach(doc => {
         const data = doc.data();
-        const devSkill = devSkillsMap.get(data.skillId);
+        const devSkill = devSkillsData.find(s => s.id === data.skillId);
         
         if (devSkill) {
           childSkillsData.push({
@@ -147,12 +155,12 @@ export default function ChildDevelopmentPage({ params }: { params: { id: string 
       });
       
       // For skills not yet tracked, add them with not_started status
-      devSkillsMap.forEach((devSkill, skillId) => {
-        const exists = childSkillsData.some(s => s.skillId === skillId);
+      devSkillsData.forEach(devSkill => {
+        const exists = childSkillsData.some(s => s.skillId === devSkill.id);
         if (!exists) {
           childSkillsData.push({
-            id: `new-${skillId}`,
-            skillId,
+            id: `new-${devSkill.id}`,
+            skillId: devSkill.id,
             name: devSkill.name || 'Unnamed Skill',
             description: devSkill.description,
             area: devSkill.area || 'unknown',

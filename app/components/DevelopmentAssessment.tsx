@@ -88,12 +88,14 @@ export default function DevelopmentAssessment({
       try {
         // Fetch age-appropriate skills
         const ageInMonths = Math.floor((new Date().getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+        console.log('[Assessment Debug] Child age in months:', ageInMonths);
         // Query for skills where any ageRange includes the child's age in months
         const allSkillsSnapshot = await getDocs(collection(db, 'developmentalSkills'));
         const allSkillsData = allSkillsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as DevelopmentalSkill[];
+        console.log('[Assessment Debug] All skills loaded:', allSkillsData.length, allSkillsData.map(s => ({id: s.id, name: s.name, ageRanges: s.ageRanges})));
         // Filter skills by age
         const skillsData = allSkillsData.filter(skill => {
           if (!Array.isArray(skill.ageRanges)) return false;
@@ -104,6 +106,7 @@ export default function DevelopmentAssessment({
               ageInMonths >= range.min && ageInMonths < range.max;
           });
         });
+        console.log('[Assessment Debug] Filtered skills for age:', skillsData.length, skillsData.map(s => ({id: s.id, name: s.name, ageRanges: s.ageRanges})));
 
         setSkills(skillsData);
 
