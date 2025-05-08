@@ -12,6 +12,11 @@ const SQUARESPACE_API_KEY = process.env.SQUARESPACE_API_KEY;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://learnsprout.vercel.app';
 
 export async function GET(req: NextRequest) {
+  // Security: Only allow requests with the correct CRON_SECRET
+  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   // 1. Fetch orders from Squarespace
   const { data } = await axios.get(
     'https://api.squarespace.com/1.0/commerce/orders',

@@ -194,12 +194,11 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
             <ul className="list-disc list-inside text-sm text-blue-700 space-y-2">
               <li>You'll be shown age-appropriate skills one at a time</li>
               <li>For each skill, indicate if your child is "Emerging" (just starting), "Developing" (making progress), or "Mastered" (consistently shows this skill)</li>
-              <li>Add notes about specific behaviors or observations if you'd like</li>
               <li>The assessment typically takes 10-15 minutes to complete</li>
             </ul>
           </div>
           <p className="text-gray-600 mb-4">
-            Based on your responses and the concerns/goals you shared, we'll create a personalized development plan to support {childData.name}'s growth.
+            Based on your responses and the concerns/goals you shared, we'll create a personalized development plan to support {childData.name}'s growth. Your weekly plan is right on the dashboard.
           </p>
         </div>
 
