@@ -101,12 +101,16 @@ export default function Dashboard() {
   
   // Fetch children and their skills
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
+      if (!currentUser) return;
+
       try {
+        setLoading(true);
+        
         // Fetch children
         const childrenQuery = query(
           collection(db, 'children'),
-          where('userId', '==', currentUser?.uid)
+          where('userId', '==', currentUser.uid)
         );
         const childrenSnapshot = await getDocs(childrenQuery);
         const childrenData = childrenSnapshot.docs.map(doc => ({
@@ -115,55 +119,28 @@ export default function Dashboard() {
         })) as Child[];
         setChildren(childrenData);
 
-        // Automatically select the first child if no child is selected
-        if (childrenData.length > 0 && !selectedChildId) {
-          const firstChild = childrenData[0];
-          setSelectedChildId(firstChild.id);
-          updateUrlParams(selectedDate, firstChild.id);
-        }
+        // Fetch all skills for all children
+        const skillsQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', 'in', childrenData.map(child => child.id))
+        );
+        const skillsSnapshot = await getDocs(skillsQuery);
+        const skillsData = skillsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as ChildSkill[];
+        setRecentSkills(skillsData);
 
-        // Fetch recent skills
-        if (childrenData.length > 0) {
-          const childIds = childrenData.map(child => child.id);
-          
-          // First, fetch all developmental skills to get their names
-          const devSkillsQuery = query(collection(db, 'developmentalSkills'));
-          const devSkillsSnapshot = await getDocs(devSkillsQuery);
-          const devSkillsMap = new Map();
-          
-          devSkillsSnapshot.forEach(doc => {
-            devSkillsMap.set(doc.id, { id: doc.id, ...doc.data() });
-          });
-
-          // Then fetch child skills
-          const skillsQuery = query(
-            collection(db, 'childSkills'),
-            where('childId', 'in', childIds),
-            where('status', 'in', ['mastered', 'developing', 'emerging']),
-            orderBy('lastAssessed', 'desc'),
-            limit(10)
-          );
-          const skillsSnapshot = await getDocs(skillsQuery);
-          const skillsData = skillsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const devSkill = devSkillsMap.get(data.skillId);
-            return {
-              id: doc.id,
-              ...data,
-              skillName: devSkill?.name || 'Unnamed Skill'
-            };
-          }) as ChildSkill[];
-          setRecentSkills(skillsData);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    if (currentUser?.uid) {
-      fetchData();
-    }
-  }, [currentUser, selectedChildId, selectedDate, updateUrlParams]);
+    fetchData();
+  }, [currentUser]);
   
   // Handle date selection
   const handleDateSelect = useCallback((date: Date) => {
@@ -317,7 +294,7 @@ export default function Dashboard() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Your Dashboard</h1>
               <p className="text-gray-600">
-                Welcome to Learn Sprout, your personalized play-based development learning companion
+                Welcome to Learn Sprout, your personalized early childhood development platform
               </p>
             </div>
             
@@ -410,7 +387,7 @@ export default function Dashboard() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Children's Progress</h2>
               <div className="space-y-6">
                 {children.map((child) => {
-                  // Find recent milestones for this child
+                  // Get meaningful skills for this child
                   const childSkills = recentSkills
                     .filter(skill => skill.childId === child.id)
                     .map(skill => ({
@@ -420,8 +397,27 @@ export default function Dashboard() {
                       status: skill.status as 'mastered' | 'developing' | 'emerging',
                       lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
                     }))
-                    .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
-                    .slice(0, 5);
+                    // Sort by: 1. Developing skills first (most relevant), 2. Recently assessed, 3. Mastered skills
+                    .sort((a, b) => {
+                      if (a.status === 'developing' && b.status !== 'developing') return -1;
+                      if (b.status === 'developing' && a.status !== 'developing') return 1;
+                      return new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime();
+                    })
+                    // Take top 3 developing skills and 2 most recent mastered skills
+                    .reduce<Array<{
+                      id: string;
+                      skillId: string;
+                      skillName: string;
+                      status: 'mastered' | 'developing' | 'emerging';
+                      lastAssessed: string;
+                    }>>((acc, skill) => {
+                      if (skill.status === 'developing' && acc.filter(s => s.status === 'developing').length < 3) {
+                        acc.push(skill);
+                      } else if (skill.status === 'mastered' && acc.filter(s => s.status === 'mastered').length < 2) {
+                        acc.push(skill);
+                      }
+                      return acc;
+                    }, []);
 
                   return (
                     <ProgressCelebration

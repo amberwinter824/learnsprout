@@ -110,16 +110,19 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
   if (!recentMilestones.length) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <p className="text-gray-600">
-          No recent progress to celebrate yet. Keep working with {childName}!
+        <div className="flex items-center mb-3">
+          <h3 className="text-sm font-medium text-gray-900">{childName}</h3>
+        </div>
+        <p className="text-gray-600 mb-2">
+          Ready to start tracking {childName}'s development journey!
         </p>
         {showProgressLinks && (
           <div className="mt-4">
             <Link
-              href={`/dashboard/children/${childId}/weekly-plan`}
-              className="text-blue-600 hover:text-blue-800 font-medium mr-6"
+              href={`/dashboard/children/${childId}/assessment`}
+              className="text-emerald-600 hover:text-emerald-700 font-medium mr-6"
             >
-              Find Activities
+              Start Development Assessment
             </Link>
           </div>
         )}
@@ -127,7 +130,8 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
     );
   }
 
-  const mostSignificantMilestone = sortedMilestones[0];
+  const developingSkills = sortedMilestones.filter(m => m.status === 'developing');
+  const masteredSkills = sortedMilestones.filter(m => m.status === 'mastered');
 
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-200">
@@ -143,58 +147,60 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
           </Link>
         )}
       </div>
-      
-      <div className="space-y-3">
-        {sortedMilestones.slice(0, 3).map((milestone, index) => (
-          <div key={milestone.id} className="relative">
-            {/* Progress bar background */}
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              {/* Progress bar fill */}
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${
-                  milestone.status === 'mastered' 
-                    ? 'bg-emerald-500' 
-                    : milestone.status === 'developing'
-                    ? 'bg-blue-500'
-                    : 'bg-amber-500'
-                }`}
-                style={{ 
-                  width: `${milestone.status === 'mastered' ? '100%' : 
-                          milestone.status === 'developing' ? '60%' : '30%'}`
-                }}
-              />
-            </div>
-            
-            {/* Milestone details */}
-            <div className="mt-1.5 flex items-start justify-between">
-              <div className="flex-1 flex items-center">
-                <div className={`mr-2 ${getStatusColor(milestone.status)}`}>
-                  {getStatusIcon(milestone.status)}
+
+      {/* Progress Summary */}
+      {developingSkills.length > 0 && (
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 mb-2">
+            {childName} is currently working on {developingSkills.length} skill{developingSkills.length > 1 ? 's' : ''}:
+          </p>
+          <div className="space-y-3">
+            {developingSkills.map((milestone) => (
+              <div key={milestone.id} className="relative">
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-blue-500 transition-all duration-500" style={{ width: '60%' }} />
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-900 truncate">
-                    {milestone.skillName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {format(new Date(milestone.lastAssessed), 'MMM d')}
-                  </p>
+                <div className="mt-1.5 flex items-start justify-between">
+                  <div className="flex-1 flex items-center">
+                    <div className="mr-2 text-blue-500">
+                      <Sprout className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-900 truncate">
+                        {milestone.skillName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Last assessed {format(new Date(milestone.lastAssessed), 'MMM d')}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              {/* Status indicator */}
-              <div className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
-                milestone.status === 'mastered' 
-                  ? 'bg-emerald-100 text-emerald-700' 
-                  : milestone.status === 'developing'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-amber-100 text-amber-700'
-              }`}>
-                {milestone.status.charAt(0).toUpperCase() + milestone.status.slice(1)}
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Recent Achievements */}
+      {masteredSkills.length > 0 && (
+        <div className="border-t border-gray-100 pt-3">
+          <p className="text-sm text-gray-600 mb-2">
+            Recent achievements:
+          </p>
+          <div className="space-y-2">
+            {masteredSkills.map((milestone) => (
+              <div key={milestone.id} className="flex items-center">
+                <div className="mr-2 text-emerald-500">
+                  <Flower2 className="h-4 w-4" />
+                </div>
+                <p className="text-xs text-gray-900">
+                  {milestone.skillName}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       {/* Progress summary */}
       <div className="mt-3 pt-3 border-t border-gray-100">
@@ -207,10 +213,6 @@ const ProgressCelebration: FC<ProgressCelebrationProps> = ({
             <div className="flex items-center">
               <Sprout className="h-3 w-3 text-blue-500 mr-1" />
               <span className="text-gray-600">Developing</span>
-            </div>
-            <div className="flex items-center">
-              <Leaf className="h-3 w-3 text-amber-500 mr-1" />
-              <span className="text-gray-600">Emerging</span>
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { calculateAgeGroup } from '@/lib/ageUtils';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 
 // Keep the local AssessmentResult interface
@@ -174,34 +174,86 @@ export default function DevelopmentAssessment({
   const totalSkills = filteredSkills.length;
   const completedSkills = assessmentData.length;
 
-  const handleAnswer = (skillId: string, status: 'emerging' | 'developing' | 'mastered') => {
-    // Update the assessment data
-    setAssessmentData(prev => {
-      const existingIndex = prev.findIndex(r => r.skillId === skillId);
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex] = { skillId, status };
-        return updated;
-      }
-      return [...prev, { skillId, status }];
-    });
+  const handleAnswer = async (skillId: string, status: 'emerging' | 'developing' | 'mastered') => {
+    try {
+      // Update the assessment data
+      setAssessmentData(prev => {
+        const existingIndex = prev.findIndex(r => r.skillId === skillId);
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = { skillId, status };
+          return updated;
+        }
+        return [...prev, { skillId, status }];
+      });
 
-    // Auto-advance to next section if not on the last skill
-    if (currentSkillIndex < filteredSkills.length - 1) {
-      setCurrentSkillIndex(prev => prev + 1);
-    } else {
-      // If on the last skill, automatically submit the assessment
-      handleSubmit();
+      // Save to Firestore immediately
+      if (childId) {
+        const skillQuery = query(
+          collection(db, 'childSkills'),
+          where('childId', '==', childId),
+          where('skillId', '==', skillId)
+        );
+        
+        const skillSnapshot = await getDocs(skillQuery);
+        
+        if (skillSnapshot.empty) {
+          // Create new skill record
+          const newSkillRef = doc(collection(db, 'childSkills'));
+          await setDoc(newSkillRef, {
+            skillId,
+            status,
+            childId,
+            lastAssessed: new Date(),
+            updatedAt: new Date()
+          });
+        } else {
+          // Update existing skill record
+          const skillDoc = skillSnapshot.docs[0];
+          await updateDoc(skillDoc.ref, {
+            status,
+            lastAssessed: new Date(),
+            updatedAt: new Date()
+          });
+        }
+      }
+
+      // Auto-advance to next section if not on the last skill
+      if (currentSkillIndex < filteredSkills.length - 1) {
+        setCurrentSkillIndex(prev => prev + 1);
+      } else {
+        // If on the last skill, automatically submit the assessment
+        handleSubmit();
+      }
+    } catch (err) {
+      console.error('Error saving answer:', err);
+      // Show error to user
+      alert('There was an error saving your answer. Please try again.');
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (assessmentData.length === 0) {
       if (!confirm('No skills have been assessed. Are you sure you want to skip the assessment?')) {
         return;
       }
     }
-    onComplete(assessmentData);
+    
+    try {
+      // Update child's last assessment date
+      if (childId) {
+        const childRef = doc(db, 'children', childId);
+        await updateDoc(childRef, {
+          lastAssessmentDate: new Date(),
+          assessmentStatus: 'completed'
+        });
+      }
+      
+      onComplete(assessmentData);
+    } catch (err) {
+      console.error('Error completing assessment:', err);
+      alert('There was an error completing the assessment. Please try again.');
+    }
   };
 
   const handleBack = () => {
