@@ -219,10 +219,7 @@ export default function DevelopmentDashboardPage() {
         // Fetch recent skill updates
         const skillsQuery = query(
           collection(db, 'childSkills'),
-          where('childId', 'in', childIds),
-          where('status', 'in', ['mastered', 'developing', 'emerging']),
-          orderBy('lastAssessed', 'desc'),
-          limit(10)
+          where('childId', 'in', childIds)
         );
 
         let skillsData: ChildSkill[] = [];
@@ -234,7 +231,7 @@ export default function DevelopmentDashboardPage() {
             childId: doc.data().childId,
             skillId: doc.data().skillId,
             status: doc.data().status,
-            lastAssessed: doc.data().lastAssessed
+            lastAssessed: doc.data().lastAssessed || Timestamp.now()
           }));
         } catch (error) {
           console.error('Error fetching skills:', error);
