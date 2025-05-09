@@ -442,48 +442,6 @@ export default function Dashboard() {
                 })}
               </div>
             </div>
-            
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  href="/dashboard/activities"
-                  className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Activities
-                </Link>
-                <Link
-                  href="/dashboard/development"
-                  className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <BarChart2 className="h-4 w-4 mr-2" />
-                  Development
-                </Link>
-                <Link
-                  href={`/dashboard/children/${selectedChildId}/development`}
-                  className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Award className="h-4 w-4 mr-2" />
-                  Child Journey
-                </Link>
-                <Link
-                  href="/dashboard/settings"
-                  className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Link>
-                <Link
-                  href="/dashboard/materials"
-                  className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  Materials
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
       </div>
