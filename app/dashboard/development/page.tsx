@@ -611,20 +611,33 @@ export default function DevelopmentDashboardPage() {
                 .map(summary => {
                   // Find the child data
                   const child = children.find(c => c.id === summary.childId);
-                  
-                  // Find recent milestones for this child
+                  // Find recent milestones for this child using dashboard logic
                   const childSkills = recentSkills
                     .filter(skill => skill.childId === summary.childId)
                     .map(skill => ({
                       id: skill.id,
                       skillId: skill.skillId,
-                      skillName: skill.skillName || 'Skill',
-                      status: skill.status as 'mastered' | 'developing' | 'emerging',
-                      lastAssessed: skill.lastAssessed ? skill.lastAssessed.toDate().toISOString() : new Date().toISOString()
+                      skillName: skill.skillName || 'Unknown Skill',
+                      status: skill.status as 'mastered' | 'developing' | 'emerging' | 'not_started',
+                      lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function'
+                        ? skill.lastAssessed.toDate().toISOString()
+                        : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : new Date().toISOString())
                     }))
                     .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
-                    .slice(0, 5);
-                    
+                    .reduce((acc: {
+                      id: string;
+                      skillId: string;
+                      skillName: string;
+                      status: 'mastered' | 'developing' | 'emerging' | 'not_started';
+                      lastAssessed: string;
+                    }[], skill) => {
+                      if (skill.status === 'developing' && acc.filter(s => s.status === 'developing').length < 3) {
+                        acc.push(skill);
+                      } else if (skill.status === 'mastered' && acc.filter(s => s.status === 'mastered').length < 2) {
+                        acc.push(skill);
+                      }
+                      return acc;
+                    }, []);
                   return (
                     <ProgressCelebration
                       key={summary.childId}
