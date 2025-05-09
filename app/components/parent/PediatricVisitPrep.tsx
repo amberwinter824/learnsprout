@@ -6,6 +6,7 @@ import { db } from '../../../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, limit } from 'firebase/firestore';
 import { differenceInMonths } from 'date-fns';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
+import { useRouter } from 'next/navigation';
 
 interface PediatricVisitPrepProps {
   childId: string;
@@ -141,6 +142,7 @@ function getClosestAsqMilestone(month: number) {
 }
 
 export default function PediatricVisitPrep({ childId, childAge, onActivitySelect }: PediatricVisitPrepProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [nextVisit, setNextVisit] = useState<{ childId: string; visitType: string; scheduledDate: Timestamp } | null>(null);
   const [recommendedActivities, setRecommendedActivities] = useState<any[]>([]);
@@ -279,8 +281,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
     const match = nextVisit.visitType.match(/(\d+)/);
     const visitMonth = match ? parseInt(match[1], 10) : 24;
     const milestone = getClosestAsqMilestone(visitMonth);
-    const asqFile = `ASQ-3-${milestone}-Mo-Set-B.pdf`;
-    window.open(`/asq/${asqFile}`, '_blank');
+    router.push(`/asq/${milestone}`);
   };
   
   return (
