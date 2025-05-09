@@ -16,7 +16,8 @@
     "init:standalone": "node scripts/standaloneSchemaInit.js",
     "setup:dev": "npm run init:roles && npm run init:institutions && npm run init:schema && npm run init:standalone && npm run seed:dev-skills",
     "extract-materials": "node scripts/extractMaterials.cjs",
-    "import-materials": "node scripts/importMaterialLinks.cjs"
+    "import-materials": "node scripts/importMaterialLinks.cjs",
+    "create-service-account": "node scripts/create-service-account-file.js"
   },
   "dependencies": {
     "axios": "^1.9.0",
