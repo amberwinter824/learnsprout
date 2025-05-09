@@ -48,15 +48,10 @@ export default function DevelopmentAssessment({
 
   // Defensive check for birthDate
   console.log('DevelopmentAssessment birthDate:', birthDate, typeof birthDate);
-  if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
-    return (
-      <div className="p-4 bg-red-50 rounded-md text-red-700">
-        Error: Invalid or missing birth date for this child. Please update their profile.
-      </div>
-    );
-  }
+  const invalidBirthDate = !(birthDate instanceof Date) || isNaN(birthDate.getTime());
 
   useEffect(() => {
+    if (invalidBirthDate) return;
     const fetchSkills = async () => {
       try {
         // Fetch age-appropriate skills
@@ -160,10 +155,11 @@ export default function DevelopmentAssessment({
     };
 
     fetchSkills();
-  }, [birthDate, childId]);
+  }, [birthDate, childId, invalidBirthDate]);
 
   // Update skillsByArea and areas when skills change
   useEffect(() => {
+    if (invalidBirthDate) return;
     const newSkillsByArea = skills.reduce((acc, skill) => {
       if (!acc[skill.area]) {
         acc[skill.area] = [];
@@ -174,17 +170,18 @@ export default function DevelopmentAssessment({
     
     setSkillsByArea(newSkillsByArea);
     setAreas(Object.keys(newSkillsByArea));
-  }, [skills]);
+  }, [skills, invalidBirthDate]);
 
   // Update filtered skills when area changes
   useEffect(() => {
+    if (invalidBirthDate) return;
     const newFilteredSkills = skills.filter(skill => {
       if (!skill || !skill.area) return false;
       return (selectedArea === 'all' || skill.area === selectedArea);
     });
     setFilteredSkills(newFilteredSkills);
     setCurrentSkillIndex(0);
-  }, [selectedArea, skills]);
+  }, [selectedArea, skills, invalidBirthDate]);
 
   const currentSkill = filteredSkills[currentSkillIndex] || null;
   const assessedSkillIds = new Set(assessmentData.map(r => r.skillId));
@@ -315,6 +312,14 @@ export default function DevelopmentAssessment({
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (invalidBirthDate) {
+    return (
+      <div className="p-4 bg-red-50 rounded-md text-red-700">
+        Error: Invalid or missing birth date for this child. Please update their profile.
       </div>
     );
   }
