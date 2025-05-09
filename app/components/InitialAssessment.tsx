@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Info } from 'lucide-react';
 import { calculateAgeGroup } from '@/lib/ageUtils';
-import { writeBatch, collection, query, where, doc } from 'firebase/firestore';
+import { writeBatch, collection, query, where, doc, Timestamp } from 'firebase/firestore';
 import { getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -76,7 +76,7 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
         'Participates in dressing',
         'Shows interest in hygiene routines'
       ],
-      relatedSkills: ['prl-self-care', 'prl-independence']
+      relatedSkills: ['prl-self-care', 'soc-independence']
     },
     {
       id: 'sen-1',
@@ -87,7 +87,7 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
         'Responds to sounds',
         'Shows interest in visual patterns'
       ],
-      relatedSkills: ['sen-exploration', 'sen-discrimination']
+      relatedSkills: ['sen-sensory-awareness', 'sen-visual']
     },
     {
       id: 'lan-1',
@@ -98,7 +98,7 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
         'Responds to simple questions',
         'Shows understanding of basic words'
       ],
-      relatedSkills: ['lan-communication', 'lan-comprehension']
+      relatedSkills: ['lan-vocabulary', 'lan-comprehension']
     },
     {
       id: 'mat-1',
@@ -109,7 +109,7 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
         'Shows interest in counting songs',
         'Notices differences in sizes'
       ],
-      relatedSkills: ['mat-patterns', 'mat-sorting']
+      relatedSkills: ['mat-operations', 'tod-sorting']
     },
     {
       id: 'cul-1',
@@ -120,7 +120,7 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
         'Shows interest in music and movement',
         'Notices changes in surroundings'
       ],
-      relatedSkills: ['cul-exploration', 'cul-awareness']
+      relatedSkills: ['cul-botany', 'cul-art']
     },
     {
       id: 'soc-1',
@@ -131,7 +131,7 @@ const getQuestionsForAge = (ageGroup: string): Question[] => {
         'Expresses basic emotions',
         'Responds to others\' emotions'
       ],
-      relatedSkills: ['soc-interaction', 'soc-emotional']
+      relatedSkills: ['soc-relationships', 'soc-emotion-reg']
     }
   ];
 
@@ -222,10 +222,10 @@ export default function InitialAssessment({
           return question.relatedSkills.map(skillId => ({
             skillId,
             status,
-            childId: childId, // Add childId to each skill record
-            lastAssessed: new Date(),
+            childId: childId,
+            lastAssessed: Timestamp.now(),
             notes: `Initial assessment: ${answer}`,
-            updatedAt: new Date()
+            updatedAt: Timestamp.now()
           }));
         });
         

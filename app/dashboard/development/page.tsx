@@ -278,12 +278,10 @@ export default function DevelopmentDashboardPage() {
         const skillsWithNames = skillsData.map(skill => ({
           ...skill,
           skillName: skill.skillId && skillNames[skill.skillId] ? skillNames[skill.skillId] : 'Unknown Skill',
-          lastAssessed: skill.lastAssessed instanceof Timestamp ? 
-            skill.lastAssessed.toDate() : 
-            (skill.lastAssessed ? new Date(skill.lastAssessed) : new Date())
+          lastAssessed: skill.lastAssessed || Timestamp.now()
         }));
 
-        setRecentSkills(skillsWithNames as any);
+        setRecentSkills(skillsWithNames);
         
         // Calculate progress summaries for each child
         const summaries: ProgressSummary[] = [];
