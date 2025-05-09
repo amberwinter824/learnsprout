@@ -132,6 +132,14 @@ const getAsqQuestionnaire = (visitType: string) => {
   return asqQuestionnaires[`${closestMonth}m`] || asqQuestionnaires['24m'];
 };
 
+// List of available ASQ PDF milestones (in months)
+const asqMilestones = [2, 4, 6, 8, 9, 10, 12, 14, 16, 18, 20, 22, 24, 27, 30, 36, 42, 48];
+
+// Helper to get the closest ASQ milestone at or above the requested month
+function getClosestAsqMilestone(month: number) {
+  return asqMilestones.find(m => month <= m) || asqMilestones[asqMilestones.length - 1];
+}
+
 export default function PediatricVisitPrep({ childId, childAge, onActivitySelect }: PediatricVisitPrepProps) {
   const [loading, setLoading] = useState(true);
   const [nextVisit, setNextVisit] = useState<{ childId: string; visitType: string; scheduledDate: Timestamp } | null>(null);
@@ -264,6 +272,17 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
     return 'Soon';
   };
   
+  // Handler for Preview ASQ button
+  const handlePreviewASQ = () => {
+    if (!nextVisit?.visitType) return;
+    // Extract the month number from visitType (e.g., '24m' -> 24)
+    const match = nextVisit.visitType.match(/(\d+)/);
+    const visitMonth = match ? parseInt(match[1], 10) : 24;
+    const milestone = getClosestAsqMilestone(visitMonth);
+    const asqFile = `ASQ-3-${milestone}-Mo-Set-B.pdf`;
+    window.open(`/asq/${asqFile}`, '_blank');
+  };
+  
   return (
     <div className="space-y-6">
       {errorMessage && (
@@ -300,7 +319,7 @@ export default function PediatricVisitPrep({ childId, childAge, onActivitySelect
                 )}
               </div>
               <button
-                onClick={() => setShowAsqPopup(true)}
+                onClick={handlePreviewASQ}
                 className="inline-flex items-center px-4 py-2 text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow"
               >
                 <Info className="h-5 w-5 mr-2" />
