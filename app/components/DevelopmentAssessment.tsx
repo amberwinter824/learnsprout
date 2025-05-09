@@ -46,6 +46,16 @@ export default function DevelopmentAssessment({
   const [skillsByArea, setSkillsByArea] = useState<Record<string, DevelopmentalSkill[]>>({});
   const [areas, setAreas] = useState<string[]>([]);
 
+  // Defensive check for birthDate
+  console.log('DevelopmentAssessment birthDate:', birthDate, typeof birthDate);
+  if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
+    return (
+      <div className="p-4 bg-red-50 rounded-md text-red-700">
+        Error: Invalid or missing birth date for this child. Please update their profile.
+      </div>
+    );
+  }
+
   useEffect(() => {
     const fetchSkills = async () => {
       try {

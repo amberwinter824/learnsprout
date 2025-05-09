@@ -66,14 +66,19 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
     fetchChildData();
   }, [currentUser, params.id, router]);
 
-  const getBirthDate = (date: Timestamp | Date | string): Date => {
-    if (date instanceof Timestamp) {
+  const getBirthDate = (date: Timestamp | Date | string | undefined | null): Date => {
+    if (!date) return new Date('2000-01-01'); // fallback to a safe default
+    if (typeof date === 'object' && 'toDate' in date && typeof date.toDate === 'function') {
       return date.toDate();
     }
     if (date instanceof Date) {
       return date;
     }
-    return new Date(date);
+    if (typeof date === 'string' || typeof date === 'number') {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return new Date('2000-01-01'); // fallback
   };
 
   const handleAssessmentComplete = async (results: AssessmentResult[]) => {
