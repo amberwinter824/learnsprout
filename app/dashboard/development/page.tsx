@@ -278,7 +278,9 @@ export default function DevelopmentDashboardPage() {
         const skillsWithNames = skillsData.map(skill => ({
           ...skill,
           skillName: skill.skillId && skillNames[skill.skillId] ? skillNames[skill.skillId] : 'Unknown Skill',
-          lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function' ? skill.lastAssessed.toDate().toISOString() : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : '')
+          lastAssessed: skill.lastAssessed instanceof Timestamp ? 
+            skill.lastAssessed.toDate() : 
+            (skill.lastAssessed ? new Date(skill.lastAssessed) : new Date())
         }));
 
         setRecentSkills(skillsWithNames as any);
@@ -410,11 +412,16 @@ export default function DevelopmentDashboardPage() {
   };
   
   // Format date for display
-  const formatDate = (timestamp?: Timestamp) => {
-    if (!timestamp) return 'Never';
-    
-    const date = timestamp.toDate();
-    return format(date, 'MMM d, yyyy');
+  const formatDate = (date: Date | string | Timestamp | undefined) => {
+    if (!date) return 'Never';
+    const dateObj = date instanceof Timestamp ? 
+      date.toDate() : 
+      (date instanceof Date ? date : new Date(date));
+    return dateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
   
   // Get relative time for display

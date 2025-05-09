@@ -6,7 +6,7 @@ import { ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import DevelopmentAssessment from '@/app/components/DevelopmentAssessment';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, writeBatch, collection, getDocs, serverTimestamp, query, where } from 'firebase/firestore';
+import { doc, getDoc, writeBatch, collection, getDocs, serverTimestamp, query, where, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AssessmentResult {
@@ -15,12 +15,23 @@ interface AssessmentResult {
   notes?: string;
 }
 
+interface ChildData {
+  id: string;
+  name: string;
+  birthDate: Timestamp | Date | string;
+  parentInput?: {
+    concerns: string[];
+    goals: string[];
+    notes: string;
+  };
+}
+
 export default function ChildAssessmentPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [childData, setChildData] = useState<any>(null);
+  const [childData, setChildData] = useState<ChildData | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
@@ -40,8 +51,10 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
         const data = childDoc.data();
         setChildData({
           id: childDoc.id,
-          ...data,
-        });
+          name: data.name,
+          birthDate: data.birthDate,
+          parentInput: data.parentInput
+        } as ChildData);
       } catch (err) {
         console.error('Error fetching child data:', err);
         setError('Failed to load child data');
@@ -52,6 +65,16 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
 
     fetchChildData();
   }, [currentUser, params.id, router]);
+
+  const getBirthDate = (date: Timestamp | Date | string): Date => {
+    if (date instanceof Timestamp) {
+      return date.toDate();
+    }
+    if (date instanceof Date) {
+      return date;
+    }
+    return new Date(date);
+  };
 
   const handleAssessmentComplete = async (results: AssessmentResult[]) => {
     try {
@@ -187,7 +210,7 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">About This Assessment</h2>
           <p className="text-gray-600 mb-4">
-            This assessment will help us understand {childData.name}'s current developmental progress. We'll look at various skills that are typical for their age group.
+            This assessment will help us understand {childData?.name}'s current developmental progress. We'll look at various skills that are typical for their age group.
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
             <h3 className="text-sm font-medium text-blue-900 mb-2">How It Works:</h3>
@@ -198,17 +221,19 @@ export default function ChildAssessmentPage({ params }: { params: { id: string }
             </ul>
           </div>
           <p className="text-gray-600 mb-4">
-            Based on your responses and the concerns/goals you shared, we'll create a personalized development plan to support {childData.name}'s growth. Your weekly plan is right on the dashboard.
+            Based on your responses and the concerns/goals you shared, we'll create a personalized development plan to support {childData?.name}'s growth. Your weekly plan is right on the dashboard.
           </p>
         </div>
 
-        <DevelopmentAssessment
-          childName={childData.name}
-          birthDate={childData.birthDate.toDate()}
-          parentInput={childData.parentInput || { concerns: [], goals: [], notes: '' }}
-          onComplete={handleAssessmentComplete}
-          childId={params.id}
-        />
+        {childData && (
+          <DevelopmentAssessment
+            childName={childData.name}
+            birthDate={getBirthDate(childData.birthDate)}
+            parentInput={childData.parentInput || { concerns: [], goals: [], notes: '' }}
+            onComplete={handleAssessmentComplete}
+            childId={params.id}
+          />
+        )}
       </div>
     </div>
   );
