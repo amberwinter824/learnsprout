@@ -199,17 +199,21 @@ async function networkFirstStrategy(request, cacheName) {
 // Helper function to fetch and cache a request
 async function fetchAndCache(request, cache) {
   const response = await fetch(request);
-  
-  // Only cache valid responses
-  if (response.status === 200) {
-    // Clone the response since it can only be consumed once
+
+  // Only cache valid, non-redirect responses
+  if (
+    response.status === 200 &&
+    response.type === 'basic' &&
+    !response.redirected &&
+    response.url !== 'opaqueredirect'
+  ) {
     const responseToCache = response.clone();
-    
-    // Cache the response asynchronously
     cache.put(request, responseToCache);
     console.log('Service Worker: Caching new resource', request.url);
+  } else if (response.redirected || response.type === 'opaqueredirect') {
+    console.warn('Service Worker: Not caching redirected response', request.url);
   }
-  
+
   return response;
 }
 
@@ -217,10 +221,16 @@ async function fetchAndCache(request, cache) {
 function fetchAndUpdateCache(request, cache) {
   fetch(request)
     .then(response => {
-      if (response.status === 200) {
-        // Update the cache with the new response
+      if (
+        response.status === 200 &&
+        response.type === 'basic' &&
+        !response.redirected &&
+        response.url !== 'opaqueredirect'
+      ) {
         cache.put(request, response);
         console.log('Service Worker: Updated cache for', request.url);
+      } else if (response.redirected || response.type === 'opaqueredirect') {
+        console.warn('Service Worker: Not caching redirected response', request.url);
       }
     })
     .catch(error => {
