@@ -220,7 +220,7 @@ export default function DevelopmentAssessment({
             childId,
             lastAssessed: new Date(),
             updatedAt: new Date(),
-            notes: '' // Initialize with empty string instead of undefined
+            notes: '' // Always set to a string
           });
         } else {
           // Update existing skill record
@@ -228,11 +228,12 @@ export default function DevelopmentAssessment({
           const updateData: any = {
             status,
             lastAssessed: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            notes: '' // Default to empty string
           };
-          // Only include notes if it exists in the current document
-          if (skillDoc.data().notes !== undefined) {
-            updateData.notes = skillDoc.data().notes;
+          const notesValue = skillDoc.data().notes;
+          if (typeof notesValue === 'string') {
+            updateData.notes = notesValue;
           }
           await updateDoc(skillDoc.ref, updateData);
         }
