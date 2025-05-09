@@ -99,6 +99,18 @@ self.addEventListener('fetch', event => {
   
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin) && !isAssetRequest(event.request.url)) return;
+
+  // Special handling for root URL to handle redirects
+  if (event.request.url === self.location.origin + '/' || event.request.url === self.location.origin) {
+    event.respondWith(
+      fetch(event.request, { redirect: 'follow' })
+        .catch(() => {
+          // If fetch fails, try to serve from cache
+          return caches.match('/');
+        })
+    );
+    return;
+  }
   
   // Add better error handling
   try {
