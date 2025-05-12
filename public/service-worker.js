@@ -100,14 +100,33 @@ self.addEventListener('fetch', event => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin) && !isAssetRequest(event.request.url)) return;
 
-  // Special handling for root URL to handle redirects
-  if (event.request.url === self.location.origin + '/' || event.request.url === self.location.origin) {
+  // Special handling for root URL and navigation requests
+  if (event.request.mode === 'navigate' || 
+      event.request.url === self.location.origin + '/' || 
+      event.request.url === self.location.origin) {
     event.respondWith(
-      fetch(event.request, { redirect: 'follow' })
-        .catch(() => {
-          // If fetch fails, try to serve from cache
-          return caches.match('/');
-        })
+      fetch(event.request.clone(), {
+        redirect: 'follow',
+        credentials: 'same-origin'
+      })
+      .then(response => {
+        // Don't cache redirects or error responses
+        if (response.redirected || response.status !== 200) {
+          return response;
+        }
+        
+        // Clone the response before caching
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, responseToCache);
+        });
+        
+        return response;
+      })
+      .catch(() => {
+        // If fetch fails, try to serve from cache
+        return caches.match('/');
+      })
     );
     return;
   }
@@ -210,7 +229,10 @@ async function networkFirstStrategy(request, cacheName) {
 
 // Helper function to fetch and cache a request
 async function fetchAndCache(request, cache) {
-  const response = await fetch(request, { redirect: 'follow' });
+  const response = await fetch(request.clone(), { 
+    redirect: 'follow',
+    credentials: 'same-origin'
+  });
 
   // Only cache valid, non-redirect responses
   if (
@@ -231,7 +253,10 @@ async function fetchAndCache(request, cache) {
 
 // Helper function to fetch and update cache in background
 function fetchAndUpdateCache(request, cache) {
-  fetch(request, { redirect: 'follow' })
+  fetch(request.clone(), { 
+    redirect: 'follow',
+    credentials: 'same-origin'
+  })
     .then(response => {
       if (
         response.status === 200 &&
