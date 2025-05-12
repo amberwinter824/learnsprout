@@ -117,8 +117,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request.clone(), {
         redirect: 'follow',
-        credentials: 'same-origin',
-        mode: 'navigate'
+        credentials: 'same-origin'
       })
       .then(response => {
         // Don't cache redirects or error responses
@@ -243,8 +242,7 @@ async function networkFirstStrategy(request, cacheName) {
 async function fetchAndCache(request, cache) {
   const response = await fetch(request.clone(), { 
     redirect: 'follow',
-    credentials: 'same-origin',
-    mode: request.mode || 'cors'
+    credentials: 'same-origin'
   });
 
   // Only cache valid, non-redirect responses
@@ -268,8 +266,7 @@ async function fetchAndCache(request, cache) {
 function fetchAndUpdateCache(request, cache) {
   fetch(request.clone(), { 
     redirect: 'follow',
-    credentials: 'same-origin',
-    mode: request.mode || 'cors'
+    credentials: 'same-origin'
   })
     .then(response => {
       if (
