@@ -272,11 +272,19 @@ export default function DevelopmentDashboardPage() {
         }
 
         // Enrich skills data with names and defensive date handling
-        const skillsWithNames = skillsData.map(skill => ({
-          ...skill,
-          skillName: skill.skillId && skillNames[skill.skillId] ? skillNames[skill.skillId] : 'Unknown Skill',
-          lastAssessed: skill.lastAssessed || Timestamp.now()
-        }));
+        const skillsWithNames = skillsData.map(skill => {
+          // Ensure skillId is a string
+          const skillId = typeof skill.skillId === 'string' ? skill.skillId : 
+                         typeof skill.skillId === 'object' ? JSON.stringify(skill.skillId) : 
+                         'unknown';
+          
+          return {
+            ...skill,
+            skillId,
+            skillName: skillNames[skillId] || 'Unknown Skill',
+            lastAssessed: skill.lastAssessed || Timestamp.now()
+          };
+        });
 
         setRecentSkills(skillsWithNames);
         
