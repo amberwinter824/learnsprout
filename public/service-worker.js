@@ -2,7 +2,6 @@
 
 const CACHE_NAME = 'learn-sprout-v1';
 const STATIC_ASSETS = [
-  '/',
   '/favicon.ico',
   '/manifest.json'
 ];
@@ -122,7 +121,8 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request.clone(), {
         redirect: 'follow',
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        mode: 'navigate'
       })
       .then(response => {
         // Don't cache redirects or error responses
@@ -247,7 +247,8 @@ async function networkFirstStrategy(request, cacheName) {
 async function fetchAndCache(request, cache) {
   const response = await fetch(request.clone(), { 
     redirect: 'follow',
-    credentials: 'same-origin'
+    credentials: 'same-origin',
+    mode: request.mode
   });
 
   // Only cache valid, non-redirect responses
