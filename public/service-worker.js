@@ -65,18 +65,6 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Helper function to determine if a request is for an API route
-const isApiRequest = (url) => {
-  const parsedUrl = new URL(url);
-  return parsedUrl.pathname.startsWith('/api/');
-};
-
-// Helper function to determine if a request is for an activity
-const isActivityRequest = (url) => {
-  const parsedUrl = new URL(url);
-  return parsedUrl.pathname.includes('/activities/');
-};
-
 // Helper function to determine if a request is for an asset that should always be cached
 const isAssetRequest = (url) => {
   const parsedUrl = new URL(url);
@@ -92,15 +80,31 @@ const isAssetRequest = (url) => {
          path.endsWith('.ico');
 };
 
-// Helper function to determine if a URL is from our allowed domains
+// Helper function to check if a request is for an API endpoint
+const isApiRequest = (url) => {
+  const parsedUrl = new URL(url);
+  return parsedUrl.pathname.startsWith('/api/');
+};
+
+// Helper function to check if a request is for an activity
+const isActivityRequest = (url) => {
+  const parsedUrl = new URL(url);
+  return parsedUrl.pathname.startsWith('/activities/');
+};
+
+// Helper function to check if a request is for an allowed domain
 const isAllowedDomain = (url) => {
   const allowedDomains = [
     'app.learn-sprout.com',
     'learnsprout.vercel.app',
-    'learnsprout-git-production-amber-winters-projects.vercel.app'
+    'localhost:3000'
   ];
-  const parsedUrl = new URL(url);
-  return allowedDomains.some(domain => parsedUrl.hostname.endsWith(domain));
+  try {
+    const parsedUrl = new URL(url);
+    return allowedDomains.some(domain => parsedUrl.hostname === domain);
+  } catch (e) {
+    return false;
+  }
 };
 
 // Fetch event - serve from cache with network fallback
@@ -142,7 +146,7 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-  
+
   // Add better error handling
   try {
     // Special handling for different types of requests
