@@ -96,6 +96,7 @@ const isAssetRequest = (url) => {
 const isAllowedDomain = (url) => {
   const allowedDomains = [
     'app.learn-sprout.com',
+    'learnsprout.vercel.app',
     'learnsprout-git-production-amber-winters-projects.vercel.app'
   ];
   const parsedUrl = new URL(url);

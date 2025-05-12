@@ -7,7 +7,6 @@ import { Resend } from "resend";
 
 admin.initializeApp();
 const db = admin.firestore();
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Type definitions
 interface UserData {
@@ -994,6 +993,9 @@ export const sendWeeklyPlanEmails = functions.scheduler.onSchedule({
 }, async (context) => {
   console.log('Starting weekly plan email job');
   
+  // Initialize Resend inside the function
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  
   // Calculate the date for next Monday (start of next week)
   const today = new Date();
   const nextMonday = new Date(today);
@@ -1018,7 +1020,7 @@ export const sendWeeklyPlanEmails = functions.scheduler.onSchedule({
     console.log(`Found ${usersSnapshot.size} users with email notifications enabled`);
     
     // Process each user
-    const emailPromises = [];
+    const emailPromises: Promise<void>[] = [];
     
     for (const userDoc of usersSnapshot.docs) {
       const userData = userDoc.data() as UserData;
@@ -1140,30 +1142,37 @@ export const sendWeeklyPlanEmails = functions.scheduler.onSchedule({
         }
         
         // Send the email
-        try {
-          const { data, error } = await resend.emails.send({
-            from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
-            to: userData.email,
-            subject: `${childData.name}'s Weekly Plan: ${dateFns.format(nextMonday, 'MMMM d')} - ${dateFns.format(dateFns.addDays(nextMonday, 4), 'MMMM d')}`,
-            html: generateWeeklyPlanEmailHtml(
-              userData.displayName,
-              childData.name,
-              nextMonday,
-              weeklyPlanData,
-              activitiesDetails
-            )
-          });
-          
-          if (error) {
+        const emailPromise = (async () => {
+          try {
+            const { error } = await resend.emails.send({
+              from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
+              to: userData.email,
+              subject: `${childData.name}'s Weekly Plan: ${dateFns.format(nextMonday, 'MMMM d')} - ${dateFns.format(dateFns.addDays(nextMonday, 4), 'MMMM d')}`,
+              html: generateWeeklyPlanEmailHtml(
+                userData.displayName,
+                childData.name,
+                nextMonday,
+                weeklyPlanData,
+                activitiesDetails
+              )
+            });
+            
+            if (error) {
+              console.error(`Error sending email to ${userData.email}:`, error);
+            } else {
+              console.log(`Successfully sent weekly plan email to ${userData.email} for child ${childData.name}`);
+            }
+          } catch (error) {
             console.error(`Error sending email to ${userData.email}:`, error);
-          } else {
-            console.log(`Successfully sent weekly plan email to ${userData.email} for child ${childData.name}`);
           }
-        } catch (error) {
-          console.error(`Error sending email to ${userData.email}:`, error);
-        }
+        })();
+        
+        emailPromises.push(emailPromise);
       }
     }
+    
+    // Wait for all emails to be sent
+    await Promise.all(emailPromises);
     
     console.log('Weekly plan email job completed');
   } catch (error) {
