@@ -3,6 +3,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { generateWeeklyPlanEmailHtml } from '@/lib/emailService';
+import { generateWeeklyPlan } from '@/lib/planGenerator';
 
 // Initialize Firebase Admin
 if (!getApps().length) {
@@ -61,66 +62,56 @@ export async function GET() {
         const childData = childDoc.data();
         const childName = childData.name;
 
-        // Calculate next Monday's date
-        const today = new Date();
-        const nextMonday = new Date(today);
-        nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
-        nextMonday.setHours(0, 0, 0, 0);
-
-        // Get or create weekly plan
-        const weeklyPlanRef = db.collection('weeklyPlans').doc();
-        const weeklyPlanData = {
-          childId: childDoc.id,
-          userId: userDoc.id,
-          weekStarting: nextMonday,
-          createdBy: 'system',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          monday: [],
-          tuesday: [],
-          wednesday: [],
-          thursday: [],
-          friday: [],
-          saturday: [],
-          sunday: []
-        };
-
-        await weeklyPlanRef.set(weeklyPlanData);
-
-        // Get some sample activities for the email
-        const activitiesDetails: Record<string, any> = {
-          'activity1': {
-            title: 'Color Sorting',
-            description: 'Sort objects by their colors to develop visual discrimination skills.',
-            area: 'Sensorial',
-            difficulty: 'beginner'
-          },
-          'activity2': {
-            title: 'Pouring Practice',
-            description: 'Practice pouring between containers using water or dry materials.',
-            area: 'Practical Life',
-            difficulty: 'beginner'
-          }
-        };
-
-        // Send email
         try {
+          // Calculate next Monday's date
+          const today = new Date();
+          const nextMonday = new Date(today);
+          nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
+          nextMonday.setHours(0, 0, 0, 0);
+
+          // Generate a weekly plan for the child
+          const weeklyPlan = await generateWeeklyPlan(childDoc.id, userDoc.id, nextMonday);
+          
+          // Get activity details for all activities in the plan
+          const activitiesDetails: Record<string, any> = {};
+          const activityIds = new Set<string>();
+          
+          ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
+            weeklyPlan[day].forEach((activity: any) => {
+              activityIds.add(activity.activityId);
+            });
+          });
+
+          // Fetch activity details
+          for (const activityId of activityIds) {
+            const activityDoc = await db.collection('activities').doc(activityId).get();
+            if (activityDoc.exists) {
+              activitiesDetails[activityId] = activityDoc.data();
+            }
+          }
+
+          // Send email
           const emailHtml = generateWeeklyPlanEmailHtml(
             userName,
             childName,
             nextMonday,
-            weeklyPlanData,
+            weeklyPlan,
             activitiesDetails
           );
+
           await resend.emails.send({
-            from: 'Learn Sprout <noreply@learnsprout.app>',
+            from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
             to: userEmail,
-            subject: `Weekly Learning Plan for ${childName}`,
+            subject: `${childName}'s Weekly Plan: ${nextMonday.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${new Date(nextMonday.getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
             html: emailHtml,
           });
+
           results.emailsSent++;
+          console.log(`Successfully sent weekly plan email to ${userEmail} for child ${childName}`);
         } catch (error) {
-          results.errors.push(`Failed to send email to ${userEmail} for child ${childName}: ${error}`);
+          const errorMessage = `Failed to process weekly plan for ${childName}: ${error}`;
+          console.error(errorMessage);
+          results.errors.push(errorMessage);
         }
       }
     }
@@ -132,7 +123,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error in test-weekly-email:', error);
     return NextResponse.json(
-      { error: 'Failed to process weekly emails' },
+      { error: 'Failed to process weekly emails', details: error },
       { status: 500 }
     );
   }
