@@ -123,7 +123,7 @@ export async function GET() {
       const childrenSnapshot = await adminDb
         .collection('children')
         .where('userId', '==', userDoc.id)
-        .where('status', '==', 'active')
+        .where('active', '==', true)
         .get();
 
       if (childrenSnapshot.empty) {
