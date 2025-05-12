@@ -225,14 +225,22 @@ export default function DevelopmentDashboardPage() {
         let skillsData: ChildSkill[] = [];
         try {
           const skillsSnapshot = await getDocs(skillsQuery);
-          skillsData = skillsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            childId: doc.data().childId,
-            skillId: doc.data().skillId,
-            status: doc.data().status,
-            lastAssessed: doc.data().lastAssessed || Timestamp.now()
-          }));
+          skillsData = skillsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            // Ensure skillId is a string
+            const skillId = typeof data.skillId === 'string' ? data.skillId :
+                           typeof data.skillId === 'object' ? JSON.stringify(data.skillId) :
+                           'unknown';
+            
+            return {
+              id: doc.id,
+              ...data,
+              childId: data.childId,
+              skillId,
+              status: data.status,
+              lastAssessed: data.lastAssessed || Timestamp.now()
+            };
+          });
         } catch (error) {
           console.error('Error fetching skills:', error);
           // Continue with empty skills data
@@ -274,8 +282,8 @@ export default function DevelopmentDashboardPage() {
         // Enrich skills data with names and defensive date handling
         const skillsWithNames = skillsData.map(skill => {
           // Ensure skillId is a string
-          const skillId = typeof skill.skillId === 'string' ? skill.skillId : 
-                         typeof skill.skillId === 'object' ? JSON.stringify(skill.skillId) : 
+          const skillId = typeof skill.skillId === 'string' ? skill.skillId :
+                         typeof skill.skillId === 'object' ? JSON.stringify(skill.skillId) :
                          'unknown';
           
           return {
