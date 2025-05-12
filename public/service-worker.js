@@ -92,13 +92,23 @@ const isAssetRequest = (url) => {
          path.endsWith('.ico');
 };
 
+// Helper function to determine if a URL is from our allowed domains
+const isAllowedDomain = (url) => {
+  const allowedDomains = [
+    'app.learn-sprout.com',
+    'learnsprout-git-production-amber-winters-projects.vercel.app'
+  ];
+  const parsedUrl = new URL(url);
+  return allowedDomains.some(domain => parsedUrl.hostname.endsWith(domain));
+};
+
 // Fetch event - serve from cache with network fallback
 self.addEventListener('fetch', event => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
   
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin) && !isAssetRequest(event.request.url)) return;
+  // Skip cross-origin requests unless they're from our allowed domains
+  if (!isAllowedDomain(event.request.url) && !isAssetRequest(event.request.url)) return;
 
   // Special handling for root URL and navigation requests
   if (event.request.mode === 'navigate' || 
@@ -107,7 +117,8 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request.clone(), {
         redirect: 'follow',
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        mode: 'navigate'
       })
       .then(response => {
         // Don't cache redirects or error responses
@@ -123,7 +134,8 @@ self.addEventListener('fetch', event => {
         
         return response;
       })
-      .catch(() => {
+      .catch(error => {
+        console.error('Navigation fetch failed:', error);
         // If fetch fails, try to serve from cache
         return caches.match('/');
       })
@@ -231,7 +243,8 @@ async function networkFirstStrategy(request, cacheName) {
 async function fetchAndCache(request, cache) {
   const response = await fetch(request.clone(), { 
     redirect: 'follow',
-    credentials: 'same-origin'
+    credentials: 'same-origin',
+    mode: request.mode || 'cors'
   });
 
   // Only cache valid, non-redirect responses
@@ -255,7 +268,8 @@ async function fetchAndCache(request, cache) {
 function fetchAndUpdateCache(request, cache) {
   fetch(request.clone(), { 
     redirect: 'follow',
-    credentials: 'same-origin'
+    credentials: 'same-origin',
+    mode: request.mode || 'cors'
   })
     .then(response => {
       if (
