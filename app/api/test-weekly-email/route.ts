@@ -5,24 +5,98 @@ import { Resend } from 'resend';
 import { generateWeeklyPlanEmailHtml } from '@/lib/emailService';
 import { generateWeeklyPlan } from '@/lib/planGenerator';
 
+// Debug environment variables
+const envDebug = {
+  hasFirebaseKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+  firebaseKeyLength: process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.length || 0,
+  hasResendKey: !!process.env.RESEND_API_KEY,
+  resendKeyLength: process.env.RESEND_API_KEY?.length || 0,
+  environment: process.env.NODE_ENV,
+  // Add first few characters of keys for debugging (safely)
+  firebaseKeyPreview: process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.substring(0, 10) + '...',
+  resendKeyPreview: process.env.RESEND_API_KEY?.substring(0, 10) + '...'
+};
+
+console.log('Environment Debug:', envDebug);
+
 // Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+let adminDb: any = null;
+let initializationError: string | null = null;
+
+try {
+  console.log('Starting Firebase initialization...');
+  if (!getApps().length) {
+    console.log('No existing Firebase apps, initializing new app...');
+    // Check if Firebase service account key exists
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      initializationError = 'Missing FIREBASE_SERVICE_ACCOUNT_KEY environment variable';
+      console.error(initializationError);
+    } else {
+      try {
+        console.log('Attempting to decode Firebase service account key...');
+        // Try to decode and parse the service account
+        const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY, 'base64').toString();
+        console.log('Successfully decoded Firebase key, length:', decoded.length);
+        
+        console.log('Attempting to parse service account JSON...');
+        const serviceAccount = JSON.parse(decoded);
+        console.log('Successfully parsed service account, keys:', Object.keys(serviceAccount));
+        
+        console.log('Initializing Firebase app...');
+        // Initialize Firebase with the service account
+        initializeApp({
+          credential: cert(serviceAccount)
+        });
+        console.log('Firebase app initialized successfully');
+        
+        console.log('Getting Firestore instance...');
+        adminDb = getFirestore();
+        console.log('Firestore instance obtained successfully');
+      } catch (error: any) {
+        initializationError = `Error initializing Firebase: ${error.message}`;
+        console.error('Firebase initialization error:', error);
+        console.error('Error stack:', error.stack);
+      }
+    }
+  } else {
+    console.log('Firebase app already exists, getting Firestore instance...');
+    adminDb = getFirestore();
+    console.log('Firestore instance obtained successfully');
+  }
+} catch (error: any) {
+  initializationError = `Unexpected initialization error: ${error.message}`;
+  console.error('Unexpected error during initialization:', error);
+  console.error('Error stack:', error.stack);
 }
 
-const db = getFirestore();
+// Initialize Resend
+console.log('Initializing Resend...');
 const resend = new Resend(process.env.RESEND_API_KEY);
+console.log('Resend initialized successfully');
 
 export async function GET() {
+  console.log('GET request received, checking initialization status...');
+  // Return detailed initialization status if there's an error
+  if (initializationError || !adminDb) {
+    console.log('Initialization error detected:', initializationError);
+    console.log('Admin DB status:', !!adminDb);
+    return NextResponse.json({ 
+      error: 'Services not properly initialized',
+      details: {
+        message: initializationError || 'Unknown initialization error',
+        firebaseInitialized: !!adminDb,
+        resendInitialized: !!resend,
+        environment: process.env.NODE_ENV,
+        hasFirebaseKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+        hasResendKey: !!process.env.RESEND_API_KEY,
+        envDebug
+      }
+    }, { status: 500 });
+  }
+
   try {
     // Get all users with email notifications and weekly digest enabled
-    const usersSnapshot = await db
+    const usersSnapshot = await adminDb
       .collection('users')
       .where('preferences.emailNotifications', '==', true)
       .where('preferences.weeklyDigest', '==', true)
@@ -46,7 +120,7 @@ export async function GET() {
       const userName = userData.displayName || userData.name || 'Parent';
 
       // Get active children for this user
-      const childrenSnapshot = await db
+      const childrenSnapshot = await adminDb
         .collection('children')
         .where('userId', '==', userDoc.id)
         .where('status', '==', 'active')
@@ -84,7 +158,7 @@ export async function GET() {
 
           // Fetch activity details
           for (const activityId of activityIds) {
-            const activityDoc = await db.collection('activities').doc(activityId).get();
+            const activityDoc = await adminDb.collection('activities').doc(activityId).get();
             if (activityDoc.exists) {
               activitiesDetails[activityId] = activityDoc.data();
             }
@@ -99,17 +173,21 @@ export async function GET() {
             activitiesDetails
           );
 
-          await resend.emails.send({
+          const { data, error } = await resend.emails.send({
             from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
             to: userEmail,
             subject: `${childName}'s Weekly Plan: ${nextMonday.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${new Date(nextMonday.getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
             html: emailHtml,
           });
 
+          if (error) {
+            throw error;
+          }
+
           results.emailsSent++;
           console.log(`Successfully sent weekly plan email to ${userEmail} for child ${childName}`);
-        } catch (error) {
-          const errorMessage = `Failed to process weekly plan for ${childName}: ${error}`;
+        } catch (error: any) {
+          const errorMessage = `Failed to process weekly plan for ${childName}: ${error.message}`;
           console.error(errorMessage);
           results.errors.push(errorMessage);
         }
@@ -120,10 +198,14 @@ export async function GET() {
       message: 'Weekly email test completed',
       results,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in test-weekly-email:', error);
     return NextResponse.json(
-      { error: 'Failed to process weekly emails', details: error },
+      { 
+        error: 'Failed to process weekly emails', 
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
