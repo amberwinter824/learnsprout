@@ -216,7 +216,16 @@ export default function DevelopmentDashboardPage() {
         
         setRecentProgress(progressWithTitles);
         
-        // Fetch recent skill updates
+        // First, fetch all developmental skills to use as a reference
+        const devSkillsQuery = query(collection(db, 'developmentalSkills'));
+        const devSkillsSnapshot = await getDocs(devSkillsQuery);
+        const devSkillsMap = new Map();
+        
+        devSkillsSnapshot.forEach(doc => {
+          devSkillsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
+        
+        // Then fetch child skills
         const skillsQuery = query(
           collection(db, 'childSkills'),
           where('childId', 'in', childIds)
@@ -227,17 +236,14 @@ export default function DevelopmentDashboardPage() {
           const skillsSnapshot = await getDocs(skillsQuery);
           skillsData = skillsSnapshot.docs.map(doc => {
             const data = doc.data();
-            // Ensure skillId is a string
-            const skillId = typeof data.skillId === 'string' ? data.skillId :
-                           typeof data.skillId === 'object' ? JSON.stringify(data.skillId) :
-                           'unknown';
-            
+            const devSkill = devSkillsMap.get(data.skillId);
             return {
               id: doc.id,
-              ...data,
               childId: data.childId,
-              skillId,
-              status: data.status,
+              skillId: data.skillId,
+              skillName: devSkill?.name || 'Unknown Skill',
+              status: data.status || 'not_started',
+              area: devSkill?.area || 'unknown',
               lastAssessed: data.lastAssessed || Timestamp.now()
             };
           });
@@ -246,55 +252,7 @@ export default function DevelopmentDashboardPage() {
           // Continue with empty skills data
         }
 
-        // Fetch skill names all at once
-        const skillIds = Array.from(new Set(skillsData.map(s => s.skillId))).filter(Boolean);
-        const skillNames: Record<string, string> = {};
-
-        if (skillIds.length > 0) {
-          try {
-            // Fetch all skills in one query if possible
-            const skillNamesQuery = query(
-              collection(db, 'developmentalSkills'),
-              where('__name__', 'in', skillIds)
-            );
-            
-            try {
-              const skillNamesSnapshot = await getDocs(skillNamesQuery);
-              skillNamesSnapshot.forEach(doc => {
-                skillNames[doc.id] = doc.data().name || 'Unknown Skill';
-              });
-            } catch (error) {
-              console.error('Error fetching skill names:', error);
-              // Set default names if query fails
-              skillIds.forEach(skillId => {
-                if (skillId) skillNames[skillId] = 'Unknown Skill';
-              });
-            }
-          } catch (error) {
-            console.error('Error with skill names query:', error);
-            // Set default names
-            skillIds.forEach(skillId => {
-              if (skillId) skillNames[skillId] = 'Unknown Skill';
-            });
-          }
-        }
-
-        // Enrich skills data with names and defensive date handling
-        const skillsWithNames = skillsData.map(skill => {
-          // Ensure skillId is a string
-          const skillId = typeof skill.skillId === 'string' ? skill.skillId :
-                         typeof skill.skillId === 'object' ? JSON.stringify(skill.skillId) :
-                         'unknown';
-          
-          return {
-            ...skill,
-            skillId,
-            skillName: skillNames[skillId] || 'Unknown Skill',
-            lastAssessed: skill.lastAssessed || Timestamp.now()
-          };
-        });
-
-        setRecentSkills(skillsWithNames);
+        setRecentSkills(skillsData);
         
         // Calculate progress summaries for each child
         const summaries: ProgressSummary[] = [];
