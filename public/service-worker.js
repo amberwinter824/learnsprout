@@ -210,7 +210,7 @@ async function networkFirstStrategy(request, cacheName) {
 
 // Helper function to fetch and cache a request
 async function fetchAndCache(request, cache) {
-  const response = await fetch(request);
+  const response = await fetch(request, { redirect: 'follow' });
 
   // Only cache valid, non-redirect responses
   if (
@@ -231,7 +231,7 @@ async function fetchAndCache(request, cache) {
 
 // Helper function to fetch and update cache in background
 function fetchAndUpdateCache(request, cache) {
-  fetch(request)
+  fetch(request, { redirect: 'follow' })
     .then(response => {
       if (
         response.status === 200 &&
