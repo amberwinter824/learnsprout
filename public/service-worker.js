@@ -13,32 +13,17 @@ const API_CACHE_NAME = 'learn-sprout-api-v1';
 // Install event - cache static assets
 self.addEventListener('install', event => {
   console.log('Service Worker: Installing...');
-  
-  // Skip waiting - allow the new service worker to activate immediately
   self.skipWaiting();
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Service Worker: Attempting to cache static files');
-        // Use individual file caching instead of addAll to avoid failing if one file is problematic
+        console.log('Service Worker: Caching static files');
         return Promise.all(
           STATIC_ASSETS.map(url => 
             cache.add(url).catch(err => console.warn(`Failed to cache ${url}: ${err}`))
           )
         );
-      })
-      .then(() => {
-        // Create other caches
-        return Promise.all([
-          caches.open(ACTIVITY_CACHE_NAME),
-          caches.open(API_CACHE_NAME)
-        ]);
-      })
-      .catch(err => {
-        console.error('Service Worker installation had some errors:', err);
-        // Continue installation despite errors
-        return Promise.resolve();
       })
   );
 });
@@ -46,23 +31,30 @@ self.addEventListener('install', event => {
 // Activate event - cleanup old caches
 self.addEventListener('activate', event => {
   console.log('Service Worker: Activating...');
-  
-  const currentCaches = [CACHE_NAME, ACTIVITY_CACHE_NAME, API_CACHE_NAME];
-  
   event.waitUntil(
     caches.keys()
       .then(cacheNames => {
-        return cacheNames.filter(cacheName => !currentCaches.includes(cacheName));
-      })
-      .then(cachesToDelete => {
-        return Promise.all(cachesToDelete.map(cacheToDelete => {
-          console.log('Service Worker: Clearing old cache', cacheToDelete);
-          return caches.delete(cacheToDelete);
-        }));
+        return Promise.all(
+          cacheNames
+            .filter(cacheName => cacheName !== CACHE_NAME)
+            .map(cacheName => caches.delete(cacheName))
+        );
       })
       .then(() => self.clients.claim())
   );
 });
+
+// Helper function to check if a request is for our domain
+const isOurDomain = (url) => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname === 'app.learn-sprout.com' || 
+           parsedUrl.hostname === 'learnsprout.vercel.app' ||
+           parsedUrl.hostname === 'localhost';
+  } catch (e) {
+    return false;
+  }
+};
 
 // Helper function to determine if a request is for an asset that should always be cached
 const isAssetRequest = (url) => {
@@ -106,191 +98,46 @@ const isAllowedDomain = (url) => {
   }
 };
 
-// Fetch event - serve from cache with network fallback
+// Fetch event - simple network-first strategy
 self.addEventListener('fetch', event => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
-  
-  // Skip cross-origin requests unless they're from our allowed domains
-  if (!isAllowedDomain(event.request.url) && !isAssetRequest(event.request.url)) return;
 
-  // Special handling for root URL and navigation requests
-  if (event.request.mode === 'navigate' || 
-      event.request.url === self.location.origin + '/' || 
-      event.request.url === self.location.origin) {
-    event.respondWith(
-      fetch(event.request.clone(), {
-        redirect: 'follow',
-        credentials: 'same-origin',
-        mode: 'navigate'
-      })
+  // Skip cross-origin requests unless they're from our domain
+  if (!isOurDomain(event.request.url)) return;
+
+  event.respondWith(
+    fetch(event.request)
       .then(response => {
         // Don't cache redirects or error responses
         if (response.redirected || response.status !== 200) {
           return response;
         }
-        
+
         // Clone the response before caching
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then(cache => {
           cache.put(event.request, responseToCache);
         });
-        
+
         return response;
       })
-      .catch(error => {
-        console.error('Navigation fetch failed:', error);
-        // If fetch fails, try to serve from cache
-        return caches.match('/');
+      .catch(() => {
+        // If network fails, try to serve from cache
+        return caches.match(event.request)
+          .then(cachedResponse => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // If not in cache, return offline page for navigation requests
+            if (event.request.mode === 'navigate') {
+              return caches.match('/offline.html');
+            }
+            return new Response('Offline', { status: 503 });
+          });
       })
-    );
-    return;
-  }
-
-  // Add better error handling
-  try {
-    // Special handling for different types of requests
-    if (isApiRequest(event.request.url)) {
-      // API requests: Network first, then cache
-      event.respondWith(networkFirstStrategy(event.request, API_CACHE_NAME));
-    } else if (isActivityRequest(event.request.url)) {
-      // Activity requests: Cache first, then network
-      event.respondWith(cacheFirstStrategy(event.request, ACTIVITY_CACHE_NAME));
-    } else if (isAssetRequest(event.request.url)) {
-      // Asset requests: Cache first, then network
-      event.respondWith(cacheFirstStrategy(event.request, CACHE_NAME));
-    } else {
-      // Other requests: Cache first with network fallback
-      event.respondWith(cacheFirstStrategy(event.request, CACHE_NAME));
-    }
-  } catch (error) {
-    console.error('Error in fetch handler:', error);
-    // Don't let service worker errors break the page
-    return;
-  }
+  );
 });
-
-// Cache-first strategy: Try cache first, fallback to network
-async function cacheFirstStrategy(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  
-  try {
-    // Try to get from cache
-    const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      console.log('Service Worker: Serving from cache', request.url);
-      
-      // Return cached response immediately, but update cache in background
-      fetchAndUpdateCache(request, cache);
-      return cachedResponse;
-    }
-    
-    // If not in cache, fetch from network and cache
-    return await fetchAndCache(request, cache);
-  } catch (error) {
-    console.error('Service Worker: Cache-first strategy failed', error);
-    
-    // For navigation requests, return offline page
-    if (request.mode === 'navigate') {
-      return caches.match('/offline.html');
-    }
-    
-    // For other requests, return error response
-    return new Response('Network error happened', {
-      status: 408,
-      headers: { 'Content-Type': 'text/plain' }
-    });
-  }
-}
-
-// Network-first strategy: Try network first, fallback to cache
-async function networkFirstStrategy(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  
-  try {
-    // Try to fetch from network
-    const response = await fetchAndCache(request, cache);
-    return response;
-  } catch (error) {
-    console.log('Service Worker: Network request failed, using cache', request.url);
-    
-    // If network fails, try to get from cache
-    const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // If not in cache and network failed, return appropriate error
-    if (request.mode === 'navigate') {
-      return caches.match('/offline.html');
-    }
-    
-    // For API requests, return a JSON error
-    if (isApiRequest(request.url)) {
-      return new Response(JSON.stringify({ 
-        error: 'You are offline and this data is not cached',
-        offline: true
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    return new Response('Network error happened', {
-      status: 408,
-      headers: { 'Content-Type': 'text/plain' }
-    });
-  }
-}
-
-// Helper function to fetch and cache a request
-async function fetchAndCache(request, cache) {
-  const response = await fetch(request.clone(), { 
-    redirect: 'follow',
-    credentials: 'same-origin',
-    mode: request.mode
-  });
-
-  // Only cache valid, non-redirect responses
-  if (
-    response.status === 200 &&
-    response.type === 'basic' &&
-    !response.redirected &&
-    response.url !== 'opaqueredirect'
-  ) {
-    const responseToCache = response.clone();
-    cache.put(request, responseToCache);
-    console.log('Service Worker: Caching new resource', request.url);
-  } else if (response.redirected || response.type === 'opaqueredirect') {
-    console.warn('Service Worker: Not caching redirected response', request.url);
-  }
-
-  return response;
-}
-
-// Helper function to fetch and update cache in background
-function fetchAndUpdateCache(request, cache) {
-  fetch(request.clone(), { 
-    redirect: 'follow',
-    credentials: 'same-origin'
-  })
-    .then(response => {
-      if (
-        response.status === 200 &&
-        response.type === 'basic' &&
-        !response.redirected &&
-        response.url !== 'opaqueredirect'
-      ) {
-        cache.put(request, response);
-        console.log('Service Worker: Updated cache for', request.url);
-      } else if (response.redirected || response.type === 'opaqueredirect') {
-        console.warn('Service Worker: Not caching redirected response', request.url);
-      }
-    })
-    .catch(error => {
-      console.error('Service Worker: Background fetch failed', error);
-    });
-}
 
 // Handle push notifications
 self.addEventListener('push', event => {

@@ -2,28 +2,40 @@
 
 window.addEventListener('load', () => {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => {
-        console.log('ServiceWorker registration successful with scope:', registration.scope);
-        
-        // Only attempt to subscribe to push after service worker is active
-        if (registration.active) {
-          setupPushSubscription(registration);
-        } else {
-          // If not active yet, wait for it to activate
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'activated') {
-                setupPushSubscription(registration);
-              }
-            });
-          });
-        }
-      })
-      .catch(error => {
-        console.error('ServiceWorker registration failed:', error);
+    // First, unregister any existing service workers
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      return Promise.all(registrations.map(registration => registration.unregister()));
+    }).then(() => {
+      // Then register the new service worker
+      return navigator.serviceWorker.register('/service-worker.js', {
+        scope: '/',
+        updateViaCache: 'none' // Ensure we always get the latest service worker
       });
+    }).then(registration => {
+      console.log('ServiceWorker registration successful with scope:', registration.scope);
+      
+      // Handle updates
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New content is available, reload the page
+            window.location.reload();
+          }
+        });
+      });
+
+      // Check for updates every hour
+      setInterval(() => {
+        registration.update();
+      }, 60 * 60 * 1000);
+    }).catch(error => {
+      console.error('ServiceWorker registration failed:', error);
+      // If registration fails, ensure the service worker is unregistered
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => registration.unregister());
+      });
+    });
   }
 });
 
