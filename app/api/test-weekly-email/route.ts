@@ -96,6 +96,7 @@ export async function GET() {
 
   try {
     // Get all users with email notifications and weekly digest enabled
+    console.log('Fetching users with email notifications enabled...');
     const usersSnapshot = await adminDb
       .collection('users')
       .where('preferences.emailNotifications', '==', true)
@@ -103,21 +104,68 @@ export async function GET() {
       .get();
 
     if (usersSnapshot.empty) {
+      console.log('No users found with email notifications and weekly digest enabled');
       return NextResponse.json({ message: 'No users found with email notifications and weekly digest enabled' });
     }
 
+    console.log(`Found ${usersSnapshot.size} users with email notifications enabled`);
     const emailPromises: Promise<void>[] = [];
     const results = {
       totalUsers: usersSnapshot.size,
       emailsSent: 0,
       errors: [] as string[],
+      permissionsErrors: [] as string[],
+      collectionAccess: {
+        users: true,
+        children: false,
+        activities: false,
+        weeklyPlans: false
+      }
     };
+
+    // Test collection access
+    try {
+      await adminDb.collection('children').limit(1).get();
+      results.collectionAccess.children = true;
+    } catch (error: any) {
+      console.error('Error accessing children collection:', error);
+      results.permissionsErrors.push(`Cannot access children collection: ${error.message}`);
+    }
+
+    try {
+      await adminDb.collection('activities').limit(1).get();
+      results.collectionAccess.activities = true;
+    } catch (error: any) {
+      console.error('Error accessing activities collection:', error);
+      results.permissionsErrors.push(`Cannot access activities collection: ${error.message}`);
+    }
+
+    try {
+      await adminDb.collection('weeklyPlans').limit(1).get();
+      results.collectionAccess.weeklyPlans = true;
+    } catch (error: any) {
+      console.error('Error accessing weeklyPlans collection:', error);
+      results.permissionsErrors.push(`Cannot access weeklyPlans collection: ${error.message}`);
+    }
+
+    // If we can't access required collections, return early
+    if (results.permissionsErrors.length > 0) {
+      return NextResponse.json({
+        error: 'Missing required collection access',
+        details: {
+          collectionAccess: results.collectionAccess,
+          permissionsErrors: results.permissionsErrors
+        }
+      }, { status: 403 });
+    }
 
     // Process each user
     for (const userDoc of usersSnapshot.docs) {
       const userData = userDoc.data();
       const userEmail = userData.email;
       const userName = userData.displayName || userData.name || 'Parent';
+
+      console.log(`Processing user ${userEmail}...`);
 
       // Get active children for this user
       const childrenSnapshot = await adminDb
@@ -137,6 +185,7 @@ export async function GET() {
         const childName = childData.name;
 
         try {
+          console.log(`Generating plan for child ${childName} (${childDoc.id})...`);
           // Calculate next Monday's date
           const today = new Date();
           const nextMonday = new Date(today);
@@ -145,6 +194,7 @@ export async function GET() {
 
           // Generate a weekly plan for the child
           const weeklyPlan = await generateWeeklyPlan(childDoc.id, userDoc.id, nextMonday);
+          console.log(`Weekly plan generated for ${childName}`);
           
           // Get activity details for all activities in the plan
           const activitiesDetails: Record<string, any> = {};
@@ -156,14 +206,25 @@ export async function GET() {
             });
           });
 
+          console.log(`Fetching details for ${activityIds.size} activities...`);
           // Fetch activity details
           for (const activityId of activityIds) {
-            const activityDoc = await adminDb.collection('activities').doc(activityId).get();
-            if (activityDoc.exists) {
-              activitiesDetails[activityId] = activityDoc.data();
+            try {
+              console.log(`Fetching activity ${activityId}...`);
+              const activityDoc = await adminDb.collection('activities').doc(activityId).get();
+              if (activityDoc.exists) {
+                activitiesDetails[activityId] = activityDoc.data();
+                console.log(`Successfully fetched activity ${activityId}`);
+              } else {
+                console.log(`Activity ${activityId} not found`);
+              }
+            } catch (error: any) {
+              console.error(`Error fetching activity ${activityId}:`, error);
+              throw new Error(`Failed to fetch activity ${activityId}: ${error.message}`);
             }
           }
 
+          console.log(`Generating email HTML for ${childName}...`);
           // Send email
           const emailHtml = generateWeeklyPlanEmailHtml(
             userName,
@@ -173,6 +234,7 @@ export async function GET() {
             activitiesDetails
           );
 
+          console.log(`Sending email to ${userEmail}...`);
           const { data, error } = await resend.emails.send({
             from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
             to: userEmail,
@@ -189,6 +251,7 @@ export async function GET() {
         } catch (error: any) {
           const errorMessage = `Failed to process weekly plan for ${childName}: ${error.message}`;
           console.error(errorMessage);
+          console.error('Error stack:', error.stack);
           results.errors.push(errorMessage);
         }
       }
