@@ -244,12 +244,20 @@ export async function GET() {
       console.log(`Querying children for user ${userDoc.id}...`);
       
       // Query children with optional active filter
-      const childrenSnapshot = await adminDb
+      let childrenSnapshot = await adminDb
         .collection('children')
         .where('userId', '==', userDoc.id)
         .get();
-      
-      console.log(`Found ${childrenSnapshot.size} children for user ${userEmail}`);
+      let childrenQueryField = 'userId';
+      if (childrenSnapshot.empty) {
+        // Try parentId as a fallback
+        childrenSnapshot = await adminDb
+          .collection('children')
+          .where('parentId', '==', userDoc.id)
+          .get();
+        childrenQueryField = 'parentId';
+      }
+      console.log(`Found ${childrenSnapshot.size} children for user ${userEmail} (userId: ${userDoc.id}) using field: ${childrenQueryField}`);
       
       if (childrenSnapshot.empty) {
         results.errors.push(`No children found for user ${userEmail}`);
