@@ -122,7 +122,7 @@ export async function GET() {
         weeklyPlans: false,
         childSkills: false,
         progressRecords: false
-      }
+      } as Record<string, boolean>
     };
 
     // Test collection access
@@ -143,54 +143,49 @@ export async function GET() {
         });
       });
       
-      await adminDb.collection('children').limit(1).get();
-      results.collectionAccess.children = true;
-    } catch (error: any) {
-      console.error('Error accessing children collection:', error);
-      results.permissionsErrors.push(`Cannot access children collection: ${error.message}`);
-    }
+      // Test access to all required collections
+      const collectionsToTest = [
+        'children',
+        'childSkills',
+        'progressRecords',
+        'activities',
+        'weeklyPlans'
+      ] as const;
 
-    try {
-      await adminDb.collection('activities').limit(1).get();
-      results.collectionAccess.activities = true;
-    } catch (error: any) {
-      console.error('Error accessing activities collection:', error);
-      results.permissionsErrors.push(`Cannot access activities collection: ${error.message}`);
-    }
+      for (const collectionName of collectionsToTest) {
+        try {
+          console.log(`Testing access to ${collectionName} collection...`);
+          const testQuery = await adminDb.collection(collectionName).limit(1).get();
+          console.log(`Successfully accessed ${collectionName} collection`);
+          results.collectionAccess[collectionName] = true;
+        } catch (error: any) {
+          console.error(`Error accessing ${collectionName} collection:`, error);
+          results.permissionsErrors.push(`Cannot access ${collectionName} collection: ${error.message}`);
+          results.collectionAccess[collectionName] = false;
+        }
+      }
 
-    try {
-      await adminDb.collection('weeklyPlans').limit(1).get();
-      results.collectionAccess.weeklyPlans = true;
+      // If we can't access any required collections, return early
+      if (results.permissionsErrors.length > 0) {
+        return NextResponse.json({
+          error: 'Missing required collection access',
+          details: {
+            collectionAccess: results.collectionAccess,
+            permissionsErrors: results.permissionsErrors
+          }
+        }, { status: 403 });
+      }
     } catch (error: any) {
-      console.error('Error accessing weeklyPlans collection:', error);
-      results.permissionsErrors.push(`Cannot access weeklyPlans collection: ${error.message}`);
-    }
-
-    try {
-      await adminDb.collection('childSkills').limit(1).get();
-      results.collectionAccess.childSkills = true;
-    } catch (error: any) {
-      console.error('Error accessing childSkills collection:', error);
-      results.permissionsErrors.push(`Cannot access childSkills collection: ${error.message}`);
-    }
-
-    try {
-      await adminDb.collection('progressRecords').limit(1).get();
-      results.collectionAccess.progressRecords = true;
-    } catch (error: any) {
-      console.error('Error accessing progressRecords collection:', error);
-      results.permissionsErrors.push(`Cannot access progressRecords collection: ${error.message}`);
-    }
-
-    // If we can't access required collections, return early
-    if (results.permissionsErrors.length > 0) {
+      console.error('Error testing collection access:', error);
+      results.permissionsErrors.push(`Error testing collection access: ${error.message}`);
       return NextResponse.json({
-        error: 'Missing required collection access',
+        error: 'Error testing collection access',
         details: {
+          message: error.message,
           collectionAccess: results.collectionAccess,
           permissionsErrors: results.permissionsErrors
         }
-      }, { status: 403 });
+      }, { status: 500 });
     }
 
     // Process each user with a timeout
