@@ -165,7 +165,51 @@ export async function GET() {
         }
       }
 
-      // If we can't access any required collections, return early
+      // Test specific queries used in generateWeeklyPlan
+      try {
+        console.log('Testing childSkills query...');
+        const childSkillsQuery = await adminDb
+          .collection('childSkills')
+          .where('childId', '==', 'test')
+          .limit(1)
+          .get();
+        console.log('Successfully tested childSkills query');
+      } catch (error: any) {
+        console.error('Error testing childSkills query:', error);
+        results.permissionsErrors.push(`Cannot query childSkills: ${error.message}`);
+      }
+
+      try {
+        console.log('Testing progressRecords query...');
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const progressRecordsQuery = await adminDb
+          .collection('progressRecords')
+          .where('childId', '==', 'test')
+          .where('date', '>=', thirtyDaysAgo)
+          .limit(1)
+          .get();
+        console.log('Successfully tested progressRecords query');
+      } catch (error: any) {
+        console.error('Error testing progressRecords query:', error);
+        results.permissionsErrors.push(`Cannot query progressRecords: ${error.message}`);
+      }
+
+      try {
+        console.log('Testing activities query...');
+        const activitiesQuery = await adminDb
+          .collection('activities')
+          .where('ageRanges', 'array-contains', 'preschool')
+          .where('status', '==', 'active')
+          .limit(1)
+          .get();
+        console.log('Successfully tested activities query');
+      } catch (error: any) {
+        console.error('Error testing activities query:', error);
+        results.permissionsErrors.push(`Cannot query activities: ${error.message}`);
+      }
+
+      // If we can't access any required collections or queries, return early
       if (results.permissionsErrors.length > 0) {
         return NextResponse.json({
           error: 'Missing required collection access',
@@ -241,8 +285,27 @@ export async function GET() {
           // Generate a weekly plan for the child
           console.log(`Calling generateWeeklyPlan for child ${childName}...`);
           try {
+            console.log('Child data before plan generation:', {
+              id: childDoc.id,
+              name: childName,
+              ageGroup: childData.ageGroup,
+              userId: childData.userId,
+              parentId: childData.parentId,
+              active: childData.active,
+              lastPlanGenerated: childData.lastPlanGenerated?.toDate()
+            });
+
+            console.log('Starting plan generation...');
             const weeklyPlan = await generateWeeklyPlan(childDoc.id, userDoc.id, nextMonday);
-            console.log(`Weekly plan generated for ${childName}`);
+            console.log('Plan generation completed successfully');
+            console.log('Generated plan structure:', {
+              hasMonday: !!weeklyPlan.monday?.length,
+              hasTuesday: !!weeklyPlan.tuesday?.length,
+              hasWednesday: !!weeklyPlan.wednesday?.length,
+              hasThursday: !!weeklyPlan.thursday?.length,
+              hasFriday: !!weeklyPlan.friday?.length,
+              totalActivities: Object.values(weeklyPlan).reduce((sum, day) => sum + day.length, 0)
+            });
             
             // Get activity details for all activities in the plan
             const activitiesDetails: Record<string, any> = {};
