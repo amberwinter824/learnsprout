@@ -947,12 +947,6 @@ export default function WeeklyPlanWithDayFocus({
                             {activity.duration} min
                           </span>
                         )}
-                        {activity.isHomeSchoolConnection && (
-                          <span className="flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                            <Star className="h-3 w-3 mr-1" />
-                            School Connection
-                          </span>
-                        )}
                         {activity.timeSlot && (
                           <span className="capitalize">
                             {activity.timeSlot}

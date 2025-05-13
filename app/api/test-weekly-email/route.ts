@@ -256,436 +256,438 @@ export async function GET() {
         return;
       }
 
-      // Process each child
-      for (const childDoc of childrenSnapshot.docs) {
-        const childData = childDoc.data();
-        const childName = childData.name;
+      try {
+        // Process each child
+        for (const childDoc of childrenSnapshot.docs) {
+          const childData = childDoc.data();
+          const childName = childData.name;
 
-        // Skip if child is explicitly marked as inactive
-        if (childData.active === false) {
-          console.log(`Skipping ${childName} - marked as inactive`);
-          continue;
-        }
-
-        try {
-          // Check if we've already generated a plan for this week
-          const lastPlanGenerated = childData.lastPlanGenerated?.toDate();
-          const today = new Date();
-          const nextMonday = new Date(today);
-          nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
-          nextMonday.setHours(0, 0, 0, 0);
-
-          if (lastPlanGenerated && lastPlanGenerated >= nextMonday) {
-            console.log(`Skipping ${childName} - plan already generated for this week`);
+          // Skip if child is explicitly marked as inactive
+          if (childData.active === false) {
+            console.log(`Skipping ${childName} - marked as inactive`);
             continue;
           }
 
-          console.log(`Generating plan for child ${childName} (${childDoc.id})...`);
-          
-          // Generate a weekly plan for the child
-          console.log(`Calling generateWeeklyPlan for child ${childName}...`);
           try {
-            const initialChildData = childDoc.data();
-            console.log('Child data before plan generation:', {
-              id: childDoc.id,
-              name: childName,
-              ageGroup: initialChildData.ageGroup,
-              userId: initialChildData.userId,
-              parentId: initialChildData.parentId,
-              active: initialChildData.active,
-              lastPlanGenerated: initialChildData.lastPlanGenerated?.toDate()
-            });
+            // Check if we've already generated a plan for this week
+            const lastPlanGenerated = childData.lastPlanGenerated?.toDate();
+            const today = new Date();
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
+            nextMonday.setHours(0, 0, 0, 0);
 
-            console.log('Starting plan generation...');
-            
-            // Get child data
-            const childRef = adminDb.collection('children').doc(childDoc.id);
-            const childDocSnapshot = await childRef.get();
-            
-            if (!childDocSnapshot.exists) {
-              throw new Error('Child not found');
+            if (lastPlanGenerated && lastPlanGenerated >= nextMonday) {
+              console.log(`Skipping ${childName} - plan already generated for this week`);
+              continue;
             }
+
+            console.log(`Generating plan for child ${childName} (${childDoc.id})...`);
             
-            const childData = childDocSnapshot.data();
-            if (!childData) {
-              throw new Error('Child data is null');
-            }
-            
-            const ageGroup = childData.ageGroup;
-            const interests = childData.interests || [];
-            
-            console.log(`Child age group: ${ageGroup}, interests: ${interests.join(', ')}`);
-            
-            // Get user activity preferences
-            const preferencesRef = adminDb.collection('users').doc(userDoc.id);
-            const preferencesDoc = await preferencesRef.get();
-            const preferences = preferencesDoc.data()?.preferences?.activityPreferences || {};
-            
-            // Get current skill levels
-            const skillsQuery = adminDb
-              .collection('childSkills')
-              .where('childId', '==', childDoc.id);
-            
-            const skillsSnapshot = await skillsQuery.get();
-            
-            const childSkills: Record<string, string> = {};
-            skillsSnapshot.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
-              const data = doc.data();
-              childSkills[data.skillId] = data.status; // emerging, developing, mastered
-            });
-            
-            console.log(`Got ${Object.keys(childSkills).length} skills for child`);
-            
-            // Get recent activities (completed in the last 30 days)
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            
-            const recentActivitiesQuery = adminDb
-              .collection('progressRecords')
-              .where('childId', '==', childDoc.id)
-              .where('date', '>=', thirtyDaysAgo);
-            
-            const recentActivitiesSnapshot = await recentActivitiesQuery.get();
-            
-            // Track which activities were completed and their engagement level
-            const recentActivities: Record<string, any> = {};
-            recentActivitiesSnapshot.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
-              const data = doc.data();
-              if (!recentActivities[data.activityId]) {
-                recentActivities[data.activityId] = {
-                  lastCompleted: data.date,
-                  completionCount: 0,
-                  engagement: data.engagementLevel || 'medium',
-                  interest: data.interestLevel || 'medium'
-                };
-              }
-              recentActivities[data.activityId].completionCount++;
-            });
-            
-            console.log(`Got ${Object.keys(recentActivities).length} recent activities`);
-            
-            // Get suitable activities for this age group
-            const activitiesQuery = adminDb
-              .collection('activities')
-              .where('ageRanges', 'array-contains', ageGroup)
-              .where('status', '==', 'active');
-            
-            const activitiesSnapshot = await activitiesQuery.get();
-            let activities: any[] = [];
-            
-            activitiesSnapshot.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
-              const data = doc.data();
-              activities.push({
-                id: doc.id,
-                title: data.title,
-                ...data
+            // Generate a weekly plan for the child
+            console.log(`Calling generateWeeklyPlan for child ${childName}...`);
+            try {
+              const initialChildData = childDoc.data();
+              console.log('Child data before plan generation:', {
+                id: childDoc.id,
+                name: childName,
+                ageGroup: initialChildData.ageGroup,
+                userId: initialChildData.userId,
+                parentId: initialChildData.parentId,
+                active: initialChildData.active,
+                lastPlanGenerated: initialChildData.lastPlanGenerated?.toDate()
               });
-            });
-            
-            console.log(`Got ${activities.length} potential activities for age group ${ageGroup}`);
-            
-            // Prioritize activities matching interests
-            activities = activities.sort((a, b) => {
-              const aMatchesInterests = interests.some((interest: string) => 
-                a.tags?.includes(interest) || a.keywords?.includes(interest) || 
-                (a.area && a.area.toLowerCase().includes(interest.toLowerCase()))
-              );
+
+              console.log('Starting plan generation...');
               
-              const bMatchesInterests = interests.some((interest: string) => 
-                b.tags?.includes(interest) || b.keywords?.includes(interest) ||
-                (b.area && b.area.toLowerCase().includes(interest.toLowerCase()))
-              );
+              // Get child data
+              const childRef = adminDb.collection('children').doc(childDoc.id);
+              const childDocSnapshot = await childRef.get();
               
-              if (aMatchesInterests && !bMatchesInterests) return -1;
-              if (!aMatchesInterests && bMatchesInterests) return 1;
-              return 0;
-            });
-            
-            // Score and rank activities based on child's needs
-            const scoredActivities = activities.map(activity => {
-              let score = 5; // Base score
-              const reasons: string[] = [];
-              
-              // Factor 1: Skills addressed - prioritize emerging and developing skills
-              const activitySkills = activity.skillsAddressed || [];
-              
-              for (const skillId of activitySkills) {
-                const skillStatus = childSkills[skillId] || 'unknown';
-                
-                if (skillStatus === 'emerging') {
-                  score += 3;
-                  reasons.push(`Helps develop emerging skill`);
-                } else if (skillStatus === 'developing') {
-                  score += 2;
-                  reasons.push(`Reinforces developing skill`);
-                } else if (skillStatus === 'mastered') {
-                  score += 0.5;
-                  reasons.push(`Maintains mastered skill`);
-                } else {
-                  score += 2;
-                  reasons.push(`Introduces new skill`);
-                }
+              if (!childDocSnapshot.exists) {
+                throw new Error('Child not found');
               }
               
-              // Factor 2: Child's interests
-              for (const interest of interests) {
-                if (activity.area && activity.area.toLowerCase().includes(interest.toLowerCase())) {
-                  score += 2;
-                  reasons.push(`Matches child's interest in ${interest}`);
-                }
-                
-                if (activity.tags?.includes(interest) || activity.keywords?.includes(interest)) {
-                  score += 2;
-                  reasons.push(`Tagged with child's interest: ${interest}`);
-                }
+              const childData = childDocSnapshot.data();
+              if (!childData) {
+                throw new Error('Child data is null');
               }
               
-              // Factor 3: Recent completion and engagement
-              const recent = recentActivities[activity.id];
-              if (recent) {
-                // Reduce score slightly for very recently completed activities
-                const daysSinceCompletion = Math.floor((Date.now() - recent.lastCompleted.toMillis()) / (24 * 60 * 60 * 1000));
+              const ageGroup = childData.ageGroup;
+              const interests = childData.interests || [];
+              
+              console.log(`Child age group: ${ageGroup}, interests: ${interests.join(', ')}`);
+              
+              // Get user activity preferences
+              const preferencesRef = adminDb.collection('users').doc(userDoc.id);
+              const preferencesDoc = await preferencesRef.get();
+              const preferences = preferencesDoc.data()?.preferences?.activityPreferences || {};
+              
+              // Get current skill levels
+              const skillsQuery = adminDb
+                .collection('childSkills')
+                .where('childId', '==', childDoc.id);
+              
+              const skillsSnapshot = await skillsQuery.get();
+              
+              const childSkills: Record<string, string> = {};
+              skillsSnapshot.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+                const data = doc.data();
+                childSkills[data.skillId] = data.status; // emerging, developing, mastered
+              });
+              
+              console.log(`Got ${Object.keys(childSkills).length} skills for child`);
+              
+              // Get recent activities (completed in the last 30 days)
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              
+              const recentActivitiesQuery = adminDb
+                .collection('progressRecords')
+                .where('childId', '==', childDoc.id)
+                .where('date', '>=', thirtyDaysAgo);
+              
+              const recentActivitiesSnapshot = await recentActivitiesQuery.get();
+              
+              // Track which activities were completed and their engagement level
+              const recentActivities: Record<string, any> = {};
+              recentActivitiesSnapshot.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+                const data = doc.data();
+                if (!recentActivities[data.activityId]) {
+                  recentActivities[data.activityId] = {
+                    lastCompleted: data.date,
+                    completionCount: 0,
+                    engagement: data.engagementLevel || 'medium',
+                    interest: data.interestLevel || 'medium'
+                  };
+                }
+                recentActivities[data.activityId].completionCount++;
+              });
+              
+              console.log(`Got ${Object.keys(recentActivities).length} recent activities`);
+              
+              // Get suitable activities for this age group
+              const activitiesQuery = adminDb
+                .collection('activities')
+                .where('ageRanges', 'array-contains', ageGroup)
+                .where('status', '==', 'active');
+              
+              const activitiesSnapshot = await activitiesQuery.get();
+              let activities: any[] = [];
+              
+              activitiesSnapshot.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+                const data = doc.data();
+                activities.push({
+                  id: doc.id,
+                  title: data.title,
+                  ...data
+                });
+              });
+              
+              console.log(`Got ${activities.length} potential activities for age group ${ageGroup}`);
+              
+              // Prioritize activities matching interests
+              activities = activities.sort((a, b) => {
+                const aMatchesInterests = interests.some((interest: string) => 
+                  a.tags?.includes(interest) || a.keywords?.includes(interest) || 
+                  (a.area && a.area.toLowerCase().includes(interest.toLowerCase()))
+                );
                 
-                if (daysSinceCompletion < 7) {
-                  score -= 2;
-                  reasons.push(`Completed recently (${daysSinceCompletion} days ago)`);
-                } else {
-                  // For activities done 1-4 weeks ago, boost score if engagement was high
-                  if (recent.engagement === 'high' || recent.interest === 'high') {
+                const bMatchesInterests = interests.some((interest: string) => 
+                  b.tags?.includes(interest) || b.keywords?.includes(interest) ||
+                  (b.area && b.area.toLowerCase().includes(interest.toLowerCase()))
+                );
+                
+                if (aMatchesInterests && !bMatchesInterests) return -1;
+                if (!aMatchesInterests && bMatchesInterests) return 1;
+                return 0;
+              });
+              
+              // Score and rank activities based on child's needs
+              const scoredActivities = activities.map(activity => {
+                let score = 5; // Base score
+                const reasons: string[] = [];
+                
+                // Factor 1: Skills addressed - prioritize emerging and developing skills
+                const activitySkills = activity.skillsAddressed || [];
+                
+                for (const skillId of activitySkills) {
+                  const skillStatus = childSkills[skillId] || 'unknown';
+                  
+                  if (skillStatus === 'emerging') {
+                    score += 3;
+                    reasons.push(`Helps develop emerging skill`);
+                  } else if (skillStatus === 'developing') {
                     score += 2;
-                    reasons.push(`Child showed high engagement previously`);
+                    reasons.push(`Reinforces developing skill`);
+                  } else if (skillStatus === 'mastered') {
+                    score += 0.5;
+                    reasons.push(`Maintains mastered skill`);
+                  } else {
+                    score += 2;
+                    reasons.push(`Introduces new skill`);
                   }
                 }
                 
-                // Limit repetition for activities done many times already
-                if (recent.completionCount > 3) {
-                  score -= 1;
-                  reasons.push(`Already completed ${recent.completionCount} times recently`);
+                // Factor 2: Child's interests
+                for (const interest of interests) {
+                  if (activity.area && activity.area.toLowerCase().includes(interest.toLowerCase())) {
+                    score += 2;
+                    reasons.push(`Matches child's interest in ${interest}`);
+                  }
+                  
+                  if (activity.tags?.includes(interest) || activity.keywords?.includes(interest)) {
+                    score += 2;
+                    reasons.push(`Tagged with child's interest: ${interest}`);
+                  }
                 }
-              } else {
-                // Small boost for new activities
-                score += 1;
-                reasons.push(`New activity`);
-              }
-              
-              return {
-                ...activity,
-                score,
-                reasons
-              };
-            });
-            
-            // Sort by score (highest first)
-            scoredActivities.sort((a, b) => b.score - a.score);
-            
-            console.log(`Scored and ranked ${scoredActivities.length} activities`);
-            
-            // Build plan with different activities for each day
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-            type DayOfWeek = typeof days[number];
-            
-            interface WeeklyPlan {
-              childId: string;
-              userId: string;
-              weekStarting: Date;
-              createdBy: string;
-              createdAt: any;
-              updatedAt: any;
-              monday: any[];
-              tuesday: any[];
-              wednesday: any[];
-              thursday: any[];
-              friday: any[];
-              saturday: any[];
-              sunday: any[];
-              [key: string]: any;
-            }
-            
-            const weeklyPlan: WeeklyPlan = {
-              childId: childDoc.id,
-              userId: userDoc.id,
-              weekStarting: nextMonday,
-              createdBy: 'system',
-              createdAt: adminDb.FieldValue.serverTimestamp(),
-              updatedAt: adminDb.FieldValue.serverTimestamp(),
-              monday: [] as any[],
-              tuesday: [] as any[],
-              wednesday: [] as any[],
-              thursday: [] as any[],
-              friday: [] as any[],
-              saturday: [] as any[],
-              sunday: [] as any[]
-            };
-            
-            // Check if a plan already exists for this week
-            const planId = `${childDoc.id}_${nextMonday.toISOString().split('T')[0]}`;
-            const existingPlanRef = adminDb.collection('weeklyPlans').doc(planId);
-            const existingPlanDoc = await existingPlanRef.get();
-            
-            // If plan exists and we're doing an evolving update, merge with existing plan
-            // preserving any completed activities or user modifications
-            if (existingPlanDoc.exists) {
-              const existingPlan = existingPlanDoc.data();
-              
-              // For each day, retain any activities that have been completed or modified by the user
-              days.forEach((day: DayOfWeek) => {
-                const existingActivities = existingPlan[day] || [];
                 
-                // Filter activities that should be preserved (completed or user-modified)
-                const preservedActivities = existingActivities.filter((activity: any) => 
-                  activity.status === 'completed' || 
-                  activity.createdBy === 'user' ||
-                  activity.userModified === true
-                );
-                
-                // Store these activities to keep them in the new plan
-                weeklyPlan[day] = preservedActivities;
-              });
-              
-              console.log('Found existing plan - preserving completed activities and user modifications');
-            }
-            
-            // Determine number of activities for each day based on preferences
-            const activityCountByDay: {[key: string]: number} = {};
-            
-            if (preferences.useCustomSchedule && preferences.scheduleByDay) {
-              // Use custom schedule
-              days.forEach((day: DayOfWeek) => {
-                activityCountByDay[day] = preferences.scheduleByDay?.[day] || 0;
-              });
-            } else {
-              // Use simple schedule
-              days.forEach((day: DayOfWeek) => {
-                activityCountByDay[day] = preferences.daysPerWeek?.includes(day) 
-                  ? preferences.activitiesPerDay || 2
-                  : 0;
-              });
-            }
-            
-            // Assign activities to each day
-            let activityIndex = 0;
-            
-            for (const day of days) {
-              // Get the existing activities for this day
-              const existingActivities = weeklyPlan[day];
-              const activityCount = activityCountByDay[day];
-              
-              // Calculate how many more activities we need to add
-              const additionalActivitiesNeeded = Math.max(0, activityCount - existingActivities.length);
-              
-              for (let i = 0; i < additionalActivitiesNeeded; i++) {
-                if (activityIndex < scoredActivities.length) {
-                  const activity = scoredActivities[activityIndex];
+                // Factor 3: Recent completion and engagement
+                const recent = recentActivities[activity.id];
+                if (recent) {
+                  // Reduce score slightly for very recently completed activities
+                  const daysSinceCompletion = Math.floor((Date.now() - recent.lastCompleted.toMillis()) / (24 * 60 * 60 * 1000));
                   
-                  // Assign morning/afternoon based on position
-                  const timeSlot = i < Math.ceil(additionalActivitiesNeeded / 2) ? 'morning' : 'afternoon';
+                  if (daysSinceCompletion < 7) {
+                    score -= 2;
+                    reasons.push(`Completed recently (${daysSinceCompletion} days ago)`);
+                  } else {
+                    // For activities done 1-4 weeks ago, boost score if engagement was high
+                    if (recent.engagement === 'high' || recent.interest === 'high') {
+                      score += 2;
+                      reasons.push(`Child showed high engagement previously`);
+                    }
+                  }
                   
-                  existingActivities.push({
-                    activityId: activity.id,
-                    timeSlot,
-                    status: 'suggested',
-                    order: existingActivities.length + i,
-                    notes: activity.reasons.join('. ')
-                  });
-                  
-                  activityIndex++;
-                }
-              }
-              
-              // Update the day's activities in the plan
-              weeklyPlan[day] = existingActivities;
-            }
-            
-            // Create or update the weekly plan document
-            await existingPlanRef.set(weeklyPlan);
-            
-            // Update child profile with last plan generation timestamp
-            await childRef.update({
-              lastPlanGenerated: adminDb.FieldValue.serverTimestamp()
-            });
-            
-            console.log(`Created/updated weekly plan with ID: ${planId}`);
-            
-            interface WeeklyPlanWithId extends WeeklyPlan {
-              id: string;
-            }
-            
-            const weeklyPlanWithId: WeeklyPlanWithId = { id: planId, ...weeklyPlan };
-            console.log('Plan generation completed successfully');
-            console.log('Generated plan structure:', {
-              hasMonday: !!weeklyPlanWithId.monday?.length,
-              hasTuesday: !!weeklyPlanWithId.tuesday?.length,
-              hasWednesday: !!weeklyPlanWithId.wednesday?.length,
-              hasThursday: !!weeklyPlanWithId.thursday?.length,
-              hasFriday: !!weeklyPlanWithId.friday?.length,
-              totalActivities: Object.values(weeklyPlanWithId).reduce((sum, day) => sum + (Array.isArray(day) ? day.length : 0), 0)
-            });
-            
-            // Get activity details for all activities in the plan
-            const activitiesDetails: Record<string, any> = {};
-            const activityIds = new Set<string>();
-            
-            const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] as const;
-            weekdays.forEach(day => {
-              weeklyPlanWithId[day].forEach((activity: any) => {
-                activityIds.add(activity.activityId);
-              });
-            });
-
-            console.log(`Fetching details for ${activityIds.size} activities...`);
-            // Fetch activity details
-            for (const activityId of activityIds) {
-              try {
-                console.log(`Fetching activity ${activityId}...`);
-                const activityDoc = await adminDb.collection('activities').doc(activityId).get();
-                if (activityDoc.exists) {
-                  activitiesDetails[activityId] = activityDoc.data();
-                  console.log(`Successfully fetched activity ${activityId}`);
+                  // Limit repetition for activities done many times already
+                  if (recent.completionCount > 3) {
+                    score -= 1;
+                    reasons.push(`Already completed ${recent.completionCount} times recently`);
+                  }
                 } else {
-                  console.log(`Activity ${activityId} not found`);
+                  // Small boost for new activities
+                  score += 1;
+                  reasons.push(`New activity`);
                 }
-              } catch (error: any) {
-                console.error(`Error fetching activity ${activityId}:`, error);
-                throw new Error(`Failed to fetch activity ${activityId}: ${error.message}`);
+                
+                return {
+                  ...activity,
+                  score,
+                  reasons
+                };
+              });
+              
+              // Sort by score (highest first)
+              scoredActivities.sort((a, b) => b.score - a.score);
+              
+              console.log(`Scored and ranked ${scoredActivities.length} activities`);
+              
+              // Build plan with different activities for each day
+              const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+              type DayOfWeek = typeof days[number];
+              
+              interface WeeklyPlan {
+                childId: string;
+                userId: string;
+                weekStarting: Date;
+                createdBy: string;
+                createdAt: any;
+                updatedAt: any;
+                monday: any[];
+                tuesday: any[];
+                wednesday: any[];
+                thursday: any[];
+                friday: any[];
+                saturday: any[];
+                sunday: any[];
+                [key: string]: any;
               }
+              
+              const weeklyPlan: WeeklyPlan = {
+                childId: childDoc.id,
+                userId: userDoc.id,
+                weekStarting: nextMonday,
+                createdBy: 'system',
+                createdAt: adminDb.FieldValue.serverTimestamp(),
+                updatedAt: adminDb.FieldValue.serverTimestamp(),
+                monday: [] as any[],
+                tuesday: [] as any[],
+                wednesday: [] as any[],
+                thursday: [] as any[],
+                friday: [] as any[],
+                saturday: [] as any[],
+                sunday: [] as any[]
+              };
+              
+              // Check if a plan already exists for this week
+              const planId = `${childDoc.id}_${nextMonday.toISOString().split('T')[0]}`;
+              const existingPlanRef = adminDb.collection('weeklyPlans').doc(planId);
+              const existingPlanDoc = await existingPlanRef.get();
+              
+              // If plan exists and we're doing an evolving update, merge with existing plan
+              // preserving any completed activities or user modifications
+              if (existingPlanDoc.exists) {
+                const existingPlan = existingPlanDoc.data();
+                
+                // For each day, retain any activities that have been completed or modified by the user
+                days.forEach((day: DayOfWeek) => {
+                  const existingActivities = existingPlan[day] || [];
+                  
+                  // Filter activities that should be preserved (completed or user-modified)
+                  const preservedActivities = existingActivities.filter((activity: any) => 
+                    activity.status === 'completed' || 
+                    activity.createdBy === 'user' ||
+                    activity.userModified === true
+                  );
+                  
+                  // Store these activities to keep them in the new plan
+                  weeklyPlan[day] = preservedActivities;
+                });
+                
+                console.log('Found existing plan - preserving completed activities and user modifications');
+              }
+              
+              // Determine number of activities for each day based on preferences
+              const activityCountByDay: {[key: string]: number} = {};
+              
+              if (preferences.useCustomSchedule && preferences.scheduleByDay) {
+                // Use custom schedule
+                days.forEach((day: DayOfWeek) => {
+                  activityCountByDay[day] = preferences.scheduleByDay?.[day] || 0;
+                });
+              } else {
+                // Use simple schedule
+                days.forEach((day: DayOfWeek) => {
+                  activityCountByDay[day] = preferences.daysPerWeek?.includes(day) 
+                    ? preferences.activitiesPerDay || 2
+                    : 0;
+                });
+              }
+              
+              // Assign activities to each day
+              let activityIndex = 0;
+              
+              for (const day of days) {
+                // Get the existing activities for this day
+                const existingActivities = weeklyPlan[day];
+                const activityCount = activityCountByDay[day];
+                
+                // Calculate how many more activities we need to add
+                const additionalActivitiesNeeded = Math.max(0, activityCount - existingActivities.length);
+                
+                for (let i = 0; i < additionalActivitiesNeeded; i++) {
+                  if (activityIndex < scoredActivities.length) {
+                    const activity = scoredActivities[activityIndex];
+                    
+                    // Assign morning/afternoon based on position
+                    const timeSlot = i < Math.ceil(additionalActivitiesNeeded / 2) ? 'morning' : 'afternoon';
+                    
+                    existingActivities.push({
+                      activityId: activity.id,
+                      timeSlot,
+                      status: 'suggested',
+                      order: existingActivities.length + i,
+                      notes: activity.reasons.join('. ')
+                    });
+                    
+                    activityIndex++;
+                  }
+                }
+                
+                // Update the day's activities in the plan
+                weeklyPlan[day] = existingActivities;
+              }
+              
+              // Create or update the weekly plan document
+              await existingPlanRef.set(weeklyPlan);
+              
+              // Update child profile with last plan generation timestamp
+              await childRef.update({
+                lastPlanGenerated: adminDb.FieldValue.serverTimestamp()
+              });
+              
+              console.log(`Created/updated weekly plan with ID: ${planId}`);
+              
+              interface WeeklyPlanWithId extends WeeklyPlan {
+                id: string;
+              }
+              
+              const weeklyPlanWithId: WeeklyPlanWithId = { id: planId, ...weeklyPlan };
+              console.log('Plan generation completed successfully');
+              console.log('Generated plan structure:', {
+                hasMonday: !!weeklyPlanWithId.monday?.length,
+                hasTuesday: !!weeklyPlanWithId.tuesday?.length,
+                hasWednesday: !!weeklyPlanWithId.wednesday?.length,
+                hasThursday: !!weeklyPlanWithId.thursday?.length,
+                hasFriday: !!weeklyPlanWithId.friday?.length,
+                totalActivities: Object.values(weeklyPlanWithId).reduce((sum, day) => sum + (Array.isArray(day) ? day.length : 0), 0)
+              });
+              
+              // Get activity details for all activities in the plan
+              const activitiesDetails: Record<string, any> = {};
+              const activityIds = new Set<string>();
+              
+              const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] as const;
+              weekdays.forEach(day => {
+                weeklyPlanWithId[day].forEach((activity: any) => {
+                  activityIds.add(activity.activityId);
+                });
+              });
+
+              console.log(`Fetching details for ${activityIds.size} activities...`);
+              // Fetch activity details
+              for (const activityId of activityIds) {
+                try {
+                  console.log(`Fetching activity ${activityId}...`);
+                  const activityDoc = await adminDb.collection('activities').doc(activityId).get();
+                  if (activityDoc.exists) {
+                    activitiesDetails[activityId] = activityDoc.data();
+                    console.log(`Successfully fetched activity ${activityId}`);
+                  } else {
+                    console.log(`Activity ${activityId} not found`);
+                  }
+                } catch (error: any) {
+                  console.error(`Error fetching activity ${activityId}:`, error);
+                  throw new Error(`Failed to fetch activity ${activityId}: ${error.message}`);
+                }
+              }
+
+              console.log(`Generating email HTML for ${childName}...`);
+              // Send email
+              const emailHtml = generateWeeklyPlanEmailHtml(
+                userName,
+                childName,
+                nextMonday,
+                weeklyPlan,
+                activitiesDetails
+              );
+
+              console.log(`Sending email to ${userEmail}...`);
+              const { data, error } = await resend.emails.send({
+                from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
+                to: userEmail,
+                subject: `${childName}'s Weekly Plan: ${nextMonday.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${new Date(nextMonday.getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
+                html: emailHtml,
+              });
+
+              if (error) {
+                throw error;
+              }
+
+              results.emailsSent++;
+              console.log(`Generated email for ${childName} and sent to ${userEmail}`);
+            } catch (error: any) {
+              console.error('Error generating plan:', error);
+              results.errors.push(`Error generating plan for ${childName}: ${error.message}`);
             }
-
-            console.log(`Generating email HTML for ${childName}...`);
-            // Send email
-            const emailHtml = generateWeeklyPlanEmailHtml(
-              userName,
-              childName,
-              nextMonday,
-              weeklyPlan,
-              activitiesDetails
-            );
-
-            console.log(`Sending email to ${userEmail}...`);
-            const { data, error } = await resend.emails.send({
-              from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
-              to: userEmail,
-              subject: `${childName}'s Weekly Plan: ${nextMonday.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${new Date(nextMonday.getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
-              html: emailHtml,
-            });
-
-            if (error) {
-              throw error;
-            }
-
-            results.emailsSent++;
-            console.log(`Generated email for ${childName} and sent to ${userEmail}`);
           } catch (error: any) {
-            console.error('Error generating plan:', error);
-            results.errors.push(`Error generating plan for ${childName}: ${error.message}`);
+            console.error(`Error processing child ${childName}:`, error);
+            results.errors.push(`Error processing child ${childName}: ${error.message}`);
           }
-        } catch (error: any) {
-          console.error(`Error processing child ${childName}:`, error);
-          results.errors.push(`Error processing child ${childName}: ${error.message}`);
         }
+      } catch (error: any) {
+        console.error('Error processing user:', error);
+        results.errors.push(`Error processing user: ${error.message}`);
       }
-    } catch (error: any) {
-      console.error('Error processing user:', error);
-      results.errors.push(`Error processing user: ${error.message}`);
     }
 
     // Return results
