@@ -204,7 +204,7 @@ export async function GET() {
       // Get children for this user
       console.log(`Querying children for user ${userDoc.id}...`);
       
-      // Query children without the active filter since it doesn't exist
+      // Query children with optional active filter
       const childrenSnapshot = await adminDb
         .collection('children')
         .where('userId', '==', userDoc.id)
@@ -221,6 +221,12 @@ export async function GET() {
       for (const childDoc of childrenSnapshot.docs) {
         const childData = childDoc.data();
         const childName = childData.name;
+
+        // Skip if child is explicitly marked as inactive
+        if (childData.active === false) {
+          console.log(`Skipping ${childName} - marked as inactive`);
+          continue;
+        }
 
         try {
           // Check if we've already generated a plan for this week
@@ -239,66 +245,78 @@ export async function GET() {
           
           // Generate a weekly plan for the child
           console.log(`Calling generateWeeklyPlan for child ${childName}...`);
-          const weeklyPlan = await generateWeeklyPlan(childDoc.id, userDoc.id, nextMonday);
-          console.log(`Weekly plan generated for ${childName}`);
-          
-          // Get activity details for all activities in the plan
-          const activitiesDetails: Record<string, any> = {};
-          const activityIds = new Set<string>();
-          
-          ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
-            weeklyPlan[day].forEach((activity: any) => {
-              activityIds.add(activity.activityId);
+          try {
+            const weeklyPlan = await generateWeeklyPlan(childDoc.id, userDoc.id, nextMonday);
+            console.log(`Weekly plan generated for ${childName}`);
+            
+            // Get activity details for all activities in the plan
+            const activitiesDetails: Record<string, any> = {};
+            const activityIds = new Set<string>();
+            
+            ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
+              weeklyPlan[day].forEach((activity: any) => {
+                activityIds.add(activity.activityId);
+              });
             });
-          });
 
-          console.log(`Fetching details for ${activityIds.size} activities...`);
-          // Fetch activity details
-          for (const activityId of activityIds) {
-            try {
-              console.log(`Fetching activity ${activityId}...`);
-              const activityDoc = await adminDb.collection('activities').doc(activityId).get();
-              if (activityDoc.exists) {
-                activitiesDetails[activityId] = activityDoc.data();
-                console.log(`Successfully fetched activity ${activityId}`);
-              } else {
-                console.log(`Activity ${activityId} not found`);
+            console.log(`Fetching details for ${activityIds.size} activities...`);
+            // Fetch activity details
+            for (const activityId of activityIds) {
+              try {
+                console.log(`Fetching activity ${activityId}...`);
+                const activityDoc = await adminDb.collection('activities').doc(activityId).get();
+                if (activityDoc.exists) {
+                  activitiesDetails[activityId] = activityDoc.data();
+                  console.log(`Successfully fetched activity ${activityId}`);
+                } else {
+                  console.log(`Activity ${activityId} not found`);
+                }
+              } catch (error: any) {
+                console.error(`Error fetching activity ${activityId}:`, error);
+                throw new Error(`Failed to fetch activity ${activityId}: ${error.message}`);
               }
-            } catch (error: any) {
-              console.error(`Error fetching activity ${activityId}:`, error);
-              throw new Error(`Failed to fetch activity ${activityId}: ${error.message}`);
             }
-          }
 
-          console.log(`Generating email HTML for ${childName}...`);
-          // Send email
-          const emailHtml = generateWeeklyPlanEmailHtml(
-            userName,
-            childName,
-            nextMonday,
-            weeklyPlan,
-            activitiesDetails
-          );
+            console.log(`Generating email HTML for ${childName}...`);
+            // Send email
+            const emailHtml = generateWeeklyPlanEmailHtml(
+              userName,
+              childName,
+              nextMonday,
+              weeklyPlan,
+              activitiesDetails
+            );
 
-          console.log(`Sending email to ${userEmail}...`);
-          const { data, error } = await resend.emails.send({
-            from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
-            to: userEmail,
-            subject: `${childName}'s Weekly Plan: ${nextMonday.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${new Date(nextMonday.getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
-            html: emailHtml,
-          });
+            console.log(`Sending email to ${userEmail}...`);
+            const { data, error } = await resend.emails.send({
+              from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
+              to: userEmail,
+              subject: `${childName}'s Weekly Plan: ${nextMonday.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${new Date(nextMonday.getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
+              html: emailHtml,
+            });
 
-          if (error) {
+            if (error) {
+              throw error;
+            }
+
+            // Update lastPlanGenerated timestamp
+            await childDoc.ref.update({
+              lastPlanGenerated: adminDb.FieldValue.serverTimestamp()
+            });
+
+            results.emailsSent++;
+            console.log(`Successfully sent weekly plan email to ${userEmail} for child ${childName}`);
+          } catch (error: any) {
+            console.error('Error generating weekly plan:', error);
+            console.error('Error details:', {
+              code: error.code,
+              message: error.message,
+              stack: error.stack,
+              childId: childDoc.id,
+              userId: userDoc.id
+            });
             throw error;
           }
-
-          // Update lastPlanGenerated timestamp
-          await childDoc.ref.update({
-            lastPlanGenerated: adminDb.FieldValue.serverTimestamp()
-          });
-
-          results.emailsSent++;
-          console.log(`Successfully sent weekly plan email to ${userEmail} for child ${childName}`);
         } catch (error: any) {
           const errorMessage = `Failed to process weekly plan for ${childName}: ${error.message}`;
           console.error(errorMessage);
