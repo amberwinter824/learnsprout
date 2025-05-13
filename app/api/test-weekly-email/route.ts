@@ -673,4 +673,28 @@ export async function GET() {
             }
 
             results.emailsSent++;
-            console.log(`
+            console.log(`Generated email for ${childName} and sent to ${userEmail}`);
+          } catch (error: any) {
+            console.error('Error generating plan:', error);
+            results.errors.push(`Error generating plan for ${childName}: ${error.message}`);
+          }
+        } catch (error: any) {
+          console.error(`Error processing child ${childName}:`, error);
+          results.errors.push(`Error processing child ${childName}: ${error.message}`);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error processing user:', error);
+      results.errors.push(`Error processing user: ${error.message}`);
+    }
+
+    // Return results
+    return NextResponse.json({
+      message: 'Email generation completed',
+      results: results
+    }, { status: 200 });
+  } catch (error: any) {
+    console.error('Unexpected error in GET handler:', error);
+    return NextResponse.json({ error: 'Unexpected error', details: error.message }, { status: 500 });
+  }
+}
