@@ -227,6 +227,14 @@ export async function GET() {
             status: firstChild.status,
             name: firstChild.name
           });
+
+          // Log all fields in the child document to see what's available
+          console.log('All fields in child document:', Object.keys(firstChild));
+          
+          // Check if status field is being used instead of active
+          if (firstChild.status) {
+            console.log('Child status field value:', firstChild.status);
+          }
         }
         
         results.errors.push(`No active children found for user ${userEmail}`);
