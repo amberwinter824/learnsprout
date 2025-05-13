@@ -269,17 +269,11 @@ export async function GET() {
           }
 
           try {
-            // Check if we've already generated a plan for this week
-            const lastPlanGenerated = childData.lastPlanGenerated?.toDate();
+            // Always calculate nextMonday for use in plan generation and email subject
             const today = new Date();
             const nextMonday = new Date(today);
             nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
             nextMonday.setHours(0, 0, 0, 0);
-
-            if (lastPlanGenerated && lastPlanGenerated >= nextMonday) {
-              console.log(`Skipping ${childName} - plan already generated for this week`);
-              continue;
-            }
 
             console.log(`Generating plan for child ${childName} (${childDoc.id})...`);
             
