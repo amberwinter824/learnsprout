@@ -101,6 +101,7 @@ export async function GET() {
       .collection('users')
       .where('preferences.emailNotifications', '==', true)
       .where('preferences.weeklyDigest', '==', true)
+      .limit(5) // Process only 5 users at a time
       .get();
 
     if (usersSnapshot.empty) {
@@ -109,7 +110,6 @@ export async function GET() {
     }
 
     console.log(`Found ${usersSnapshot.size} users with email notifications enabled`);
-    const emailPromises: Promise<void>[] = [];
     const results = {
       totalUsers: usersSnapshot.size,
       emailsSent: 0,
@@ -177,8 +177,8 @@ export async function GET() {
       }, { status: 403 });
     }
 
-    // Process each user
-    for (const userDoc of usersSnapshot.docs) {
+    // Process each user with a timeout
+    const processUser = async (userDoc: any) => {
       const userData = userDoc.data();
       const userEmail = userData.email;
       const userName = userData.displayName || userData.name || 'Parent';
@@ -230,7 +230,7 @@ export async function GET() {
         }
         
         results.errors.push(`No active children found for user ${userEmail}`);
-        continue;
+        return;
       }
 
       // Process each child
@@ -310,7 +310,23 @@ export async function GET() {
           results.errors.push(errorMessage);
         }
       }
-    }
+    };
+
+    // Process users with a timeout
+    const timeout = 25000; // 25 seconds timeout
+    const processPromises = usersSnapshot.docs.map((userDoc: FirebaseFirestore.QueryDocumentSnapshot) => {
+      return Promise.race([
+        processUser(userDoc),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Operation timed out')), timeout)
+        )
+      ]).catch(error => {
+        console.error(`Error processing user: ${error.message}`);
+        results.errors.push(`Error processing user: ${error.message}`);
+      });
+    });
+
+    await Promise.all(processPromises);
 
     return NextResponse.json({
       message: 'Weekly email test completed',
