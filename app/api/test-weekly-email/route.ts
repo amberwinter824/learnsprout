@@ -127,6 +127,22 @@ export async function GET() {
 
     // Test collection access
     try {
+      // Get a sample of children documents to inspect their structure
+      const sampleChildren = await adminDb.collection('children').limit(5).get();
+      console.log('Sample children documents:');
+      sampleChildren.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+        const data = doc.data();
+        console.log(`Child ${doc.id}:`, {
+          id: doc.id,
+          userId: data.userId,
+          parentId: data.parentId,
+          active: data.active,
+          status: data.status,
+          name: data.name,
+          allFields: Object.keys(data)
+        });
+      });
+      
       await adminDb.collection('children').limit(1).get();
       results.collectionAccess.children = true;
     } catch (error: any) {
@@ -187,13 +203,37 @@ export async function GET() {
 
       // Get active children for this user
       console.log(`Querying children for user ${userDoc.id}...`);
+      
+      // First, let's see what children exist for this user without any filters
+      const allUserChildren = await adminDb
+        .collection('children')
+        .where('userId', '==', userDoc.id)
+        .get();
+      
+      console.log(`Found ${allUserChildren.size} total children for user ${userEmail}`);
+      if (!allUserChildren.empty) {
+        allUserChildren.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+          const data = doc.data();
+          console.log(`Child ${doc.id}:`, {
+            id: doc.id,
+            userId: data.userId,
+            parentId: data.parentId,
+            active: data.active,
+            status: data.status,
+            name: data.name,
+            allFields: Object.keys(data)
+          });
+        });
+      }
+
+      // Now try the original query
       const childrenSnapshot = await adminDb
         .collection('children')
         .where('userId', '==', userDoc.id)
         .where('active', '==', true)
         .get();
 
-      console.log(`Found ${childrenSnapshot.size} children for user ${userEmail}`);
+      console.log(`Found ${childrenSnapshot.size} active children for user ${userEmail}`);
       
       // Log the first child's data structure if any exist
       if (!childrenSnapshot.empty) {
