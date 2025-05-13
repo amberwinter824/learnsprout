@@ -119,7 +119,9 @@ export async function GET() {
         users: true,
         children: false,
         activities: false,
-        weeklyPlans: false
+        weeklyPlans: false,
+        childSkills: false,
+        progressRecords: false
       }
     };
 
@@ -148,6 +150,22 @@ export async function GET() {
       results.permissionsErrors.push(`Cannot access weeklyPlans collection: ${error.message}`);
     }
 
+    try {
+      await adminDb.collection('childSkills').limit(1).get();
+      results.collectionAccess.childSkills = true;
+    } catch (error: any) {
+      console.error('Error accessing childSkills collection:', error);
+      results.permissionsErrors.push(`Cannot access childSkills collection: ${error.message}`);
+    }
+
+    try {
+      await adminDb.collection('progressRecords').limit(1).get();
+      results.collectionAccess.progressRecords = true;
+    } catch (error: any) {
+      console.error('Error accessing progressRecords collection:', error);
+      results.permissionsErrors.push(`Cannot access progressRecords collection: ${error.message}`);
+    }
+
     // If we can't access required collections, return early
     if (results.permissionsErrors.length > 0) {
       return NextResponse.json({
@@ -168,13 +186,49 @@ export async function GET() {
       console.log(`Processing user ${userEmail}...`);
 
       // Get active children for this user
+      console.log(`Querying children for user ${userDoc.id}...`);
       const childrenSnapshot = await adminDb
         .collection('children')
         .where('userId', '==', userDoc.id)
         .where('active', '==', true)
         .get();
 
+      console.log(`Found ${childrenSnapshot.size} children for user ${userEmail}`);
+      
+      // Log the first child's data structure if any exist
+      if (!childrenSnapshot.empty) {
+        const firstChild = childrenSnapshot.docs[0].data();
+        console.log('First child data structure:', {
+          id: childrenSnapshot.docs[0].id,
+          userId: firstChild.userId,
+          parentId: firstChild.parentId,
+          active: firstChild.active,
+          status: firstChild.status,
+          name: firstChild.name
+        });
+      }
+
       if (childrenSnapshot.empty) {
+        // Try querying without the active filter to see if any children exist
+        const allChildrenSnapshot = await adminDb
+          .collection('children')
+          .where('userId', '==', userDoc.id)
+          .get();
+        
+        console.log(`Found ${allChildrenSnapshot.size} total children for user ${userEmail} (including inactive)`);
+        
+        if (!allChildrenSnapshot.empty) {
+          const firstChild = allChildrenSnapshot.docs[0].data();
+          console.log('First child data structure (including inactive):', {
+            id: allChildrenSnapshot.docs[0].id,
+            userId: firstChild.userId,
+            parentId: firstChild.parentId,
+            active: firstChild.active,
+            status: firstChild.status,
+            name: firstChild.name
+          });
+        }
+        
         results.errors.push(`No active children found for user ${userEmail}`);
         continue;
       }
@@ -193,6 +247,7 @@ export async function GET() {
           nextMonday.setHours(0, 0, 0, 0);
 
           // Generate a weekly plan for the child
+          console.log(`Calling generateWeeklyPlan for child ${childName}...`);
           const weeklyPlan = await generateWeeklyPlan(childDoc.id, userDoc.id, nextMonday);
           console.log(`Weekly plan generated for ${childName}`);
           
