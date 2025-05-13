@@ -201,83 +201,19 @@ export async function GET() {
 
       console.log(`Processing user ${userEmail}...`);
 
-      // Get active children for this user
+      // Get children for this user
       console.log(`Querying children for user ${userDoc.id}...`);
       
-      // First, let's see what children exist for this user without any filters
-      const allUserChildren = await adminDb
-        .collection('children')
-        .where('userId', '==', userDoc.id)
-        .get();
-      
-      console.log(`Found ${allUserChildren.size} total children for user ${userEmail}`);
-      if (!allUserChildren.empty) {
-        allUserChildren.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
-          const data = doc.data();
-          console.log(`Child ${doc.id}:`, {
-            id: doc.id,
-            userId: data.userId,
-            parentId: data.parentId,
-            active: data.active,
-            status: data.status,
-            name: data.name,
-            allFields: Object.keys(data)
-          });
-        });
-      }
-
-      // Now try the original query
+      // Query children without the active filter since it doesn't exist
       const childrenSnapshot = await adminDb
         .collection('children')
         .where('userId', '==', userDoc.id)
-        .where('active', '==', true)
         .get();
-
-      console.log(`Found ${childrenSnapshot.size} active children for user ${userEmail}`);
       
-      // Log the first child's data structure if any exist
-      if (!childrenSnapshot.empty) {
-        const firstChild = childrenSnapshot.docs[0].data();
-        console.log('First child data structure:', {
-          id: childrenSnapshot.docs[0].id,
-          userId: firstChild.userId,
-          parentId: firstChild.parentId,
-          active: firstChild.active,
-          status: firstChild.status,
-          name: firstChild.name
-        });
-      }
-
+      console.log(`Found ${childrenSnapshot.size} children for user ${userEmail}`);
+      
       if (childrenSnapshot.empty) {
-        // Try querying without the active filter to see if any children exist
-        const allChildrenSnapshot = await adminDb
-          .collection('children')
-          .where('userId', '==', userDoc.id)
-          .get();
-        
-        console.log(`Found ${allChildrenSnapshot.size} total children for user ${userEmail} (including inactive)`);
-        
-        if (!allChildrenSnapshot.empty) {
-          const firstChild = allChildrenSnapshot.docs[0].data();
-          console.log('First child data structure (including inactive):', {
-            id: allChildrenSnapshot.docs[0].id,
-            userId: firstChild.userId,
-            parentId: firstChild.parentId,
-            active: firstChild.active,
-            status: firstChild.status,
-            name: firstChild.name
-          });
-
-          // Log all fields in the child document to see what's available
-          console.log('All fields in child document:', Object.keys(firstChild));
-          
-          // Check if status field is being used instead of active
-          if (firstChild.status) {
-            console.log('Child status field value:', firstChild.status);
-          }
-        }
-        
-        results.errors.push(`No active children found for user ${userEmail}`);
+        results.errors.push(`No children found for user ${userEmail}`);
         return;
       }
 
@@ -287,13 +223,20 @@ export async function GET() {
         const childName = childData.name;
 
         try {
-          console.log(`Generating plan for child ${childName} (${childDoc.id})...`);
-          // Calculate next Monday's date
+          // Check if we've already generated a plan for this week
+          const lastPlanGenerated = childData.lastPlanGenerated?.toDate();
           const today = new Date();
           const nextMonday = new Date(today);
           nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
           nextMonday.setHours(0, 0, 0, 0);
 
+          if (lastPlanGenerated && lastPlanGenerated >= nextMonday) {
+            console.log(`Skipping ${childName} - plan already generated for this week`);
+            continue;
+          }
+
+          console.log(`Generating plan for child ${childName} (${childDoc.id})...`);
+          
           // Generate a weekly plan for the child
           console.log(`Calling generateWeeklyPlan for child ${childName}...`);
           const weeklyPlan = await generateWeeklyPlan(childDoc.id, userDoc.id, nextMonday);
@@ -348,6 +291,11 @@ export async function GET() {
           if (error) {
             throw error;
           }
+
+          // Update lastPlanGenerated timestamp
+          await childDoc.ref.update({
+            lastPlanGenerated: adminDb.FieldValue.serverTimestamp()
+          });
 
           results.emailsSent++;
           console.log(`Successfully sent weekly plan email to ${userEmail} for child ${childName}`);
