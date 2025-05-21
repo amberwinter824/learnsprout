@@ -165,10 +165,31 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
           const weekStarting = plan.weekStarting?.toDate?.();
           if (!weekStarting) return false;
           
-          // Convert both dates to start of day for accurate comparison
-          const planStart = startOfDay(weekStarting);
-          const todayStart = startOfDay(today);
-          const endDateStart = startOfDay(forecastEndDate);
+          // Convert both dates to UTC for accurate comparison
+          const planStart = new Date(Date.UTC(
+            weekStarting.getUTCFullYear(),
+            weekStarting.getUTCMonth(),
+            weekStarting.getUTCDate()
+          ));
+          
+          const todayStart = new Date(Date.UTC(
+            today.getUTCFullYear(),
+            today.getUTCMonth(),
+            today.getUTCDate()
+          ));
+          
+          const endDateStart = new Date(Date.UTC(
+            forecastEndDate.getUTCFullYear(),
+            forecastEndDate.getUTCMonth(),
+            forecastEndDate.getUTCDate()
+          ));
+          
+          console.log('Date comparison:', {
+            planStart: planStart.toISOString(),
+            todayStart: todayStart.toISOString(),
+            endDateStart: endDateStart.toISOString(),
+            isInRange: planStart >= todayStart && planStart <= endDateStart
+          });
           
           return planStart >= todayStart && planStart <= endDateStart;
         });
