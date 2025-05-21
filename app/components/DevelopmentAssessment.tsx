@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { calculateAgeGroup } from '@/lib/ageUtils';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 import { useRouter } from 'next/navigation';
 
@@ -264,16 +264,28 @@ export default function DevelopmentAssessment({
       // Update child's last assessment date
       if (childId) {
         const childRef = doc(db, 'children', childId);
+        // First get the current child data to preserve existing fields
+        const childDoc = await getDoc(childRef);
+        if (!childDoc.exists()) {
+          throw new Error('Child document not found');
+        }
+        const childData = childDoc.data();
+        
+        // Update with required fields and new assessment data
         await updateDoc(childRef, {
+          ...childData, // Preserve existing fields
           lastAssessmentDate: new Date(),
-          assessmentStatus: 'completed'
+          assessmentStatus: 'completed',
+          updatedAt: new Date()
         });
       }
       
+      // Only call onComplete if the status update was successful
       onComplete(assessmentData);
     } catch (err) {
       console.error('Error completing assessment:', err);
-      alert('There was an error completing the assessment. Please try again.');
+      alert('There was an error saving the assessment results. Your individual skill assessments have been saved, but the overall status could not be updated. Please try again.');
+      // Don't call onComplete here since the status update failed
     }
   };
 
