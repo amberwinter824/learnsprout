@@ -215,42 +215,17 @@ export default function AddChildPage() {
         throw new Error('You must be logged in to add a child');
       }
 
-      // Create child document first
-      const childRef = doc(collection(db, 'children'));
-      const childData = {
+      // Use createChild to create the child and update childrenAccess
+      const newChildId = await createChild(currentUser.uid, {
         name: name.trim(),
         birthDateString: birthDate.toISOString().split('T')[0],
         birthDate: Timestamp.fromDate(birthDate),
         ageGroup: calculateAgeGroup(birthDate),
         interests: selectedInterests,
         parentInput,
-        createdAt: Timestamp.fromDate(new Date()),
-        updatedAt: Timestamp.fromDate(new Date()),
-        userId: currentUser.uid,
-        // Add access control fields
-        access: {
-          [currentUser.uid]: {
-            role: 'parent',
-            addedAt: Timestamp.fromDate(new Date())
-          }
-        }
-      };
-      
-      // Set the child document first
-      await setDoc(childRef, childData);
-      const newChildId = childRef.id;
-      setChildId(newChildId);
-
-      // Create an access control document
-      const accessRef = doc(db, 'access', newChildId);
-      await setDoc(accessRef, {
-        [currentUser.uid]: {
-          role: 'parent',
-          addedAt: Timestamp.fromDate(new Date())
-        }
+        notes: '',
       });
-      
-      // Redirect to the dashboard
+      setChildId(newChildId);
       router.push('/dashboard');
     } catch (err) {
       console.error('Error creating child:', err);
@@ -272,41 +247,16 @@ export default function AddChildPage() {
 
       // If childId doesn't exist, create the child first
       if (!childId) {
-        const childRef = doc(collection(db, 'children'));
-        const childData = {
+        const newChildId = await createChild(currentUser.uid, {
           name: name.trim(),
           birthDateString: birthDate!.toISOString().split('T')[0],
           birthDate: Timestamp.fromDate(birthDate!),
           ageGroup,
           interests: selectedInterests,
           parentInput,
-          createdAt: Timestamp.fromDate(new Date()),
-          updatedAt: Timestamp.fromDate(new Date()),
-          userId: currentUser.uid,
-          // Add access control fields
-          access: {
-            [currentUser.uid]: {
-              role: 'parent',
-              addedAt: Timestamp.fromDate(new Date())
-            }
-          }
-        };
-        
-        // Create the child document
-        await setDoc(childRef, childData);
-        const newChildId = childRef.id;
-        setChildId(newChildId);
-
-        // Create an access control document
-        const accessRef = doc(db, 'access', newChildId);
-        await setDoc(accessRef, {
-          [currentUser.uid]: {
-            role: 'parent',
-            addedAt: Timestamp.fromDate(new Date())
-          }
+          notes: '',
         });
-        
-        // Redirect to the dashboard
+        setChildId(newChildId);
         router.push('/dashboard');
         return;
       }
