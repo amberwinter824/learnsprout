@@ -256,11 +256,30 @@ export default function AddChildPage() {
         throw new Error('You must be logged in to add a child');
       }
 
+      // If childId doesn't exist, create the child first
       if (!childId) {
-        throw new Error('Child ID not found');
+        const childRef = doc(collection(db, 'children'));
+        const childData = {
+          name: name.trim(),
+          birthDateString: birthDate!.toISOString().split('T')[0],
+          birthDate: Timestamp.fromDate(birthDate!),
+          ageGroup,
+          interests: selectedInterests,
+          parentInput,
+          createdAt: Timestamp.fromDate(new Date()),
+          updatedAt: Timestamp.fromDate(new Date()),
+          userId: currentUser.uid
+        };
+        
+        await setDoc(childRef, childData);
+        setChildId(childRef.id);
+        
+        // Redirect to the child's profile page
+        router.push(`/dashboard/children/${childRef.id}`);
+        return;
       }
 
-      // Update the child document with any changes
+      // Update existing child document
       const childRef = doc(db, 'children', childId);
       await updateDoc(childRef, {
         name: name.trim(),
@@ -624,7 +643,7 @@ export default function AddChildPage() {
                   disabled={loading || !birthDate || !name.trim()}
                   className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Child Profile
+                  {childId ? 'Update Child Profile' : 'Save Child Profile'}
                 </button>
               </div>
             </div>
