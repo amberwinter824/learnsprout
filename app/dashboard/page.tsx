@@ -135,17 +135,22 @@ export default function Dashboard() {
         })) as DevelopmentalSkill[];
         setAllSkills(devSkillsData);
 
-        // Fetch all skills for all children
-        const skillsQuery = query(
-          collection(db, 'childSkills'),
-          where('childId', 'in', childrenData.map(child => child.id))
-        );
-        const skillsSnapshot = await getDocs(skillsQuery);
-        const skillsData = skillsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as ChildSkill[];
-        setRecentSkills(skillsData);
+        // Only fetch skills if there are children
+        if (childrenData.length > 0) {
+          // Fetch all skills for all children
+          const skillsQuery = query(
+            collection(db, 'childSkills'),
+            where('childId', 'in', childrenData.map(child => child.id))
+          );
+          const skillsSnapshot = await getDocs(skillsQuery);
+          const skillsData = skillsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as ChildSkill[];
+          setRecentSkills(skillsData);
+        } else {
+          setRecentSkills([]);
+        }
 
       } catch (err) {
         console.error('Error fetching data:', err);

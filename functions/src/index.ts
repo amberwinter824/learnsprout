@@ -134,8 +134,9 @@ interface UserAnalytics {
  */
 export const generateWeeklyPlans = functions.scheduler.onSchedule({
   schedule: "0 0 * * 0",
-  timeZone: "America/New_York"
-}, async () => {
+  timeZone: "America/New_York",
+  retryCount: 3
+}, async (event) => {
   const now = admin.firestore.Timestamp.now();
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -595,7 +596,7 @@ export const createUserProfile = functionsV1.auth.user().onCreate(async (user: U
 /**
  * Update user's last login timestamp
  */
-export const updateLastLogin = functionsV1.auth.user().beforeSignIn(async (user) => {
+export const updateLastLogin = functionsV1.auth.user().onCreate(async (user: UserRecord) => {
   const { uid } = user;
   
   try {
@@ -604,10 +605,8 @@ export const updateLastLogin = functionsV1.auth.user().beforeSignIn(async (user)
     });
     
     console.log(`Updated last login timestamp for ${uid}`);
-    return { sessionClaims: {} };  // Required return for beforeSignIn
   } catch (error) {
     console.error("Error updating last login timestamp:", error);
-    return { sessionClaims: {} };  // Return even on error
   }
 });
 
@@ -984,201 +983,282 @@ if (!suggestionsQuery.empty) {
 });
 
 /**
- * Sends weekly plan emails to users every Friday at noon
- * Emails include activities for the upcoming week (starting next Monday)
+ * Sends weekly plan emails to users
+ * Can be triggered via HTTP request
  */
-export const sendWeeklyPlanEmails = functions.scheduler.onSchedule({
-  schedule: "0 12 * * 5", // Every Friday at 12:00 PM
-  timeZone: "America/New_York"
-}, async (context) => {
+export const sendWeeklyPlanEmails = functions.https.onRequest(async (req, res) => {
   console.log('Starting weekly plan email job');
-  
-  // Initialize Resend inside the function
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  
-  // Calculate the date for next Monday (start of next week)
-  const today = new Date();
-  const nextMonday = new Date(today);
-  nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
-  nextMonday.setHours(0, 0, 0, 0);
-  
-  const nextMondayTimestamp = admin.firestore.Timestamp.fromDate(nextMonday);
-  console.log(`Preparing weekly plans for week starting ${nextMonday.toISOString()}`);
-  
+
   try {
-    // Get all users with emailNotifications and weeklyDigest preferences enabled
+    const db = admin.firestore();
+    console.log('Firestore instance initialized');
+
+    const resendApiKey = process.env.RESEND_API_KEY;
+    console.log('Resend API key found:', resendApiKey ? 'Yes' : 'No');
+
+    if (!resendApiKey) {
+      console.error('Missing RESEND_API_KEY environment variable');
+      res.status(500).json({ error: 'Email service configuration error' });
+      return;
+    }
+
+    const resend = new Resend(resendApiKey);
+    console.log('Resend client initialized');
+
+    const today = new Date();
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
+    nextMonday.setHours(0, 0, 0, 0);
+    const nextMondayTimestamp = admin.firestore.Timestamp.fromDate(nextMonday);
+    console.log(`Preparing weekly plans for week starting ${nextMonday.toISOString()}`);
+
     const usersSnapshot = await db.collection("users")
       .where("preferences.emailNotifications", "==", true)
       .where("preferences.weeklyDigest", "==", true)
       .get();
-    
+
+    console.log(`Found ${usersSnapshot.size} users with email notifications enabled`);
+
     if (usersSnapshot.empty) {
       console.log("No users with email notifications enabled");
+      res.status(200).json({ message: "No users with email notifications enabled" });
       return;
     }
-    
-    console.log(`Found ${usersSnapshot.size} users with email notifications enabled`);
-    
-    // Process each user
-    const emailPromises: Promise<void>[] = [];
-    
+
+    // Sequentially process each user
     for (const userDoc of usersSnapshot.docs) {
-      const userData = userDoc.data() as UserData;
-      const userId = userDoc.id;
-      
-      // Get all active children for this user
-      const childrenSnapshot = await db.collection("children")
-        .where("userId", "==", userId)
-        .where("active", "==", true)
-        .get();
-      
-      if (childrenSnapshot.empty) {
-        console.log(`No active children found for user ${userId}`);
-        continue;
-      }
-      
-      // Process each child's weekly plan
-      for (const childDoc of childrenSnapshot.docs) {
-        const childData = childDoc.data() as ChildData;
-        const childId = childDoc.id;
-        
-        console.log(`Processing weekly plan for child: ${childData.name} (${childId})`);
-        
-        // Get the child's weekly plan for next week
-        const weeklyPlanQuery = await db.collection("weeklyPlans")
-          .where("childId", "==", childId)
-          .where("weekStarting", "==", nextMondayTimestamp)
-          .limit(1)
+      try {
+        const userData = userDoc.data() as UserData;
+        const userId = userDoc.id;
+        console.log(`Processing user ${userId} (${userData.email})`);
+
+        // Skip test/example emails
+        if (userData.email.includes('example.com') || userData.email.includes('test@')) {
+          console.log(`Skipping test email: ${userData.email}`);
+          continue;
+        }
+
+        // Get all active children for this user
+        const childrenSnapshot = await db.collection("children")
+          .where("userId", "==", userId)
+          .where("active", "==", true)
           .get();
-        
-        // If no plan exists yet, generate one
-        let weeklyPlanData: WeeklyPlanData;
-        
-        if (weeklyPlanQuery.empty) {
-          console.log(`No weekly plan found for child ${childId}, generating one`);
-          
-          // Generate a plan similar to the generateWeeklyPlans function
-          // This is a simplified version - in production, you might want to call your existing function
-          const newPlanRef = db.collection("weeklyPlans").doc();
-          
-          weeklyPlanData = {
-            childId,
-            userId,
-            weekStarting: nextMondayTimestamp,
-            createdBy: "system",
-            createdAt: admin.firestore.Timestamp.now(),
-            updatedAt: admin.firestore.Timestamp.now(),
-            monday: [],
-            tuesday: [],
-            wednesday: [],
-            thursday: [],
-            friday: [],
-            saturday: [],
-            sunday: []
-          };
-          
-          // Get suggested activities for this child
-          const suggestionsSnapshot = await db.collection("activitySuggestions")
-            .where("childId", "==", childId)
-            .where("status", "==", "pending")
-            .orderBy("priority", "desc")
-            .limit(15)
-            .get();
-          
-          if (!suggestionsSnapshot.empty) {
-            // Distribute activities throughout the week
-            const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-            const timeSlots = ["morning", "afternoon"];
-            
-            let activityIndex = 0;
-            suggestionsSnapshot.forEach(doc => {
-              const suggestion = doc.data() as ActivitySuggestion;
-              
-              if (activityIndex < 10) { // Limit to 10 activities per week
-                const dayIndex = activityIndex % 5;
-                const day = daysOfWeek[dayIndex];
-                const timeSlot = timeSlots[Math.floor(activityIndex / 5) % 2];
-                
-                const activity: WeeklyPlanActivity = {
-                  activityId: suggestion.activityId,
-                  timeSlot: timeSlot as "morning" | "afternoon",
-                  status: "suggested",
-                  order: Math.floor(activityIndex / 5),
-                  suggestionId: doc.id
-                };
-                
-                weeklyPlanData[day].push(activity);
-                activityIndex++;
-              }
-            });
-          }
-          
-          // Save the new plan
-          await newPlanRef.set(weeklyPlanData);
-        } else {
-          weeklyPlanData = weeklyPlanQuery.docs[0].data() as WeeklyPlanData;
+
+        console.log(`Found ${childrenSnapshot.size} active children for user ${userId}`);
+
+        if (childrenSnapshot.empty) {
+          console.log(`No active children found for user ${userId}`);
+          continue;
         }
-        
-        // Gather all activity IDs from the weekly plan
-        const activityIds = new Set<string>();
-        ["monday", "tuesday", "wednesday", "thursday", "friday"].forEach(day => {
-          weeklyPlanData[day].forEach((activity: WeeklyPlanActivity) => {
-            activityIds.add(activity.activityId);
-          });
-        });
-        
-        // Fetch activity details for all activities in the plan
-        const activitiesDetails: Record<string, any> = {};
-        
-        if (activityIds.size > 0) {
-          const activitiesPromises = Array.from(activityIds).map(async (activityId) => {
-            const activityDoc = await db.collection("activities").doc(activityId).get();
-            if (activityDoc.exists) {
-              activitiesDetails[activityId] = activityDoc.data();
-            }
-          });
-          
-          await Promise.all(activitiesPromises);
-        }
-        
-        // Send the email
-        const emailPromise = (async () => {
+
+        // Gather weekly plans and activities for all children
+        const childrenPlans: Array<{childName: string, plan: any, activitiesDetails: Record<string, any>}> = [];
+
+        for (const childDoc of childrenSnapshot.docs) {
           try {
-            const { error } = await resend.emails.send({
-              from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
-              to: userData.email,
-              subject: `${childData.name}'s Weekly Plan: ${dateFns.format(nextMonday, 'MMMM d')} - ${dateFns.format(dateFns.addDays(nextMonday, 4), 'MMMM d')}`,
-              html: generateWeeklyPlanEmailHtml(
-                userData.displayName,
-                childData.name,
-                nextMonday,
-                weeklyPlanData,
-                activitiesDetails
-              )
-            });
-            
-            if (error) {
-              console.error(`Error sending email to ${userData.email}:`, error);
+            const childData = childDoc.data() as ChildData;
+            const childId = childDoc.id;
+            console.log(`Processing weekly plan for child: ${childData.name} (${childId})`);
+
+            // Get the child's weekly plan for next week
+            const weeklyPlanQuery = await db.collection("weeklyPlans")
+              .where("childId", "==", childId)
+              .where("weekStarting", "==", nextMondayTimestamp)
+              .limit(1)
+              .get();
+
+            // If no plan exists yet, generate one
+            let weeklyPlanData: WeeklyPlanData;
+            if (weeklyPlanQuery.empty) {
+              console.log(`No weekly plan found for child ${childId}, generating one`);
+              const newPlanRef = db.collection("weeklyPlans").doc();
+              weeklyPlanData = {
+                childId,
+                userId,
+                weekStarting: nextMondayTimestamp,
+                createdBy: "system",
+                createdAt: admin.firestore.Timestamp.now(),
+                updatedAt: admin.firestore.Timestamp.now(),
+                monday: [],
+                tuesday: [],
+                wednesday: [],
+                thursday: [],
+                friday: [],
+                saturday: [],
+                sunday: []
+              };
+              // Get suggested activities for this child
+              const suggestionsSnapshot = await db.collection("activitySuggestions")
+                .where("childId", "==", childId)
+                .where("status", "==", "pending")
+                .orderBy("priority", "desc")
+                .limit(15)
+                .get();
+              console.log(`Found ${suggestionsSnapshot.size} suggested activities for child ${childId}`);
+              if (!suggestionsSnapshot.empty) {
+                const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+                const timeSlots = ["morning", "afternoon"];
+                let activityIndex = 0;
+                suggestionsSnapshot.forEach(doc => {
+                  const suggestion = doc.data() as ActivitySuggestion;
+                  if (activityIndex < 10) {
+                    const dayIndex = activityIndex % 5;
+                    const day = daysOfWeek[dayIndex];
+                    const timeSlot = timeSlots[Math.floor(activityIndex / 5) % 2];
+                    const activity: WeeklyPlanActivity = {
+                      activityId: suggestion.activityId,
+                      timeSlot: timeSlot as "morning" | "afternoon",
+                      status: "suggested",
+                      order: Math.floor(activityIndex / 5),
+                      suggestionId: doc.id
+                    };
+                    weeklyPlanData[day].push(activity);
+                    activityIndex++;
+                  }
+                });
+              }
+              await newPlanRef.set(weeklyPlanData);
+              console.log(`Created new weekly plan for child ${childId}`);
             } else {
-              console.log(`Successfully sent weekly plan email to ${userData.email} for child ${childData.name}`);
+              weeklyPlanData = weeklyPlanQuery.docs[0].data() as WeeklyPlanData;
+              console.log(`Retrieved existing weekly plan for child ${childId}`);
             }
+
+            // Gather all activity IDs from the weekly plan
+            const activityIds = new Set<string>();
+            ["monday", "tuesday", "wednesday", "thursday", "friday"].forEach(day => {
+              weeklyPlanData[day].forEach((activity: WeeklyPlanActivity) => {
+                activityIds.add(activity.activityId);
+              });
+            });
+            console.log(`Found ${activityIds.size} activities in weekly plan for child ${childId}`);
+
+            // Fetch activity details for all activities in the plan
+            const activitiesDetails: Record<string, any> = {};
+            if (activityIds.size > 0) {
+              const activitiesPromises = Array.from(activityIds).map(async (activityId) => {
+                const activityDoc = await db.collection("activities").doc(activityId).get();
+                if (activityDoc.exists) {
+                  activitiesDetails[activityId] = activityDoc.data();
+                }
+              });
+              await Promise.all(activitiesPromises);
+              console.log(`Retrieved details for ${Object.keys(activitiesDetails).length} activities`);
+            }
+
+            childrenPlans.push({
+              childName: childData.name,
+              plan: weeklyPlanData,
+              activitiesDetails
+            });
           } catch (error) {
-            console.error(`Error sending email to ${userData.email}:`, error);
+            console.error(`Error processing child ${childDoc.id}:`, error);
           }
-        })();
-        
-        emailPromises.push(emailPromise);
+        }
+
+        // Build a single email for the user with all children's plans
+        const html = generateFamilyWeeklyPlanEmailHtml(
+          userData.displayName,
+          childrenPlans,
+          nextMonday
+        );
+
+        // Add a delay to respect rate limits (1000ms between users)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Send the email
+        try {
+          const { error } = await resend.emails.send({
+            from: 'Learn Sprout <weekly@updates.learn-sprout.com>',
+            to: userData.email,
+            subject: `Your Family's Weekly Learning Plans: Week of ${dateFns.format(nextMonday, 'MMMM d')}`,
+            html
+          });
+          if (error) {
+            console.error(`Error sending email to ${userData.email}:`, error);
+            throw error;
+          } else {
+            console.log(`Successfully sent family weekly plan email to ${userData.email}`);
+          }
+        } catch (error) {
+          console.error(`Error sending email to ${userData.email}:`, error);
+          throw error;
+        }
+      } catch (error) {
+        console.error(`Error processing user ${userDoc.id}:`, error);
       }
     }
-    
-    // Wait for all emails to be sent
-    await Promise.all(emailPromises);
-    
-    console.log('Weekly plan email job completed');
+
+    console.log('Weekly plan email job completed successfully');
+    res.status(200).json({ message: "Weekly plan emails sent successfully" });
   } catch (error) {
     console.error('Error in sendWeeklyPlanEmails function:', error);
+    res.status(500).json({
+      error: "Failed to send weekly plan emails",
+      details: error instanceof Error ? error.message : String(error)
+    });
   }
 });
+
+// New helper to build a family email
+function generateFamilyWeeklyPlanEmailHtml(
+  userName: string,
+  childrenPlans: Array<{childName: string, plan: any, activitiesDetails: Record<string, any>}>,
+  weekStartingDate: Date
+): string {
+  const weekStart = new Date(weekStartingDate);
+  const weekEnd = new Date(weekStartingDate);
+  weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday
+  const dateOptions: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
+  const weekRangeText = `${weekStart.toLocaleDateString('en-US', dateOptions)} - ${weekEnd.toLocaleDateString('en-US', dateOptions)}`;
+
+  let childrenHtml = '';
+  for (const { childName, plan, activitiesDetails } of childrenPlans) {
+    // Reuse the per-child HTML logic
+    childrenHtml += `
+      <div style="margin-bottom: 40px; border-bottom: 1px solid #e5e7eb; padding-bottom: 30px;">
+        <h2 style="color: #059669; font-size: 22px; margin-bottom: 10px;">${childName}'s Weekly Plan</h2>
+        ${generateWeeklyPlanEmailHtml(userName, childName, weekStartingDate, plan, activitiesDetails)}
+      </div>
+    `;
+  }
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://app.learn-sprout.com/icons/icon-192x192.png" alt="Learn Sprout Logo" style="height: 40px; margin-bottom: 20px;">
+        <h1 style="color: #059669; margin: 0; font-size: 26px;">Your Family's Weekly Learning Plans</h1>
+        <p style="color: #4b5563; margin: 10px 0 0 0;">Week of ${weekRangeText}</p>
+      </div>
+      <div style="background-color: #f3f4f6; padding: 20px; border-radius: 6px; margin-bottom: 30px;">
+        <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 1.5;">Hi ${userName},</p>
+        <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 1.5;">
+          Here are your family's learning plans for next week. Each plan is personalized based on your children's current skills and interests.
+        </p>
+        <p style="margin: 0; font-size: 16px; line-height: 1.5;">
+          You can modify these plans anytime on the Learn Sprout platform.
+        </p>
+      </div>
+      ${childrenHtml}
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://app.learn-sprout.com/dashboard/weekly-plans" 
+           style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; font-size: 16px;">
+          View Full Plans
+        </a>
+      </div>
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          If you'd like to adjust your email preferences, please visit your <a href="https://app.learn-sprout.com/settings" style="color: #059669; text-decoration: none;">account settings</a>.
+        </p>
+      </div>
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+        <p style="color: #9ca3af; font-size: 12px;">
+          Sent by Learn Sprout • <a href="https://app.learn-sprout.com" style="color: #059669; text-decoration: none;">Visit Website</a>
+        </p>
+      </div>
+    </div>
+  `;
+}
 
 /**
  * Generates HTML content for the weekly plan email
@@ -1202,7 +1282,8 @@ function generateWeeklyPlanEmailHtml(
   const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
   
   let activitiesHtml = '';
-  
+  let allDaysEmpty = true;
+
   daysOfWeek.forEach(day => {
     const dayDate = new Date(weekStartingDate);
     dayDate.setDate(dayDate.getDate() + daysOfWeek.indexOf(day));
@@ -1220,6 +1301,7 @@ function generateWeeklyPlanEmailHtml(
     if (dayActivities.length === 0) {
       activitiesHtml += `<p style="color: #6b7280; font-style: italic; margin: 0;">No activities scheduled</p>`;
     } else {
+      allDaysEmpty = false;
       dayActivities.forEach((activity: WeeklyPlanActivity) => {
         const activityDetails = activitiesDetails[activity.activityId] || {};
         const timeSlot = activity.timeSlot === 'morning' ? 'Morning' : 'Afternoon';
@@ -1243,14 +1325,24 @@ function generateWeeklyPlanEmailHtml(
     activitiesHtml += `</div>`;
   });
 
+  // If all days are empty, show call-to-action
+  let ctaHtml = '';
+  if (allDaysEmpty) {
+    ctaHtml = `
+      <div style="background-color: #fff7ed; border: 1px solid #fdba74; color: #b45309; padding: 18px; border-radius: 6px; margin: 30px 0; text-align: center;">
+        <p style="margin: 0 0 12px 0; font-size: 16px;">You haven't generated a plan for this week.</p>
+        <a href="https://app.learn-sprout.com/dashboard" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; font-size: 16px;">Click here to generate a personalized learning plan now</a>
+      </div>
+    `;
+  }
+
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://learnsprout.vercel.app/icons/icon-192x192.png" alt="Learn Sprout Logo" style="height: 40px; margin-bottom: 20px;">
+        <img src="https://app.learn-sprout.com/icons/icon-192x192.png" alt="Learn Sprout Logo" style="height: 40px; margin-bottom: 20px;">
         <h1 style="color: #059669; margin: 0; font-size: 24px;">${childName}'s Weekly Plan</h1>
         <p style="color: #4b5563; margin: 10px 0 0 0;">Week of ${weekRangeText}</p>
       </div>
-      
       <div style="background-color: #f3f4f6; padding: 20px; border-radius: 6px; margin-bottom: 30px;">
         <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 1.5;">Hi ${userName},</p>
         <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 1.5;">
@@ -1261,27 +1353,24 @@ function generateWeeklyPlanEmailHtml(
           You can modify this plan anytime on the Learn Sprout platform.
         </p>
       </div>
-      
+      ${ctaHtml}
       <div style="margin: 30px 0;">
         ${activitiesHtml}
       </div>
-      
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://learnsprout.vercel.app/dashboard/weekly-plans" 
+        <a href="https://app.learn-sprout.com/dashboard/weekly-plans" 
            style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; font-size: 16px;">
           View Full Plan
         </a>
       </div>
-      
       <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
         <p style="color: #6b7280; font-size: 14px; margin: 0;">
-          If you'd like to adjust your email preferences, please visit your <a href="https://learnsprout.vercel.app/settings" style="color: #059669; text-decoration: none;">account settings</a>.
+          If you'd like to adjust your email preferences, please visit your <a href="https://app.learn-sprout.com/settings" style="color: #059669; text-decoration: none;">account settings</a>.
         </p>
       </div>
-      
       <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
         <p style="color: #9ca3af; font-size: 12px;">
-          Sent by Learn Sprout • <a href="https://learnsprout.vercel.app" style="color: #059669; text-decoration: none;">Visit Website</a>
+          Sent by Learn Sprout • <a href="https://app.learn-sprout.com" style="color: #059669; text-decoration: none;">Visit Website</a>
         </p>
       </div>
     </div>
