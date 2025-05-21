@@ -1,7 +1,8 @@
 // Node.js script to generate favicon and PWA icons from SVG
-// Requires: npm install sharp
+// Requires: npm install sharp to-ico
 
 const sharp = require('sharp');
+const toIco = require('to-ico');
 const fs = require('fs');
 const path = require('path');
 
@@ -52,15 +53,20 @@ async function generateIcons() {
   }
 
   // Special cases for favicons
-  // 16x16 and 32x32 are already generated above
   // Generate favicon.ico (contains 16x16, 32x32, 48x48)
   const icoPath = path.join(outputDir, '../favicon.ico');
-  await sharp([
-    path.join(outputDir, 'icon-16x16.png'),
-    path.join(outputDir, 'icon-32x32.png'),
-    path.join(outputDir, 'icon-48x48.png')
-  ])
-    .toFile(icoPath);
+  const faviconBuffers = await Promise.all([
+    fs.promises.readFile(path.join(outputDir, 'icon-16x16.png')),
+    fs.promises.readFile(path.join(outputDir, 'icon-32x32.png')),
+    fs.promises.readFile(path.join(outputDir, 'icon-48x48.png'))
+  ]);
+  
+  const icoBuffer = await toIco(faviconBuffers, {
+    sizes: [16, 32, 48],
+    resize: true
+  });
+  
+  await fs.promises.writeFile(icoPath, icoBuffer);
   console.log(`Generated ${icoPath}`);
 
   // Apple touch icon (180x180)

@@ -130,26 +130,54 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
         const today = startOfDay(new Date());
         const forecastEndDate = addDays(today, 90);
 
-        // Get all weekly plans for all children in this period
+        console.log('Debug - Query parameters:', {
+          userId: currentUser.uid,
+          childIds: targetChildren.map(child => child.id),
+          dateRange: {
+            start: today.toISOString(),
+            end: forecastEndDate.toISOString()
+          }
+        });
+
+        // First, let's try to get all plans for the user without date filtering
         const plansSnapshot = await getDocs(
           query(
             collection(db, 'weeklyPlans'),
             where('userId', '==', currentUser.uid),
-            where('childId', 'in', targetChildren.map(child => child.id)),
-            where('weekStarting', '>=', today),
-            where('weekStarting', '<=', forecastEndDate)
+            where('childId', 'in', targetChildren.map(child => child.id))
           )
         );
 
-        console.log(`Found ${plansSnapshot.size} weekly plans`);
+        console.log(`Found ${plansSnapshot.size} weekly plans total`);
+        plansSnapshot.forEach(doc => {
+          const plan = doc.data();
+          console.log('Plan details:', {
+            id: doc.id,
+            weekStarting: plan.weekStarting?.toDate?.()?.toISOString(),
+            childId: plan.childId,
+            userId: plan.userId
+          });
+        });
+
+        // Filter plans in memory to ensure we're not missing any due to timestamp comparison issues
+        const filteredPlans = plansSnapshot.docs.filter(doc => {
+          const plan = doc.data();
+          const weekStarting = plan.weekStarting?.toDate?.();
+          return weekStarting && weekStarting >= today && weekStarting <= forecastEndDate;
+        });
+
+        console.log(`Filtered to ${filteredPlans.length} plans within date range`);
 
         // Extract all activities from all plans
         const activityIds = new Set<string>();
         const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-        plansSnapshot.forEach(doc => {
+        filteredPlans.forEach(doc => {
           const plan = doc.data();
-          console.log('Processing plan:', plan.weekStarting);
+          console.log('Processing plan:', {
+            id: doc.id,
+            weekStarting: plan.weekStarting?.toDate?.()?.toISOString()
+          });
           
           days.forEach(day => {
             const dayActivities = plan[day] || [];
