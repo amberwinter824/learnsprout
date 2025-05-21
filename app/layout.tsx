@@ -48,10 +48,11 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         
         {/* Favicon and icons */}
-        <link rel="icon" href="/icons/favicon-32x32.png" sizes="any" />
-        <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16" />
-        <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="icon" href="/icons/favicon.ico" />
+        <link rel="icon" href="/icons/favicon-32x32.png?v=2" sizes="any" />
+        <link rel="icon" href="/icons/favicon-16x16.png?v=2" type="image/png" sizes="16x16" />
+        <link rel="icon" href="/icons/favicon-32x32.png?v=2" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2" />
         
         {/* Apple splash screens */}
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />

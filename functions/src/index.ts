@@ -587,6 +587,26 @@ export const createUserProfile = functionsV1.auth.user().onCreate(async (user: U
     
     await db.collection("users").doc(uid).set(userData);
     
+    // Send notification email to hello@learn-sprout.com
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      const resend = new Resend(resendApiKey);
+      await resend.emails.send({
+        from: 'Learn Sprout <no-reply@learn-sprout.com>',
+        to: 'hello@learn-sprout.com',
+        subject: 'New User Signup',
+        html: `
+          <h2>New User Signup</h2>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Display Name:</strong> ${displayName}</p>
+          <p><strong>UID:</strong> ${uid}</p>
+          <p><strong>Signup Time:</strong> ${new Date().toISOString()}</p>
+        `
+      });
+    } else {
+      console.error('RESEND_API_KEY not set, cannot send admin notification email.');
+    }
+    
     console.log(`Created user profile for ${uid}`);
   } catch (error) {
     console.error("Error creating user profile:", error);

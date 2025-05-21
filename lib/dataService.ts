@@ -214,6 +214,7 @@ import {
         userId: userId,
         parentId: userId, // Keep for backward compatibility
         ...(familyId ? { familyId } : {}), // Only include familyId if it exists
+        active: childData.active !== undefined ? childData.active : true, // Always set active: true by default
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
