@@ -163,7 +163,14 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
         const filteredPlans = plansSnapshot.docs.filter(doc => {
           const plan = doc.data();
           const weekStarting = plan.weekStarting?.toDate?.();
-          return weekStarting && weekStarting >= today && weekStarting <= forecastEndDate;
+          if (!weekStarting) return false;
+          
+          // Convert both dates to start of day for accurate comparison
+          const planStart = startOfDay(weekStarting);
+          const todayStart = startOfDay(today);
+          const endDateStart = startOfDay(forecastEndDate);
+          
+          return planStart >= todayStart && planStart <= endDateStart;
         });
 
         console.log(`Filtered to ${filteredPlans.length} plans within date range`);
