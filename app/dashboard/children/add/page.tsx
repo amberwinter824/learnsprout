@@ -226,18 +226,32 @@ export default function AddChildPage() {
         parentInput,
         createdAt: Timestamp.fromDate(new Date()),
         updatedAt: Timestamp.fromDate(new Date()),
-        userId: currentUser.uid
+        userId: currentUser.uid,
+        // Add access control fields
+        access: {
+          [currentUser.uid]: {
+            role: 'parent',
+            addedAt: Timestamp.fromDate(new Date())
+          }
+        }
       };
       
       // Set the child document first
       await setDoc(childRef, childData);
-      
-      // Store the childId
       const newChildId = childRef.id;
       setChildId(newChildId);
+
+      // Create an access control document
+      const accessRef = doc(db, 'access', newChildId);
+      await setDoc(accessRef, {
+        [currentUser.uid]: {
+          role: 'parent',
+          addedAt: Timestamp.fromDate(new Date())
+        }
+      });
       
-      // Redirect to the new assessment page
-      router.push(`/dashboard/children/${newChildId}/assessment`);
+      // Redirect to the dashboard
+      router.push('/dashboard');
     } catch (err) {
       console.error('Error creating child:', err);
       setError(err instanceof Error ? err.message : 'Failed to create child');
@@ -268,14 +282,32 @@ export default function AddChildPage() {
           parentInput,
           createdAt: Timestamp.fromDate(new Date()),
           updatedAt: Timestamp.fromDate(new Date()),
-          userId: currentUser.uid
+          userId: currentUser.uid,
+          // Add access control fields
+          access: {
+            [currentUser.uid]: {
+              role: 'parent',
+              addedAt: Timestamp.fromDate(new Date())
+            }
+          }
         };
         
+        // Create the child document
         await setDoc(childRef, childData);
-        setChildId(childRef.id);
+        const newChildId = childRef.id;
+        setChildId(newChildId);
+
+        // Create an access control document
+        const accessRef = doc(db, 'access', newChildId);
+        await setDoc(accessRef, {
+          [currentUser.uid]: {
+            role: 'parent',
+            addedAt: Timestamp.fromDate(new Date())
+          }
+        });
         
-        // Redirect to the child's profile page
-        router.push(`/dashboard/children/${childRef.id}`);
+        // Redirect to the dashboard
+        router.push('/dashboard');
         return;
       }
 
@@ -300,12 +332,12 @@ export default function AddChildPage() {
             childId,
             skillId: result.skillId,
             status: result.status,
-            lastAssessed: new Date(),
+            lastAssessed: Timestamp.fromDate(new Date()),
             notes: result.notes || '',
             observations: result.notes ? [result.notes] : [],
-            observationDates: [new Date()],
-            createdAt: new Date(),
-            updatedAt: new Date()
+            observationDates: [Timestamp.fromDate(new Date())],
+            createdAt: Timestamp.fromDate(new Date()),
+            updatedAt: Timestamp.fromDate(new Date())
           });
         });
         
@@ -313,8 +345,8 @@ export default function AddChildPage() {
         console.log('Saved assessment results as child skills with observations');
       }
       
-      // Redirect to the child's profile page
-      router.push(`/dashboard/children/${childId}`);
+      // Redirect to the dashboard
+      router.push('/dashboard');
     } catch (err: any) {
       console.error('Error updating child:', err);
       setError(err.message || 'Failed to update child');

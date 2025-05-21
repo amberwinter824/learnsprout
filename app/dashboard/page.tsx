@@ -36,28 +36,25 @@ import { db } from '@/lib/firebase';
 import ProgressCelebration from '@/components/parent/ProgressCelebration';
 import { Timestamp } from 'firebase/firestore';
 import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
+import { getUserChildren } from '@/lib/dataService';
+
+interface Child {
+  id: string;
+  name: string;
+  age: number;
+  userId: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
 
 interface ChildSkill {
   id: string;
   childId: string;
   skillId: string;
-  skillName?: string;
-  status: 'not_started' | 'emerging' | 'developing' | 'mastered';
-  lastAssessed?: Timestamp;
-}
-
-interface Child {
-  id: string;
-  name: string;
-  birthDate?: any;
-  ageGroup?: string;
-  interests?: string[];
-  active?: boolean;
-  skillProgress?: {
-    emerging: number;
-    developing: number;
-    mastered: number;
-  };
+  status: 'not_started' | 'in_progress' | 'mastered';
+  lastPracticed?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 export default function Dashboard() {
@@ -72,7 +69,7 @@ export default function Dashboard() {
   
   // State
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(
     dateParam ? new Date(dateParam) : new Date()
   );
@@ -423,12 +420,12 @@ export default function Dashboard() {
                       return {
                         ...skill,
                         skillName: skillName || 'Unknown Skill',
-                        lastAssessed: skill.lastAssessed && typeof skill.lastAssessed.toDate === 'function' ? skill.lastAssessed.toDate().toISOString() : (typeof skill.lastAssessed === 'string' ? skill.lastAssessed : '')
+                        lastPracticed: skill.lastPracticed && typeof skill.lastPracticed.toDate === 'function' ? skill.lastPracticed.toDate().toISOString() : (typeof skill.lastPracticed === 'string' ? skill.lastPracticed : '')
                       };
                     })
-                    .sort((a, b) => new Date(b.lastAssessed).getTime() - new Date(a.lastAssessed).getTime())
+                    .sort((a, b) => new Date(b.lastPracticed).getTime() - new Date(a.lastPracticed).getTime())
                     .reduce((acc: any[], skill) => {
-                      if (skill.status === 'developing' && acc.filter(s => s.status === 'developing').length < 3) {
+                      if (skill.status === 'in_progress' && acc.filter(s => s.status === 'in_progress').length < 3) {
                         acc.push(skill);
                       } else if (skill.status === 'mastered' && acc.filter(s => s.status === 'mastered').length < 2) {
                         acc.push(skill);

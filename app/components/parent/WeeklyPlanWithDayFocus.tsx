@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, addDays, subDays, isSameDay, startOfWeek, endOfWeek, getDay, formatISO } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, getDoc, doc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityDetailsPopup from './ActivityDetailsPopup';
 import QuickObservationForm from './QuickObservationForm';
@@ -250,10 +250,11 @@ export default function WeeklyPlanWithDayFocus({
       } else {
         console.log('Plan not found by ID, trying query approach');
         // If not found by ID, try the query approach
+        const weekStartTimestamp = Timestamp.fromDate(weekStartDate);
         const plansQuery = query(
           collection(db, 'weeklyPlans'),
           where('childId', '==', selectedChild.id),
-          where('weekStarting', '==', weekStartString)
+          where('weekStarting', '==', weekStartTimestamp)
         );
         
         const plansSnapshot = await getDocs(plansQuery);
