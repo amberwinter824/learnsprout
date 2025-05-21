@@ -136,8 +136,8 @@ const AllChildrenMaterialsForecast = forwardRef<{ fetchMaterialsNeeded: () => vo
             collection(db, 'weeklyPlans'),
             where('userId', '==', currentUser.uid),
             where('childId', 'in', targetChildren.map(child => child.id)),
-            where('weekStarting', '>=', Timestamp.fromDate(today)),
-            where('weekStarting', '<=', Timestamp.fromDate(forecastEndDate))
+            where('weekStarting', '>=', today),
+            where('weekStarting', '<=', forecastEndDate)
           )
         );
 

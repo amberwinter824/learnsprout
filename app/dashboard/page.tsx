@@ -71,9 +71,12 @@ export default function Dashboard() {
   // State
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(
-    dateParam ? new Date(dateParam) : new Date()
-  );
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (dateParam) {
+      return new Date(dateParam);
+    }
+    return new Date();
+  });
   const [selectedChildId, setSelectedChildId] = useState<string | undefined>(
     childIdParam ?? undefined
   );

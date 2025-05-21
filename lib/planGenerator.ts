@@ -341,7 +341,7 @@ export async function generateWeeklyPlan(childId: string, userId: string, weekSt
     const weeklyPlan: WeeklyPlan = {
       childId,
       userId,
-      weekStarting: weekStart,
+      weekStarting: Timestamp.fromDate(weekStart),
       createdBy: 'system',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
