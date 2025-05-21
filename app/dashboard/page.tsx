@@ -37,6 +37,7 @@ import ProgressCelebration from '@/components/parent/ProgressCelebration';
 import { Timestamp } from 'firebase/firestore';
 import { DevelopmentalSkill } from '@/lib/types/enhancedSchema';
 import { getUserChildren } from '@/lib/dataService';
+import ReloadButton from '@/components/ReloadButton';
 
 interface Child {
   id: string;
@@ -296,12 +297,7 @@ export default function Dashboard() {
         <div className="text-center">
           <h2 className="text-xl font-medium text-red-600 mb-2">Something went wrong</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600"
-          >
-            Try Again
-          </button>
+          <ReloadButton />
         </div>
       </div>
     );
