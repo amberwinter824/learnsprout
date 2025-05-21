@@ -1025,6 +1025,39 @@ export const sendWeeklyPlanEmails = functions.https.onRequest(async (req, res) =
       return;
     }
 
+    // Add detailed logging for each user
+    console.log("Detailed user analysis:");
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data() as UserData;
+      console.log(`\nAnalyzing user ${userData.email}:`);
+      console.log(`- Email notifications: ${userData.preferences?.emailNotifications}`);
+      console.log(`- Weekly digest: ${userData.preferences?.weeklyDigest}`);
+      
+      // Check if it's a test email
+      const isTestEmail = userData.email.includes('example.com') || userData.email.includes('test@');
+      console.log(`- Is test email: ${isTestEmail}`);
+      
+      // Get active children by userId
+      let childrenSnapshot = await db.collection("children")
+        .where("userId", "==", userDoc.id)
+        .where("active", "==", true)
+        .get();
+      let childrenQueryField = 'userId';
+      if (childrenSnapshot.empty) {
+        // Try parentId as a fallback
+        childrenSnapshot = await db.collection("children")
+          .where("parentId", "==", userDoc.id)
+          .where("active", "==", true)
+          .get();
+        childrenQueryField = 'parentId';
+      }
+      console.log(`Found ${childrenSnapshot.size} active children for user ${userDoc.id} using field: ${childrenQueryField}`);
+      if (childrenSnapshot.empty) {
+        console.log(`No active children found for user ${userDoc.id}`);
+        continue;
+      }
+    }
+
     // Sequentially process each user
     for (const userDoc of usersSnapshot.docs) {
       try {
